@@ -17,11 +17,11 @@ type RollExpression struct {
 }
 
 type Result struct {
-	roll     string      `json:"roll"`
-	rolls    interface{} `json:"rolls"`
+	roll     string
+	rolls    interface{}
 	Expanded string      `json:"expanded"`
 	Result   interface{} `json:"result"`
-	total    int         `json:"total"`
+	total    int
 }
 
 // Dice is a group of several Die objects that should be added together.
@@ -41,7 +41,8 @@ type Die struct {
 // Any changes to RNG, ex. to roll using a CSPRNG or pseudo-CSPRNG, should
 // probably be made in this function.
 func (r *Die) roll() int {
-	return 1 + rand.Intn(r.Size)
+	r.result = 1 + rand.Intn(r.Size)
+	return r.result
 }
 
 // NewDie creates a new Die.
