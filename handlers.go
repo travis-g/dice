@@ -26,7 +26,7 @@ func respondWithError(w http.ResponseWriter, code int, err string) {
 // isValidDiceNotationString returns if a given string is a valid dice notation
 // expression. If debug mode is enabled all strings are matched.
 func isValidDiceNotationString(s string) bool {
-	if Debug {
+	if DebugMode {
 		return true
 	}
 	return ValidCalcRegex.Match([]byte(s))
