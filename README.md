@@ -2,7 +2,7 @@
 
 DRAAS (Dice Rolls As A Service) is a scalable HTTP API solution to your dice-rolling needs. It's also technically a calculator.
 
-[Dice notation][dice-notation] is an algebra-like system for indicating dice rolls in games. Dice rolls are usually given in the form **<em>X</em>d<em>Y</em>[-|+]_N_**, where *X* is the number of *Y*-sided dice to roll, with an optional modifier *N*.
+[Dice notation][dice-notation] is an algebra-like system for indicating dice rolls in games. Dice rolls are usually given in the form **<em>X</em>d<em>Y</em>((-|+)<em>N</em>)**, where *X* is the number of *Y*-sided dice to roll, with an optional modifier *N*. *N* could be an integer or potentially another dice notation string.
 
 ## API
 
