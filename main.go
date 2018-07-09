@@ -18,8 +18,9 @@ import (
 var (
 	MaxDice               = 1000
 	ShutdownGraceDuration = time.Second * 5
-	Debug                 bool
+	DebugMode             bool
 	Port                  int
+	PrettifyLogs          bool
 	StaticContentDir      string
 
 	// Regular Expressions
@@ -29,17 +30,21 @@ var (
 
 func main() {
 	// Flag parsing
-	flag.BoolVar(&Debug, "debug", false, "whether to run the server in debug mode")
-	flag.IntVar(&Port, "port", 8000, "port to host the server")
+	flag.BoolVar(&DebugMode, "debug", false, "run the server in debug mode with higher verbosity")
+	flag.BoolVar(&PrettifyLogs, "pretty", false, "prettify output logs. If false, outputs JSON logs")
+	flag.IntVar(&Port, "port", 8000, "port to listen on")
 	flag.Parse()
 
 	// InfoLevel logging by default
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 
-	// Set up debug options if debugging
-	if Debug {
-		// Dev log
+	if PrettifyLogs {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	}
+
+	// Set up debug options if debugging
+	if DebugMode {
+		// Increase log verbosity
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 		log.Debug().Msg("debug mode enabled")
 	}
@@ -52,6 +57,7 @@ func main() {
 	// Configure routing
 	r := ConfigureRouting()
 
+	// Define the server
 	srv := &http.Server{
 		Handler:      r,
 		Addr:         ":" + strconv.Itoa(Port),
@@ -60,7 +66,7 @@ func main() {
 		IdleTimeout:  5 * time.Second,
 	}
 
-	// Run server as a goroutine so we don't block
+	// Run server as a goroutine so that we don't block
 	// This lets us set up the interrupt signal handling
 	go func() {
 		if err := srv.ListenAndServe(); err != nil {
