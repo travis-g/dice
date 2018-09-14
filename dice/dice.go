@@ -11,7 +11,7 @@ import (
 const (
 	// diceNotationPattern is the RegEx pattern that matches a dice notation
 	// string in the format XdY, where X is the number of Y-sided dice to roll.
-	// X may be omitted if it is 1, yielding dY instead of 1dY
+	// X may be omitted if it is 1, yielding dY instead of 1dY.
 	diceNotationPattern = `(?P<count>\d*)d(?P<size>\d{1,})`
 )
 

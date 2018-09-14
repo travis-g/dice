@@ -75,6 +75,7 @@ func TestRoll(t *testing.T) {
 		{"1d20", 1, 20, "d20"},
 		{"d20", 1, 20, "d20"},
 		{"3d20", 3, 20, "3d20"},
+		{"20d20", 20, 20, "20d20"},
 	}
 	for _, tc := range testCases {
 		for i := 0; i < 100; i++ {
