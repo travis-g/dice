@@ -1,4 +1,4 @@
-package server
+package main
 
 import (
 	"context"
@@ -74,7 +74,7 @@ func main() {
 		}
 	}()
 
-	log.Info().Str("address", srv.Addr).Msg("server started")
+	log.Info().Msg("server started")
 
 	// Graceful shutdowns when quit via SIGINT (Ctrl+C)
 	c := make(chan os.Signal, 1)
