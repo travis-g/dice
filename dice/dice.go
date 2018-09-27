@@ -6,7 +6,12 @@ import (
 	"math/rand"
 	"regexp"
 	"strconv"
+	"time"
 )
+
+func init() {
+	rand.Seed(time.Now().UTC().UnixNano())
+}
 
 const (
 	// diceNotationPattern is the RegEx pattern that matches a dice notation
