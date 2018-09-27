@@ -28,7 +28,7 @@ var (
 	ValidCalcRegex = regexp.MustCompile(`(?i)^((\d+)|(\d*d\d+))((\s*[\+-]\s*)((\d+)|(\d*d\d+)))*$`)
 )
 
-func main() {
+func Run() (int, error) {
 	// Flag parsing
 	flag.BoolVar(&DebugMode, "debug", false, "run the server in debug mode with higher verbosity")
 	flag.BoolVar(&PrettifyLogs, "pretty", false, "prettify output logs. If false, outputs JSON logs")
@@ -88,5 +88,13 @@ func main() {
 	defer cancel()
 	srv.Shutdown(ctx)
 	log.Info().Msg("shutting down")
-	os.Exit(0)
+	return 0, nil
+}
+
+func main() {
+	exit, err := Run()
+	if err != nil {
+		log.Error().Err(err).Msg("exited with error")
+	}
+	os.Exit(exit)
 }
