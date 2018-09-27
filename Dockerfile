@@ -17,4 +17,3 @@ COPY --from=builder /go/bin/draas /usr/bin/draas
 EXPOSE 8000
 
 ENTRYPOINT ["/usr/bin/draas"]
-
