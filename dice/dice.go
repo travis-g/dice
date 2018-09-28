@@ -3,15 +3,11 @@ package dice
 import (
 	"bytes"
 	"fmt"
-	"math/rand"
 	"regexp"
 	"strconv"
-	"time"
-)
 
-func init() {
-	rand.Seed(time.Now().UTC().UnixNano())
-}
+	"github.com/NebulousLabs/fastrand"
+)
 
 const (
 	// diceNotationPattern is the RegEx pattern that matches a dice notation
@@ -55,7 +51,7 @@ func (d Die) String() string {
 // Roll will roll a given Die and set the die's result. Results are in the range
 // [1, size].
 func (d *Die) roll() int {
-	r := 1 + rand.Intn(d.Size)
+	r := 1 + fastrand.Intn(d.Size)
 	d.Result = r
 	return r
 }
