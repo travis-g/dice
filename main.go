@@ -29,5 +29,5 @@ func main() {
 		os.Exit(1)
 	}
 	json, _ := toJson(roll)
-	fmt.Printf("%s", json)
+	fmt.Printf("%s\n", json)
 }
