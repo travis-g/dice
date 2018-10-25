@@ -12,32 +12,17 @@ You need [Go][golang] installed. To fetch the source and dependencies and place 
 $ go get -u github.com/travis-g/draas
 ```
 
-Compile with `go build`. Dependencies not yet fetched can be obtained with `go get`.
-
 ## Usage
 
-Full DRAAS options can be listed with the `-h` flag. To start a DRAAS server on the default port:
+To start a DRAAS server on the default port:
 
 ```console
-$ ./draas
-{"level":"info","time":"2018-07-09T11:47:24-04:00","message":"server started"}
+$ ./draas serve
+{"level":"info","address":":8000","time":"2018-10-25T08:03:48-07:00","message":"server started"}
 ...
 ```
 
-The server will gracefully shut down if `SIGINT`/<kdb>^C</kbd> is sent to the process. DRAAS also supports a `-debug` flag to increase verbosity.
-
-The `-pretty` flag will set DRAAS to output server logs with [zerolog][zerolog]'s pretty logging:
-
-```console
-$ draas -debug -pretty
-2018-07-09T11:50:39-04:00 |DEBU| debug mode enabled
-2018-07-09T11:50:39-04:00 |DEBU| seeded PRNG seed=1531151439237556569
-2018-07-09T11:50:39-04:00 |INFO| server started
-2018-07-09T11:51:04-04:00 |DEBU| rolled expanded=5+1 result=6 roll=2d6
-2018-07-09T11:51:10-04:00 |DEBU| rolled expanded=5 result=5 roll=1d20
-2018-07-09T11:51:21-04:00 |INFO| SIGINT received
-2018-07-09T11:51:21-04:00 |INFO| shutting down
-```
+The server will gracefully shut down if SIGINT/<kbd>^C</kbd> is sent to the process.
 
 ## API
 
@@ -47,7 +32,7 @@ This endpoint returns the result of evaluating given [dice notation][dice-notati
 
 | Method | Path            | Produces               |
 | ------ | --------------- | ---------------------- |
-| `GET`  | `/(roll/):dice` | `200 application/json` |
+| `GET`  | `/:dice` | `200 application/json` |
 
 If spaces are included in the roll (ex. `3d6 + 1`) the request will need to be URL encoded. Non-encoded spaces will result in a `400 bad request`.
 
@@ -75,14 +60,10 @@ $ curl \
 ## HTTP Status Codes
 
 - `200` - Success with roll result
-- `400` - Invalid request, usually due to a dice notation syntax error.
+- `400` - Invalid request, usually due to a dice notation syntax error or URL encoding issues.
 - `404` - Invalid path. This can mean that the requested resource did not exist or that the dice notation was not interpreted correctly.
 - `414` - Request-URI was too long or requested too many dice rolls.
 - `500` - Internal server error. Try again later, and contact the maintainer if the problem persists.
-
-## Notes
-
-- The dice rolls are pseudo-random. `crypto/rand` would be an easy swap-in, but a full CSPRNG integration is significantly slower compared to traditional seeding of `math.rand` with the system time. My intention is to implement `crypto/rand` in some capacity later.
 
 ## Todo
 
