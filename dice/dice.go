@@ -3,11 +3,10 @@ package dice
 import (
 	"bytes"
 	"fmt"
+	rand "math/rand"
 	"regexp"
 	"strconv"
 	"time"
-
-	rand "math/rand"
 	// rand "github.com/NebulousLabs/fastrand"
 )
 
@@ -68,10 +67,6 @@ func (d *Die) roll() int {
 	d.Result = r
 	return r
 }
-
-// func (d Die) Result() int {
-// 	return d.result
-// }
 
 // A Dice set is a group of like-sided dice from a dice notation string
 type Dice struct {

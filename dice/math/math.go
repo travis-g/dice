@@ -62,13 +62,15 @@ var (
 // A DiceExpression is a representation of a dice roll that must be evaluated.
 // This may be as simple as `d20` or as complex as `floor(max(d20,d12)/2+3)`.
 type DiceExpression struct {
-	Original string  `json:"original"`
-	Rolled   string  `json:"rolled"`
-	Result   float64 `json:"result"`
+	Original string       `json:"original"`
+	Rolled   string       `json:"rolled"`
+	Result   float64      `json:"result"`
+	Dice     []*dice.Dice `json:"dice"`
 }
 
+// Evaluate will calculate the result of dice expression.
 func (de *DiceExpression) Evaluate() error {
-	faux, err := Eval(de.Original)
+	faux, err := Evaluate(de.Original)
 	if err != nil {
 		return err
 	}
@@ -76,7 +78,7 @@ func (de *DiceExpression) Evaluate() error {
 	return dice.NewErrNotImplemented("not implemented")
 }
 
-// Eval evaluates a string expression of dice and math, returning a synopsis of
+// Evaluate evaluates a string expression of dice and math, returning a synopsis of
 // the various stages of evaluation and/or an error. The evaluation order needs
 // to follow order of operations:
 //
@@ -84,12 +86,14 @@ func (de *DiceExpression) Evaluate() error {
 //     2. Perform any function-based operations (adv, dis, floor),
 //     3. Multiplication/division,
 //     4. Addition/subtraction,
-func Eval(expression string) (*DiceExpression, error) {
+func Evaluate(expression string) (*DiceExpression, error) {
 	de := &DiceExpression{
 		Original: expression,
+		Dice:     make([]*dice.Dice, 0),
 	}
 	rolledBytes := dice.DiceNotationRegex.ReplaceAllFunc([]byte(de.Original), func(matchBytes []byte) []byte {
 		d, err := dice.Parse(string(matchBytes))
+		de.Dice = append(de.Dice, d)
 		if err != nil {
 			return []byte(``)
 		}
