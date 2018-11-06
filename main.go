@@ -29,7 +29,7 @@ func main() {
 			Aliases: []string{"r"},
 			Usage:   "roll dice",
 			Action: func(c *cli.Context) error {
-				return command.RollCommand(c.Args().Get(0))
+				return command.RollCommand(c)
 			},
 		},
 		cli.Command{
@@ -37,7 +37,7 @@ func main() {
 			Aliases: []string{"e"},
 			Usage:   "evaluate a dice expression",
 			Action: func(c *cli.Context) error {
-				return command.EvalCommand(c.Args().Get(0))
+				return command.EvalCommand(c)
 			},
 		},
 	}

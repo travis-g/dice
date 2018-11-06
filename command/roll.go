@@ -4,9 +4,11 @@ import (
 	"fmt"
 
 	"github.com/travis-g/draas/dice"
+	"github.com/urfave/cli"
 )
 
-func RollCommand(roll string) error {
+func RollCommand(c *cli.Context) error {
+	roll := c.Args().Get(0)
 	dice, err := dice.Parse(roll)
 	if err != nil {
 		return err

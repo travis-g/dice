@@ -2,21 +2,17 @@ package command
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/travis-g/draas/dice/math"
+	"github.com/urfave/cli"
 )
 
-func EvalCommand(eval string) error {
-	exp, err := math.Eval(eval)
+func EvalCommand(c *cli.Context) error {
+	eval := c.Args().Get(0)
+	exp, err := math.Evaluate(eval)
 	if err != nil {
 		return err
 	}
 	fmt.Println(exp.Result)
-	json, err := toJson(exp)
-	if err != nil {
-		return err
-	}
-	fmt.Fprintln(os.Stderr, string(json))
 	return nil
 }

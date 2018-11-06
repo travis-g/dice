@@ -1,6 +1,8 @@
 package command
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 // generic interface to JSON output function
 func toJson(i interface{}) (string, error) {
