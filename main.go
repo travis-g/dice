@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/travis-g/draas/dice"
-	"github.com/travis-g/draas/server"
+	"github.com/travis-g/draas/command"
+	"github.com/urfave/cli"
 )
 
 func toJson(i interface{}) (string, error) {
@@ -18,16 +18,33 @@ func toJson(i interface{}) (string, error) {
 }
 
 func main() {
-	if os.Args[1] == "serve" {
-		exit, _ := server.Run()
-		os.Exit(exit)
+	cmd := cli.NewApp()
+	cmd.Name = "dice"
+	cmd.Usage = "CLI dice roller"
+	cmd.Version = "0.0.1"
+
+	cmd.Commands = []cli.Command{
+		cli.Command{
+			Name:    "roll",
+			Aliases: []string{"r"},
+			Usage:   "roll dice",
+			Action: func(c *cli.Context) error {
+				return command.RollCommand(c.Args().Get(0))
+			},
+		},
+		cli.Command{
+			Name:    "eval",
+			Aliases: []string{"e"},
+			Usage:   "evaluate a dice expression",
+			Action: func(c *cli.Context) error {
+				return command.EvalCommand(c.Args().Get(0))
+			},
+		},
 	}
 
-	roll, err := dice.Parse(os.Args[1])
+	err := cmd.Run(os.Args)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		fmt.Printf("%s\n", err)
 		os.Exit(1)
 	}
-	json, _ := toJson(roll)
-	fmt.Printf("%s\n", json)
 }

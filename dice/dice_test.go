@@ -14,7 +14,7 @@ func BenchmarkParse3d20(b *testing.B) {
 func TestParse(t *testing.T) {
 	testCases := []struct {
 		notation string
-		count    int
+		count    uint
 		size     int
 		output   string
 	}{
@@ -24,12 +24,12 @@ func TestParse(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		dice, err := Parse(tc.notation)
-		dice.sum()
+		dice.Sum()
 		json, _ := json.Marshal(dice)
+		t.Logf("parsed %s; got %s", tc.notation, string(json))
 		if err != nil {
 			t.Fatalf("failed to parse %q", tc.notation)
 		}
-		t.Logf("parsed %s: got %v", tc.notation, string(json))
 		if dice.Size != tc.size {
 			t.Errorf("parsed %s; want size %d, got size %d", tc.notation, tc.size, dice.Size)
 		}
@@ -39,7 +39,7 @@ func TestParse(t *testing.T) {
 		if output := dice.Notation(); output != tc.output {
 			t.Errorf("parsed notation %s; want %s, got %s", tc.notation, tc.output, output)
 		}
-		if dice.Result < dice.Count {
+		if dice.Result < int(dice.Count) {
 			t.Errorf("parsed notation %s; got result %d which is less than count %d", tc.notation, dice.Result, dice.Count)
 		}
 	}
@@ -84,10 +84,10 @@ func TestRoll(t *testing.T) {
 				t.Fatalf("failed to parse %q", tc.notation)
 			}
 			t.Logf("parsed %s: got %v", tc.notation, dice)
-			if dice.Result < dice.Count {
+			if dice.Result < int(dice.Count) {
 				t.Errorf("parsed notation %s; got result %d which is less than count %d", tc.notation, dice.Result, dice.Count)
 			}
-			if dice.Result > dice.Size*dice.Count {
+			if dice.Result > dice.Size*int(dice.Count) {
 				t.Errorf("parsed notation %s; got result %d which should be impossible", tc.notation, dice.Result)
 			}
 		}
