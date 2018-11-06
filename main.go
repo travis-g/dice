@@ -44,7 +44,7 @@ func main() {
 
 	err := cmd.Run(os.Args)
 	if err != nil {
-		fmt.Printf("%s\n", err)
+		fmt.Fprintf(os.Stderr, "%s\n", err)
 		os.Exit(1)
 	}
 }
