@@ -13,6 +13,7 @@ func EvalCommand(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(exp.Result)
+	out, err := toTable(toStruct(exp))
+	fmt.Println(out)
 	return nil
 }
