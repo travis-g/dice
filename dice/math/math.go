@@ -93,6 +93,7 @@ func Evaluate(expression string) (*DiceExpression, error) {
 	}
 	rolledBytes := dice.DiceNotationRegex.ReplaceAllFunc([]byte(de.Original), func(matchBytes []byte) []byte {
 		d, err := dice.Parse(string(matchBytes))
+		// record dice:
 		de.Dice = append(de.Dice, d)
 		if err != nil {
 			return []byte(``)

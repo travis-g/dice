@@ -2,17 +2,16 @@ package dice
 
 import (
 	"bytes"
-	"fmt"
-	rand "math/rand"
+	"fmt" // rand "math/rand"
 	"regexp"
 	"strconv"
-	"time"
-	// rand "github.com/NebulousLabs/fastrand"
+
+	rand "github.com/NebulousLabs/fastrand"
 )
 
 func init() {
-	// seed PRNG
-	rand.Seed(time.Now().UTC().UnixNano())
+	// // seed PRNG
+	// rand.Seed(time.Now().UTC().UnixNano())
 }
 
 const (
@@ -99,10 +98,6 @@ func NewDice(size int, count uint) *Dice {
 	}
 	total := sumDice(dice)
 	return &Dice{s, c, total, dice}
-}
-
-func (dice Dice) Stats() *Dice {
-	return &dice
 }
 
 func sumDice(dice []*Die) int {

@@ -6,14 +6,16 @@ import (
 	"sort"
 
 	"github.com/ryanuber/columnize"
+	yaml "gopkg.in/yaml.v2"
 )
 
 var (
+	// thematic separator
 	delim = `🎲`
 )
 
 // generic interface to JSON output function
-func toJson(i interface{}) (string, error) {
+func toJSON(i interface{}) (string, error) {
 	b, err := json.Marshal(i)
 	if err != nil {
 		return "", err
@@ -58,6 +60,14 @@ func columnOutput(list []string, c *columnize.Config) string {
 	}
 
 	return columnize.Format(list, c)
+}
+
+func toYaml(data map[string]interface{}) (string, error) {
+	tmp, err := yaml.Marshal(data)
+	if err != nil {
+		return "", err
+	}
+	return string(tmp), nil
 }
 
 func toStruct(iface interface{}) map[string]interface{} {
