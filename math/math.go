@@ -44,10 +44,14 @@ func min(args ...interface{}) (interface{}, error) {
 
 var (
 	// DiceFunctions are functions usable in dice arithmetic operations, such as
-	// `adv()`, `dis()`, and `max()`.
+	// `round()`, `min()`, and `max()`.
 	DiceFunctions = map[string]govaluate.ExpressionFunction{
-		// "adv": max,
-		// "dis": min,
+		"abs": func(args ...interface{}) (interface{}, error) {
+			return math.Abs(args[0].(float64)), nil
+		},
+		"ceil": func(args ...interface{}) (interface{}, error) {
+			return math.Ceil(args[0].(float64)), nil
+		},
 		"floor": func(args ...interface{}) (interface{}, error) {
 			return math.Floor(args[0].(float64)), nil
 		},
@@ -56,6 +60,9 @@ var (
 		},
 		"max": max,
 		"min": min,
+		"round": func(args ...interface{}) (interface{}, error) {
+			return math.Round(args[0].(float64)), nil
+		},
 	}
 )
 

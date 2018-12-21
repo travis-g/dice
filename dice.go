@@ -75,7 +75,7 @@ type Dice struct {
 	Dice   []*Die `json:"dice"`
 }
 
-// String returns the dice notation format of the dice group in the format XdY,
+// Notation returns the dice notation format of the dice group in the format XdY,
 // where X is the count of dice to roll and Y is the size of the dice
 func (d Dice) Notation() string {
 	var s bytes.Buffer
@@ -88,6 +88,7 @@ func (d Dice) Notation() string {
 	return s.String()
 }
 
+// NewDice creates a new Dice object and returns its pointer
 func NewDice(size int, count uint) *Dice {
 	s := size
 	c := count
@@ -108,7 +109,7 @@ func sumDice(dice []*Die) int {
 	return sum
 }
 
-// sum returns and sets the total of a rolled dice set
+// Sum returns and sets the total of a rolled dice set
 func (d *Dice) Sum() int {
 	sum := sumDice(d.Dice)
 	d.Result = sum
