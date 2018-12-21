@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strconv"
 
-	rand "github.com/NebulousLabs/fastrand"
+	rand "gitlab.com/NebulousLabs/fastrand"
 )
 
 func init() {
