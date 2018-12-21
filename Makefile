@@ -1,8 +1,8 @@
 build:
 	@echo "==> Building the CLI..."
-	go build ../dice/cmd/dice
+	go build -ldflags="-s -w" ../dice/cmd/dice
 
 clean:
-	@rm dice
+	@rm dice dice.exe
 
 .PHONY: clean build
