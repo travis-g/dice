@@ -3,6 +3,6 @@ build:
 	go build -ldflags="-s -w" ../dice/cmd/dice
 
 clean:
-	@rm dice dice.exe
+	@rm -f dice dice.exe
 
 .PHONY: clean build
