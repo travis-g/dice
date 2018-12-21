@@ -14,7 +14,18 @@ var (
 	delim = `🎲`
 )
 
-// generic interface to JSON output function
+// generic `interface{}` to `map[string]interface{}` converter.
+func toStruct(i interface{}) (map[string]interface{}, error) {
+	var out map[string]interface{}
+	tmp, err := json.Marshal(i)
+	if err != nil {
+		return nil, err
+	}
+	json.Unmarshal(tmp, &out)
+	return out, nil
+}
+
+// generic `interface{}` to JSON string function
 func toJSON(i interface{}) (string, error) {
 	b, err := json.Marshal(i)
 	if err != nil {
@@ -68,14 +79,4 @@ func toYaml(data map[string]interface{}) (string, error) {
 		return "", err
 	}
 	return string(tmp), nil
-}
-
-func toStruct(iface interface{}) map[string]interface{} {
-	var out map[string]interface{}
-	tmp, err := json.Marshal(iface)
-	if err != nil {
-		panic(err)
-	}
-	json.Unmarshal(tmp, &out)
-	return out
 }
