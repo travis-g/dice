@@ -27,7 +27,7 @@ func Disadvantage(rolls ...*dice.Dice) *dice.Dice {
 	return rolls[0]
 }
 
-// These functions must work take interfaces as they must be valid
+// These functions must take interfaces as arguments since they must be valid
 // govaluate.ExpressionFunctions.
 func max(args ...interface{}) (interface{}, error) {
 	sort.Slice(args[:], func(i, j int) bool {
@@ -46,8 +46,8 @@ var (
 	// DiceFunctions are functions usable in dice arithmetic operations, such as
 	// `adv()`, `dis()`, and `max()`.
 	DiceFunctions = map[string]govaluate.ExpressionFunction{
-		"adv": max,
-		"dis": min,
+		// "adv": max,
+		// "dis": min,
 		"floor": func(args ...interface{}) (interface{}, error) {
 			return math.Floor(args[0].(float64)), nil
 		},
