@@ -2,7 +2,7 @@ package dice
 
 import (
 	"bytes"
-	"fmt" // rand "math/rand"
+	"fmt"
 	"regexp"
 	"strconv"
 

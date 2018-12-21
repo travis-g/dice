@@ -1,6 +1,6 @@
-# DRAAS
+# Dice
 
-DRAAS (Dice Rolls As A Service) is a scalable HTTP API solution to your dice-rolling needs. It's also technically a calculator.
+Dice is a CLI solution to your dice-rolling needs. It's also technically a calculator.
 
 [Dice notation][dice-notation] is an algebra-like system for indicating dice rolls in games. Dice rolls are usually given in the form **<em>X</em>d<em>Y</em>((-|+)<em>N</em>)**, where *X* is the number of *Y*-sided dice to roll, with an optional modifier *N*. *N* could be an integer or potentially another dice notation string. Additionally, _X_ can be omitted if the number of _Y_-sided dice to roll is 1: 1d<em>Y</em> can be written as simply d<em>Y</em>.
 
@@ -9,67 +9,11 @@ DRAAS (Dice Rolls As A Service) is a scalable HTTP API solution to your dice-rol
 You need [Go][golang] installed. To fetch the source and dependencies and place everything in your [GOPATH][gopath]:
 
 ```console
-$ go get -u github.com/travis-g/draas
+$ go get -u github.com/travis-g/dice/...
+# downloads/updates source
 ```
 
-## Usage
-
-To start a DRAAS server on the default port:
-
-```console
-$ ./draas serve
-{"level":"info","address":":8000","time":"2018-10-25T08:03:48-07:00","message":"server started"}
-...
-```
-
-The server will gracefully shut down if SIGINT/<kbd>^C</kbd> is sent to the process.
-
-## API
-
-### Evaluate a Roll Expression
-
-This endpoint returns the result of evaluating given [dice notation][dice-notation] expressions.
-
-| Method | Path            | Produces               |
-| ------ | --------------- | ---------------------- |
-| `GET`  | `/:dice` | `200 application/json` |
-
-If spaces are included in the roll (ex. `3d6 + 1`) the request will need to be URL encoded. Non-encoded spaces will result in a `400 bad request`.
-
-#### Parameters
-
-- `dice (string: <required>)` - Specifies the [dice notation](#dice-notation) expression to roll.
-
-#### Sample Request
-
-```console
-$ curl \
-    --request GET \
-    localhost:8000/1d20+1
-```
-
-#### Sample Response
-
-```json
-{
-  "expanded": "(8)+1",
-  "result": 9
-}
-```
-
-## HTTP Status Codes
-
-- `200` - Success with roll result
-- `400` - Invalid request, usually due to a dice notation syntax error or URL encoding issues.
-- `404` - Invalid path. This can mean that the requested resource did not exist or that the dice notation was not interpreted correctly.
-- `414` - Request-URI was too long or requested too many dice rolls.
-- `500` - Internal server error. Try again later, and contact the maintainer if the problem persists.
-
-## Todo
-
-- [ ] `MaxDice` enforcement to deny arbitrarily large and taxing dice rolls.
-- [ ] Better request and response logging.
-- [ ] Redo the API design: `POST` a JSON roll payload to `/roll`, look up a previous roll with `GET /roll/:id`, etc.
+The actual `main` package is defined in `cmd/dice`.
 
 [dice-notation]: https://en.wikipedia.org/wiki/Dice_notation
 [dice-reference]: https://wiki.roll20.net/Dice_Reference

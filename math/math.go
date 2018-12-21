@@ -6,7 +6,7 @@ import (
 	"sort"
 
 	"github.com/Knetic/govaluate"
-	"github.com/travis-g/draas/dice"
+	"github.com/travis-g/dice"
 )
 
 // Advantage takes a slice of Dice pointers and returns the first Dice object

@@ -5,7 +5,7 @@ import (
 	"os"
 	"sort"
 
-	"github.com/travis-g/draas/command"
+	"github.com/travis-g/dice/cmd/dice/command"
 	"github.com/urfave/cli"
 )
 

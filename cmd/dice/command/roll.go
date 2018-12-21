@@ -3,7 +3,7 @@ package command
 import (
 	"fmt"
 
-	"github.com/travis-g/draas/dice"
+	"github.com/travis-g/dice"
 	"github.com/urfave/cli"
 )
 
