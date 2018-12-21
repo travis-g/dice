@@ -26,19 +26,26 @@ func main() {
 
 	cmd.Commands = []cli.Command{
 		cli.Command{
-			Name:    "roll",
-			Aliases: []string{"r"},
-			Usage:   "roll plain dice",
-			Action: func(c *cli.Context) error {
-				return command.RollCommand(c)
-			},
-		},
-		cli.Command{
 			Name:    "eval",
 			Aliases: []string{"e"},
 			Usage:   "evaluate a dice expression",
 			Action: func(c *cli.Context) error {
 				return command.EvalCommand(c)
+			},
+		},
+		cli.Command{
+			Name:  "repl",
+			Usage: "enter a REPL mode",
+			Action: func(c *cli.Context) error {
+				return command.REPLCommand(c)
+			},
+		},
+		cli.Command{
+			Name:    "roll",
+			Aliases: []string{"r"},
+			Usage:   "roll plain dice",
+			Action: func(c *cli.Context) error {
+				return command.RollCommand(c)
 			},
 		},
 	}

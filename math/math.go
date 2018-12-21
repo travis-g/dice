@@ -113,7 +113,11 @@ func Evaluate(expression string) (*DiceExpression, error) {
 	if err != nil {
 		return nil, err
 	}
-	// result should be an float
-	de.Result = result.(float64)
-	return de, nil
+	// result should be a float
+	var ok bool
+	if de.Result, ok = result.(float64); ok {
+		return de, nil
+	}
+
+	return nil, fmt.Errorf("error evaluating roll")
 }
