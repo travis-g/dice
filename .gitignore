@@ -1,6 +1,8 @@
 dice
 dice.exe
 
+coverage.out
+
 # macOS
 .DS_Store
 .AppleDouble
