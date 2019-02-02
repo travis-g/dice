@@ -19,7 +19,7 @@ func main() {
 		cli.StringFlag{
 			Name:   "format",
 			Value:  "table",
-			Usage:  "output format",
+			Usage:  "output format (unimplemented)",
 			EnvVar: "FORMAT",
 		},
 	}

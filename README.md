@@ -6,7 +6,7 @@ Dice is a CLI solution to your dice-rolling needs. It's also technically a calcu
 
 ## Install
 
-You need [Go][golang] installed. To fetch just the main CLI and it in your [GOPATH][gopath]:
+You need [Go][golang] installed. To fetch just the main CLI and place it in your [GOPATH][gopath]:
 
 ```console
 go get -u github.com/travis-g/dice/cmd/dice
@@ -25,6 +25,8 @@ The actual `main` package is defined in `cmd/dice`. To test everything and build
 ```console
 make build
 ```
+
+See the `Makefile` for more.
 
 ## Tips
 
