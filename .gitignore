@@ -1,5 +1,6 @@
 dice
 dice.exe
+!cmd/dice
 
 coverage.out
 
