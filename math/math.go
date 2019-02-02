@@ -9,24 +9,6 @@ import (
 	"github.com/travis-g/dice"
 )
 
-// Advantage takes a slice of Dice pointers and returns the first Dice object
-// that is the last occurrence of the highest roll in the slice.
-func Advantage(rolls ...*dice.Dice) *dice.Dice {
-	sort.Slice(rolls[:], func(i, j int) bool {
-		return rolls[i].Result < rolls[j].Result
-	})
-	return rolls[len(rolls)-1]
-}
-
-// Disadvantage has the same functionality as Advantage, but returns the first
-// occurrence of the lowest roll in the slice.
-func Disadvantage(rolls ...*dice.Dice) *dice.Dice {
-	sort.Slice(rolls[:], func(i, j int) bool {
-		return rolls[i].Result < rolls[j].Result
-	})
-	return rolls[0]
-}
-
 // These functions must take interfaces as arguments since they must be valid
 // govaluate.ExpressionFunctions.
 func max(args ...interface{}) (interface{}, error) {
@@ -55,9 +37,6 @@ var (
 		"floor": func(args ...interface{}) (interface{}, error) {
 			return math.Floor(args[0].(float64)), nil
 		},
-		"int": func(args ...interface{}) (interface{}, error) {
-			return args[0].(int), nil
-		},
 		"max": max,
 		"min": min,
 		"round": func(args ...interface{}) (interface{}, error) {
@@ -67,7 +46,8 @@ var (
 )
 
 // A DiceExpression is a representation of a dice roll that must be evaluated.
-// This may be as simple as `d20` or as complex as `floor(max(d20,d12)/2+3)`.
+// This may be a simple expression like `d20` or more complex, like
+// `floor(max(d20,d12)/2+3)`.
 type DiceExpression struct {
 	Original string       `json:"original"`
 	Rolled   string       `json:"rolled"`
@@ -75,29 +55,30 @@ type DiceExpression struct {
 	Dice     []*dice.Dice `json:"dice"`
 }
 
-// Evaluate will calculate the result of dice expression.
-func (de *DiceExpression) Evaluate() error {
-	faux, err := Evaluate(de.Original)
-	if err != nil {
-		return err
-	}
-	de = faux
-	return dice.NewErrNotImplemented("not implemented")
+func (de *DiceExpression) String() string {
+	return fmt.Sprintf("%s = %v", de.Rolled, de.Result)
 }
 
-// Evaluate evaluates a string expression of dice and math, returning a synopsis of
-// the various stages of evaluation and/or an error. The evaluation order needs
-// to follow order of operations:
+// Evaluate evaluates a string expression of dice and math, returning a synopsis
+// of the various stages of evaluation and/or an error. The evaluation order
+// needs to follow order of operations:
 //
-//     1. Roll all dice by matching for regex and substituting the roll values,
-//     2. Perform any function-based operations (adv, dis, floor),
-//     3. Multiplication/division,
-//     4. Addition/subtraction,
+//  1. Roll all dice by matching for regex and substituting the roll values,
+//  2. Perform any function-based operations (adv, dis, floor),
+//  3. Multiplication/division,
+//  4. Addition/subtraction
+//
+// Evaluate can likely benefit immensely from optimization and more fine-grained
+// unit tests/benchmarks.
 func Evaluate(expression string) (*DiceExpression, error) {
 	de := &DiceExpression{
 		Original: expression,
 		Dice:     make([]*dice.Dice, 0),
 	}
+	// systematically parse the DiceExpression for dice notation substrings,
+	// evaluate and expand the rolls, replace the notation strings with their
+	// fully-rolled and expanded counterparts, and save the expanded expression
+	// to the object.
 	rolledBytes := dice.DiceNotationRegex.ReplaceAllFunc([]byte(de.Original), func(matchBytes []byte) []byte {
 		d, err := dice.Parse(string(matchBytes))
 		// record dice:
@@ -105,7 +86,7 @@ func Evaluate(expression string) (*DiceExpression, error) {
 		if err != nil {
 			return []byte(``)
 		}
-		return []byte(fmt.Sprintf("%d", d.Result))
+		return []byte(fmt.Sprintf("(%s)", d.Expanded))
 	})
 	de.Rolled = string(rolledBytes)
 

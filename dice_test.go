@@ -5,10 +5,24 @@ import (
 	"testing"
 )
 
+// package-level variable to prevent optimizations
+var i interface{}
+
 func BenchmarkParse3d20(b *testing.B) {
+	var d *Dice
 	for n := 0; n < b.N; n++ {
-		Parse("3d20")
+		d, _ = Parse("3d20")
 	}
+	i = d
+}
+
+func TestRollableInterfaces(t *testing.T) {
+	var rollables = []Rollable{
+		&Die{},
+		&Dice{},
+		&FateDie{},
+	}
+	t.Log(rollables)
 }
 
 func TestParse(t *testing.T) {
@@ -51,9 +65,9 @@ func TestSumDice(t *testing.T) {
 		total int
 	}{
 		{[]*Die{
-			&Die{20, 1},
-			&Die{20, 2},
-			&Die{20, 3},
+			&Die{Size: 20, Result: 1},
+			&Die{Size: 20, Result: 2},
+			&Die{Size: 20, Result: 3},
 		}, 6},
 	}
 	for _, tc := range testCases {
