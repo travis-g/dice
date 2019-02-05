@@ -1,6 +1,6 @@
 build: test
 	@echo "==> Building the CLI..."
-	go build -ldflags="-s -w" ../dice/cmd/dice
+	go build -ldflags="-s -w" ./cmd/dice
 
 test:
 	@echo "==> Running tests..."
