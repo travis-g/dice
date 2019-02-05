@@ -8,9 +8,10 @@ import (
 )
 
 func init() {
+	rand.Seed(time.Now().UTC().UnixNano())
+
 	// seed PRNG with crypto-secure integer
 	// rand.Seed(cryptoSeed())
-	rand.Seed(time.Now().UTC().UnixNano())
 }
 
 func cryptoSeed() int64 {
