@@ -23,6 +23,8 @@ func Output(c *cli.Context, i interface{}) (string, error) {
 	}
 	switch format := c.String("format"); format {
 	// TODO(travis-g): use i.String() output for unspecified format
+	case "":
+		return fmt.Sprintf("%s", i), nil
 	case "table":
 		return toTable(data)
 	case "json":

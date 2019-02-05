@@ -19,9 +19,8 @@ func main() {
 	// command
 	globalFlags := []cli.Flag{
 		cli.StringFlag{
-			Name: "format",
-			// TODO(travis-g): default format should be ""/String()
-			Value:  "table",
+			Name:   "format",
+			Value:  "",
 			Usage:  "output format",
 			EnvVar: "FORMAT",
 		},

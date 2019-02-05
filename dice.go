@@ -3,11 +3,10 @@ package dice
 import (
 	"bytes"
 	"fmt"
+	rand "math/rand"
 	"regexp"
 	"strconv"
 	"strings"
-
-	rand "gitlab.com/NebulousLabs/fastrand"
 )
 
 const (
@@ -17,7 +16,7 @@ const (
 	DiceNotationPattern = `(?P<count>\d*)d(?P<size>\d{1,})`
 
 	// DropKeepNotationPattern is the RegEx string pattern that matches a
-	// drop/keep-style dice roll.
+	// drop/keep-style dice roll (unimplemented).
 	DropKeepNotationPattern = `(?P<count>\d+)?d(?P<size>\d{1,})(?P<dropkeep>(?P<op>[dk][lh]?)(?P<num>\d{1,}))?`
 )
 
@@ -78,10 +77,13 @@ func (d Die) Type() string {
 }
 
 func (d *Die) String() string {
-	return string(d.Result)
+	return fmt.Sprintf("%d", d.Result)
 }
 
+// A FateDie (a.k.a. "Fudge die") is a die with six sides, {-1, -1, 0, 0, 1, 1}.
+// In a pinch, a FateDie can be emulated by evaluating `1d3-2`.
 type FateDie struct {
+	rolled bool
 	Result int `json:"result"`
 }
 
@@ -95,9 +97,9 @@ func (f FateDie) Type() string {
 }
 
 // Roll will Roll a given FateDie and set the die's result. Fate dice can have
-// results in the range [-1, 1].
+// results in [-1, 1].
 func (f FateDie) Roll() {
-	f.Result = rand.Intn(2) - 1
+	f.Result = rand.Intn(3) - 2
 }
 
 // A Dice set is a group of like-sided dice from a dice notation string
@@ -124,7 +126,7 @@ func (d Dice) Notation() string {
 }
 
 func (d *Dice) String() string {
-	return string(d.Result)
+	return fmt.Sprintf("%s => %d", d.Expanded, d.Result)
 }
 
 // Type returns the Dice type
