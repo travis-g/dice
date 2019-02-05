@@ -19,7 +19,7 @@ func REPLCommand(c *cli.Context) error {
 
 	// Begin the REPL:
 	for {
-		fmt.Printf(replPrompt)
+		fmt.Fprintf(os.Stderr, replPrompt)
 		scanned := scanner.Scan()
 		if !scanned {
 			return nil
@@ -32,8 +32,10 @@ func REPLCommand(c *cli.Context) error {
 				fmt.Fprintln(os.Stderr, err)
 				continue
 			}
-			m, _ := toStruct(exp)
-			out, _ := toTable(m)
+			out, err := Output(c, exp)
+			if err != nil {
+				return err
+			}
 			fmt.Println(out)
 		} else {
 			return nil

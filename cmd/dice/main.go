@@ -15,12 +15,21 @@ func main() {
 	cmd.Usage = "CLI dice roller"
 	cmd.Version = "0.0.1"
 
-	cmd.Flags = []cli.Flag{
+	// globalFlags should be set up so that they can be used anywhere in the
+	// command
+	globalFlags := []cli.Flag{
 		cli.StringFlag{
-			Name:   "format",
+			Name: "format",
+			// TODO(travis-g): default format should be ""/String()
 			Value:  "table",
-			Usage:  "output format (unimplemented)",
+			Usage:  "output format",
 			EnvVar: "FORMAT",
+		},
+		cli.StringFlag{
+			Name:   "field",
+			Value:  "",
+			Usage:  "output specific field (unimplemented)",
+			EnvVar: "FIELD",
 		},
 	}
 
@@ -29,6 +38,7 @@ func main() {
 			Name:    "eval",
 			Aliases: []string{"e"},
 			Usage:   "evaluate a dice expression",
+			Flags:   globalFlags,
 			Action: func(c *cli.Context) error {
 				return command.EvalCommand(c)
 			},
@@ -36,6 +46,7 @@ func main() {
 		cli.Command{
 			Name:  "repl",
 			Usage: "enter a REPL mode",
+			Flags: globalFlags,
 			Action: func(c *cli.Context) error {
 				return command.REPLCommand(c)
 			},
@@ -44,6 +55,7 @@ func main() {
 			Name:    "roll",
 			Aliases: []string{"r"},
 			Usage:   "roll plain dice",
+			Flags:   globalFlags,
 			Action: func(c *cli.Context) error {
 				return command.RollCommand(c)
 			},

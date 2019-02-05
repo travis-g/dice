@@ -1,82 +1,45 @@
 package command
 
 import (
-	"encoding/json"
 	"fmt"
-	"sort"
 
-	"github.com/ryanuber/columnize"
-	yaml "gopkg.in/yaml.v2"
+	"github.com/urfave/cli"
 )
 
-var (
-	// thematic separator
-	delim = `🎲`
-)
-
-// generic `interface{}` to `map[string]interface{}` converter.
-func toStruct(i interface{}) (map[string]interface{}, error) {
-	var out map[string]interface{}
-	tmp, err := json.Marshal(i)
-	if err != nil {
-		return nil, err
+// Field extracts a field from a given interface.
+func Field(i interface{}, field string) interface{} {
+	var val interface{}
+	if data, ok := i.(map[string]interface{}); ok {
+		val = data[field]
 	}
-	json.Unmarshal(tmp, &out)
-	return out, nil
+	return val
 }
 
-// generic `interface{}` to JSON string function
-func toJSON(i interface{}) (string, error) {
-	b, err := json.Marshal(i)
+// Output prints an interface based on the desired format.
+func Output(c *cli.Context, i interface{}) (string, error) {
+	data, err := toMapStringInterface(i)
 	if err != nil {
 		return "", err
 	}
-	return string(b), nil
+	switch format := c.String("format"); format {
+	// TODO(travis-g): use i.String() output for unspecified format
+	case "table":
+		return toTable(data)
+	case "json":
+		return toJSON(data)
+	case "yaml", "yml":
+		return toYaml(data)
+	default:
+		return "", fmt.Errorf("requested format %v unhandled", err)
+	}
 }
 
-func toTable(data map[string]interface{}) (string, error) {
-	props := make([]string, 0, len(data)+1)
-	if len(data) > 0 {
-		keys := make([]string, 0, len(data))
-		for k := range data {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-
-		for _, k := range keys {
-			v := data[k]
-
-			props = append(props, fmt.Sprintf("%s %s %v", k, delim, v))
-		}
-	}
-	str := columnOutput(props, &columnize.Config{
-		Delim: delim,
-	})
-	return str, nil
-}
-
-func columnOutput(list []string, c *columnize.Config) string {
-	if len(list) == 0 {
-		return ""
-	}
-
-	if c == nil {
-		c = &columnize.Config{}
-	}
-	if c.Glue == "" {
-		c.Glue = "    "
-	}
-	if c.Empty == "" {
-		c.Empty = "n/a"
-	}
-
-	return columnize.Format(list, c)
-}
-
-func toYaml(data map[string]interface{}) (string, error) {
-	tmp, err := yaml.Marshal(data)
+// OutputField prints a given field from a provided interface using a provided
+// context's format.
+func OutputField(c *cli.Context, i interface{}, field string) (string, error) {
+	data, err := toMapStringInterface(i)
 	if err != nil {
 		return "", err
 	}
-	return string(tmp), nil
+	return Output(c, data[field])
 }

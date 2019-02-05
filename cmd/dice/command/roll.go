@@ -15,6 +15,10 @@ func RollCommand(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(dice.Result)
+	out, err := Output(c, dice)
+	if err != nil {
+		return err
+	}
+	fmt.Println(out)
 	return nil
 }

@@ -37,6 +37,7 @@ type Rollable interface {
 	// Roll should be used to also set the object's Result
 	Roll()
 	String() string
+	Type() string
 }
 
 // A Die represents a variable-sided die in memory, including the result of
@@ -70,16 +71,26 @@ func (d *Die) Roll() {
 	}
 }
 
-func (d Die) String() string {
+// Type returns the die type
+func (d Die) Type() string {
 	// Largest die is d2147483647
 	return d.kind
+}
+
+func (d *Die) String() string {
+	return string(d.Result)
 }
 
 type FateDie struct {
 	Result int `json:"result"`
 }
 
-func (f FateDie) String() string {
+func (f *FateDie) String() string {
+	return string(f.Result)
+}
+
+// Type returns the FateDie's type
+func (f FateDie) Type() string {
 	return "dF"
 }
 
@@ -112,8 +123,13 @@ func (d Dice) Notation() string {
 	return s.String()
 }
 
-func (d Dice) String() string {
-	return d.Notation()
+func (d *Dice) String() string {
+	return string(d.Result)
+}
+
+// Type returns the Dice type
+func (d Dice) Type() string {
+	return fmt.Sprintf("d%d", d.Size)
 }
 
 // NewDice creates a new Dice object and returns its pointer
