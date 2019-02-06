@@ -6,8 +6,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/ghodss/yaml"
 	"github.com/ryanuber/columnize"
+	"gopkg.in/yaml.v2"
 )
 
 var (
@@ -82,6 +82,6 @@ func toYaml(data map[string]interface{}) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	// Yaml likes a trailing newline
+	// Yaml likes a trailing newline, I don't
 	return strings.TrimSpace(string(tmp)), nil
 }
