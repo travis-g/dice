@@ -41,11 +41,12 @@ func BenchmarkEvaluateCount(b *testing.B) {
 		{"3d20"},
 		{"4d20"},
 		{"5d20"},
-		{"6d20"},
-		{"7d20"},
-		{"8d20"},
-		{"9d20"},
 		{"10d20"},
+		{"15d20"},
+		{"20d20"},
+		{"25d20"},
+		{"50d20"},
+		{"100d20"},
 	}
 	var de *DiceExpression
 	for _, bmark := range benchmarks {

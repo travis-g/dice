@@ -63,8 +63,8 @@ func TestParse(t *testing.T) {
 		if output := dice.Notation(); output != tc.output {
 			t.Errorf("parsed notation %s; want %s, got %s", tc.notation, tc.output, output)
 		}
-		if dice.Result < int(dice.Count) {
-			t.Errorf("parsed notation %s; got result %d which is less than count %d", tc.notation, dice.Result, dice.Count)
+		if dice.Result < float64(dice.Count) {
+			t.Errorf("parsed notation %s; got result %f which is less than count %d", tc.notation, dice.Result, dice.Count)
 		}
 	}
 }
@@ -108,11 +108,11 @@ func TestRoll(t *testing.T) {
 				t.Fatalf("failed to parse %q", tc.notation)
 			}
 			t.Logf("parsed %s: got %v", tc.notation, dice)
-			if dice.Result < int(dice.Count) {
-				t.Errorf("parsed notation %s; got result %d which is less than count %d", tc.notation, dice.Result, dice.Count)
+			if dice.Result < float64(dice.Count) {
+				t.Errorf("parsed notation %s; got result %f which is less than count %d", tc.notation, dice.Result, dice.Count)
 			}
-			if dice.Result > dice.Size*int(dice.Count) {
-				t.Errorf("parsed notation %s; got result %d which should be impossible", tc.notation, dice.Result)
+			if dice.Result > float64(dice.Size*int(dice.Count)) {
+				t.Errorf("parsed notation %s; got result %f which should be impossible", tc.notation, dice.Result)
 			}
 		}
 	}
