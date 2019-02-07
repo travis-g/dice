@@ -1,9 +1,11 @@
 package math
 
 import (
+	"bytes"
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 
 	"github.com/Knetic/govaluate"
 	"github.com/travis-g/dice"
@@ -56,7 +58,9 @@ type DiceExpression struct {
 }
 
 func (de *DiceExpression) String() string {
-	return fmt.Sprintf("%s = %v", de.Rolled, de.Result)
+	// HACK(tssde71): since de.Result is a float Sprint is the easiest way to
+	// auto-truncate any unnecessary decimals
+	return strings.Join([]string{de.Rolled, "=", fmt.Sprint(de.Result)}, " ")
 }
 
 // Evaluate evaluates a string expression of dice and math, returning a synopsis
@@ -86,7 +90,12 @@ func Evaluate(expression string) (*DiceExpression, error) {
 		if err != nil {
 			return []byte(``)
 		}
-		return []byte(fmt.Sprintf("(%s)", d.Expanded))
+		// write expanded result back as bytes
+		var buf bytes.Buffer
+		buf.WriteString(`(`)
+		buf.WriteString(d.Expanded)
+		buf.WriteString(`)`)
+		return buf.Bytes()
 	})
 	de.Rolled = string(rolledBytes)
 

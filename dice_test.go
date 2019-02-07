@@ -9,11 +9,21 @@ import (
 var i interface{}
 
 func BenchmarkParse3d20(b *testing.B) {
+	b.ReportAllocs()
 	var d *Dice
 	for n := 0; n < b.N; n++ {
 		d, _ = Parse("3d20")
 	}
 	i = d
+}
+
+func BenchmarkNewFateDie(b *testing.B) {
+	b.ReportAllocs()
+	var f *FateDie
+	for n := 0; n < b.N; n++ {
+		f, _ = NewFateDie()
+	}
+	i = f
 }
 
 func TestRollableInterfaces(t *testing.T) {

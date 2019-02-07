@@ -34,7 +34,7 @@ var (
 // or many dice of any type.
 type Rollable interface {
 	// Roll should be used to also set the object's Result
-	Roll()
+	Roll() float64
 	String() string
 	Type() string
 }
@@ -54,20 +54,22 @@ func NewDie(size int) (*Die, error) {
 	if size < 1 {
 		return nil, fmt.Errorf("dice: call to setSize with size < 1")
 	}
-	d := new(Die)
-	d.Size = size
-	d.kind = fmt.Sprintf("d%d", d.Size)
+	d := &Die{
+		Size: size,
+		kind: strings.Join([]string{"d", strconv.Itoa(size)}, ""),
+	}
 	d.Roll()
 	return d, nil
 }
 
 // Roll will Roll a given Die (if unrolled) and set the die's result. Results
 // are in the range [1, size].
-func (d *Die) Roll() {
+func (d *Die) Roll() float64 {
 	if !d.rolled {
 		d.Result = 1 + rand.Intn(d.Size)
 		d.rolled = true
 	}
+	return float64(d.Result)
 }
 
 // Type returns the die type
@@ -76,8 +78,13 @@ func (d Die) Type() string {
 	return d.kind
 }
 
+// String returns an expression-like representation of a rolled Die or the kind
+// of die if it has not been rolled.
 func (d *Die) String() string {
-	return fmt.Sprintf("%d", d.Result)
+	if d.rolled {
+		return strconv.Itoa(d.Result)
+	}
+	return d.kind
 }
 
 // A FateDie (a.k.a. "Fudge die") is a die with six sides, {-1, -1, 0, 0, 1, 1}.
@@ -96,10 +103,21 @@ func (f FateDie) Type() string {
 	return "dF"
 }
 
+// NewFateDie create and returns a new FateDie. The error will always be nil.
+func NewFateDie() (*FateDie, error) {
+	f := new(FateDie)
+	f.Roll()
+	return f, nil
+}
+
 // Roll will Roll a given FateDie and set the die's result. Fate dice can have
 // results in [-1, 1].
-func (f FateDie) Roll() {
-	f.Result = rand.Intn(3) - 2
+func (f *FateDie) Roll() float64 {
+	if !f.rolled {
+		f.Result = rand.Intn(3) - 2
+		f.rolled = true
+	}
+	return float64(f.Result)
 }
 
 // A Dice set is a group of like-sided dice from a dice notation string
@@ -118,20 +136,20 @@ func (d Dice) Notation() string {
 	var s bytes.Buffer
 
 	if l := len(d.Dice); l > 1 {
-		fmt.Fprintf(&s, "%d", l)
+		s.WriteString(strconv.Itoa(l))
 	}
+	s.WriteString(strings.Join([]string{"d", strconv.Itoa(d.Size)}, ""))
 
-	fmt.Fprintf(&s, "d%d", d.Size)
 	return s.String()
 }
 
 func (d *Dice) String() string {
-	return fmt.Sprintf("%s => %d", d.Expanded, d.Result)
+	return strings.Join([]string{d.Expanded, "=>", strconv.Itoa(d.Result)}, " ")
 }
 
 // Type returns the Dice type
 func (d Dice) Type() string {
-	return fmt.Sprintf("d%d", d.Size)
+	return strings.Join([]string{"d", strconv.Itoa(d.Size)}, "")
 }
 
 // NewDice creates a new Dice object and returns its pointer
@@ -157,11 +175,11 @@ func NewDice(size int, count uint) *Dice {
 }
 
 // Roll rolls the dice within a Dice set and sums the result with `Sum()`
-func (d *Dice) Roll() {
+func (d *Dice) Roll() float64 {
 	for _, i := range d.Dice {
 		i.Roll()
 	}
-	d.Sum()
+	return float64(d.Sum())
 }
 
 func sumDice(dice []*Die) int {
@@ -197,28 +215,21 @@ func (d *Dice) Parse(notation string) error {
 
 // parse is the real-deal notation parsing method.
 func parse(notation string) (*Dice, error) {
-	var (
-		size  uint
-		count uint
-	)
 	matches := DiceNotationRegex.FindStringSubmatch(notation)
 	if len(matches) < 3 {
 		return &Dice{}, &ErrParseError{notation, notation, "", ": failed to identify dice components"}
 	}
-	scount, ssize := matches[1], matches[2]
 
 	// Parse and cast dice properties from regex capture values
-	ucount, err := strconv.ParseUint(scount, 10, 0)
-	count = uint(ucount)
+	count, err := strconv.ParseUint(matches[1], 10, 0)
 	if err != nil {
 		// either there was an implied count, ex 'd20', or count was invalid
 		count = 1
 	}
-	usize, err := strconv.ParseUint(ssize, 10, 0)
+	size, err := strconv.ParseUint(matches[2], 10, 0)
 	if err != nil {
-		return &Dice{}, &ErrParseError{notation, ssize, "size", ": non-uint size"}
+		return &Dice{}, &ErrParseError{notation, matches[2], "size", ": non-uint size"}
 	}
-	size = uint(usize)
 
-	return NewDice(int(size), count), nil
+	return NewDice(int(size), uint(count)), nil
 }

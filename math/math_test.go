@@ -6,12 +6,13 @@ import "testing"
 var i interface{}
 
 func BenchmarkEvaluate(b *testing.B) {
+	b.ReportAllocs()
 	benchmarks := []struct {
 		expression string
 	}{
 		{""},
+		{"d6"},
 		{"d20"},
-		{"d4"},
 		{"1d20"},
 		{"3d20"},
 		{"1d20+1d20+1d20"},
@@ -31,6 +32,7 @@ func BenchmarkEvaluate(b *testing.B) {
 }
 
 func BenchmarkEvaluateCount(b *testing.B) {
+	b.ReportAllocs()
 	benchmarks := []struct {
 		expression string
 	}{
@@ -57,6 +59,7 @@ func BenchmarkEvaluateCount(b *testing.B) {
 }
 
 func BenchmarkEvaluateSize(b *testing.B) {
+	b.ReportAllocs()
 	benchmarks := []struct {
 		expression string
 	}{
@@ -84,6 +87,7 @@ func BenchmarkEvaluateSize(b *testing.B) {
 }
 
 func BenchmarkEvaluateDiceFunctions(b *testing.B) {
+	b.ReportAllocs()
 	benchmarks := []struct {
 		name       string
 		expression string
