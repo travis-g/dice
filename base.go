@@ -4,7 +4,18 @@ import (
 	crand "crypto/rand"
 	"fmt"
 	"math/big"
+	"regexp"
 	"strings"
+)
+
+var (
+	// DiceNotationRegex is the compiled RegEx for parsing supported dice
+	// notations.
+	DiceNotationRegex = regexp.MustCompile(`(?P<count>\d*)d(?P<size>(?:\d{1,}|F))`)
+
+	// DropKeepNotationRegex is the compiled RegEx for parsing drop/keep dice
+	// notations (unimplemented).
+	DropKeepNotationRegex = regexp.MustCompile(`(?P<count>\d+)?d(?P<size>\d{1,})(?P<dropkeep>(?P<op>[dk][lh]?)(?P<num>\d{1,}))?`)
 )
 
 // CryptoInt64 is a convenience function that returns a cryptographically random
@@ -29,5 +40,6 @@ func quote(s string) string {
 }
 
 func expression(i ...interface{}) string {
-	return strings.Replace(strings.Trim(strings.Join(strings.Fields(fmt.Sprint(i...)), "+"), "[]"), "+-", "-", -1)
+	raw := strings.Trim(strings.Join(strings.Fields(fmt.Sprint(i...)), "+"), "[]")
+	return strings.Replace(raw, "+-", "-", -1)
 }

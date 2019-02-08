@@ -9,33 +9,6 @@ import (
 // package-level variable to prevent optimizations
 var i interface{}
 
-func BenchmarkParse3d20(b *testing.B) {
-	b.ReportAllocs()
-	var d DieSet
-	for n := 0; n < b.N; n++ {
-		d, _ = Parse("3d20")
-	}
-	i = d
-}
-
-func BenchmarkNewFateDie(b *testing.B) {
-	b.ReportAllocs()
-	var f *FateDie
-	for n := 0; n < b.N; n++ {
-		f, _ = NewFateDie()
-	}
-	i = f
-}
-
-func TestRollableInterfaces(t *testing.T) {
-	var rollables = []Rollable{
-		&Die{},
-		&DieSet{},
-		&FateDie{},
-	}
-	t.Log(rollables)
-}
-
 func TestParse(t *testing.T) {
 	testCases := []struct {
 		notation string
@@ -153,5 +126,26 @@ func TestRoll(t *testing.T) {
 				t.Errorf("parsed notation %s; got result %f which should be impossible", tc.notation, dice.Result)
 			}
 		}
+	}
+}
+
+// Benchmarks
+
+var diceNotationStrings = []struct {
+	notation string
+}{
+	{"d20"},
+	{"1d20"},
+}
+
+func BenchmarkParse(b *testing.B) {
+	b.ReportAllocs()
+	for _, tc := range diceNotationStrings {
+		b.Run(tc.notation, func(b *testing.B) {
+			notation := tc.notation
+			for n := 0; n < b.N; n++ {
+				Parse(notation)
+			}
+		})
 	}
 }
