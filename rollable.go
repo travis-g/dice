@@ -31,4 +31,5 @@ func sumRollables(rollables ...Rollable) (float64, error) {
 
 // A RollableSet are sets of Rollables
 type RollableSet interface {
+	Rollable
 }
