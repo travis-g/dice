@@ -1,8 +1,12 @@
 package dice
 
-var _ Rollable = (*FateDie)(nil)
+import (
+	"strconv"
+	"strings"
+)
 
-// var _ Rollable = (*FateDieSet)(nil)
+var _ Rollable = (*FateDie)(nil)
+var _ Rollable = (*FateDieSet)(nil)
 var _ RollableSet = (*FateDieSet)(nil)
 
 // A FateDie (a.k.a. "Fudge die") is a die with six sides, {-1, -1, 0, 0, 1, 1}.
@@ -44,9 +48,66 @@ func (f FateDie) Type() string {
 
 // A FateDieSet set is a group of fate/fudge dice from a notation
 type FateDieSet struct {
-	Count    uint       `json:"count"`
-	Dice     []*FateDie `json:"dice,omitempty"`
-	Drop     int        `json:"drop,omitempty"`
-	Expanded string     `json:"expanded"`
-	Result   float64    `json:"result"`
+	Count    uint      `json:"count"`
+	Dice     []FateDie `json:"dice,omitempty"`
+	Drop     int       `json:"drop,omitempty"`
+	Expanded string    `json:"expanded"`
+	Result   float64   `json:"result"`
+}
+
+// NewFateDieSet creates and returns a rolled FateDieSet.
+func NewFateDieSet(count uint) FateDieSet {
+	dice := make([]FateDie, count)
+	results := make([]int, count)
+	sum := 0
+	for i := range dice {
+		die, err := NewFateDie()
+		if err != nil {
+			continue
+		}
+		dice[i] = *die
+		results[i] = die.Result
+		sum += die.Result
+	}
+	return FateDieSet{
+		Count:    count,
+		Dice:     dice,
+		Expanded: expression(results),
+		Result:   (float64)(sum),
+	}
+}
+
+func (d FateDieSet) String() string {
+	return strings.Join([]string{d.Expanded, "=>", strconv.FormatFloat(d.Result, 'f', -1, 64)}, " ")
+}
+
+// Roll rolls the dice within a FateDieSet.
+func (d *FateDieSet) Roll() (float64, error) {
+	for _, d := range d.Dice {
+		_, err := d.Roll()
+		if err != nil {
+			return 0, err
+		}
+	}
+	return d.Sum(), nil
+}
+
+// Type returns the type of the dice within a FateDieSet, which will always be
+// "dF".
+func (d FateDieSet) Type() string {
+	return "dF"
+}
+
+func sumFateDice(dice []FateDie) int {
+	sum := 0
+	for _, d := range dice {
+		sum += d.Result
+	}
+	return sum
+}
+
+// Sum returns and sets the total of a rolled dice set
+func (d FateDieSet) Sum() float64 {
+	d.Result = (float64)(sumFateDice(d.Dice))
+	return d.Result
 }
