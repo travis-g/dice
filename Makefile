@@ -10,7 +10,7 @@ test:
 
 bench: test
 	@echo "==> Running benchmarks (may take a while)..."
-	@go test -run=XXX -bench=. -benchtime=5s . ./math
+	@go test -run=XXX -bench=. -benchtime=3s . ./math
 
 cover:
 	@echo "==> Calculating coverage..."

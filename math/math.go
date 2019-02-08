@@ -51,10 +51,10 @@ var (
 // This may be a simple expression like `d20` or more complex, like
 // `floor(max(d20,d12)/2+3)`.
 type DiceExpression struct {
-	Original string       `json:"original"`
-	Rolled   string       `json:"rolled"`
-	Result   float64      `json:"result"`
-	Dice     []*dice.Dice `json:"dice"`
+	Original string        `json:"original"`
+	Rolled   string        `json:"rolled"`
+	Result   float64       `json:"result"`
+	Dice     []dice.DieSet `json:"dice"`
 }
 
 func (de *DiceExpression) String() string {
@@ -77,7 +77,7 @@ func (de *DiceExpression) String() string {
 func Evaluate(expression string) (*DiceExpression, error) {
 	de := &DiceExpression{
 		Original: expression,
-		Dice:     make([]*dice.Dice, 0),
+		Dice:     make([]dice.DieSet, 0),
 	}
 	// systematically parse the DiceExpression for dice notation substrings,
 	// evaluate and expand the rolls, replace the notation strings with their

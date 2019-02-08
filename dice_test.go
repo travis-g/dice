@@ -2,6 +2,7 @@ package dice
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 )
 
@@ -10,7 +11,7 @@ var i interface{}
 
 func BenchmarkParse3d20(b *testing.B) {
 	b.ReportAllocs()
-	var d *Dice
+	var d DieSet
 	for n := 0; n < b.N; n++ {
 		d, _ = Parse("3d20")
 	}
@@ -29,7 +30,7 @@ func BenchmarkNewFateDie(b *testing.B) {
 func TestRollableInterfaces(t *testing.T) {
 	var rollables = []Rollable{
 		&Die{},
-		&Dice{},
+		&DieSet{},
 		&FateDie{},
 	}
 	t.Log(rollables)
@@ -69,7 +70,39 @@ func TestParse(t *testing.T) {
 	}
 }
 
-func TestSumDice(t *testing.T) {
+func TestDieSetString(t *testing.T) {
+	testCases := []struct {
+		dice DieSet
+		str  string
+	}{
+		{DieSet{
+			Dice: []*Die{
+				&Die{Size: 20, Result: 1},
+				&Die{Size: 20, Result: 2},
+				&Die{Size: 20, Result: 3},
+			},
+			Expanded: expression(1, 2, 3),
+			Result:   6.0,
+		}, "1+2+3 => 6"},
+		{DieSet{
+			Dice: []*Die{
+				&Die{Size: 6, Result: 1},
+				&Die{Size: 6, Result: 3},
+				&Die{Size: 6, Result: 4},
+			},
+			Expanded: expression(1, 3, 4),
+			Result:   8.0,
+		}, "1+3+4 => 8"},
+	}
+	for _, tc := range testCases {
+		str := fmt.Sprintf(tc.dice.String())
+		if str != tc.str {
+			t.Errorf("want result %s, got %s", tc.str, str)
+		}
+	}
+}
+
+func TestSumDieSet(t *testing.T) {
 	testCases := []struct {
 		dice  []*Die
 		total int
@@ -79,6 +112,11 @@ func TestSumDice(t *testing.T) {
 			&Die{Size: 20, Result: 2},
 			&Die{Size: 20, Result: 3},
 		}, 6},
+		{[]*Die{
+			&Die{Size: 6, Result: 1},
+			&Die{Size: 6, Result: 3},
+			&Die{Size: 6, Result: 4},
+		}, 8},
 	}
 	for _, tc := range testCases {
 		sum := sumDice(tc.dice)

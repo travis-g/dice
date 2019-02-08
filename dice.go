@@ -4,41 +4,35 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	rand "math/rand"
 	"regexp"
 	"strconv"
 	"strings"
 )
 
-const (
-	// DiceNotationPattern is the RegEx string pattern that matches a dice
-	// notation string in the format XdY, where X is the number of Y-sided dice
-	// to roll. X may be omitted if it is 1, yielding dY instead of 1dY.
-	DiceNotationPattern = `(?P<count>\d*)d(?P<size>(?:\d{1,}|F))`
-
-	// DropKeepNotationPattern is the RegEx string pattern that matches a
-	// drop/keep-style dice roll (unimplemented).
-	DropKeepNotationPattern = `(?P<count>\d+)?d(?P<size>\d{1,})(?P<dropkeep>(?P<op>[dk][lh]?)(?P<num>\d{1,}))?`
-)
-
 var (
-	// DiceNotationRegex is the compiled RegEx for parsing simple dice
+	// DiceNotationRegex is the compiled RegEx for parsing supported dice
 	// notations.
-	DiceNotationRegex = regexp.MustCompile(DiceNotationPattern)
+	DiceNotationRegex = regexp.MustCompile(`(?P<count>\d*)d(?P<size>(?:\d{1,}|F))`)
 
 	// DropKeepNotationRegex is the compiled RegEx for parsing drop/keep dice
-	// notations.
-	DropKeepNotationRegex = regexp.MustCompile(DropKeepNotationPattern)
+	// notations (unimplemented).
+	DropKeepNotationRegex = regexp.MustCompile(`(?P<count>\d+)?d(?P<size>\d{1,})(?P<dropkeep>(?P<op>[dk][lh]?)(?P<num>\d{1,}))?`)
 )
 
 // A Rollable is any kind of rollable object. A Rollable could be a single die
 // or many dice of any type.
 type Rollable interface {
 	// Roll should be used to also set the object's Result
-	Roll() float64
+	Roll() (float64, error)
 	String() string
 	Type() string
 }
+
+var ( // Validate that die types are Rollable
+	_ Rollable = (*Die)(nil)
+	_ Rollable = (*FateDie)(nil)
+	_ Rollable = (*DieSet)(nil)
+)
 
 // A Die represents a variable-sided die in memory, including the result of
 // rolling it.
@@ -65,12 +59,16 @@ func NewDie(size int) (*Die, error) {
 
 // Roll will Roll a given Die (if unrolled) and set the die's result. Results
 // are in the range [1, size].
-func (d *Die) Roll() float64 {
+func (d *Die) Roll() (float64, error) {
 	if !d.rolled {
-		d.Result = 1 + rand.Intn(d.Size)
+		i, err := Intn(d.Size)
+		if err != nil {
+			return 0, err
+		}
+		d.Result = 1 + i
 		d.rolled = true
 	}
-	return float64(d.Result)
+	return float64(d.Result), nil
 }
 
 // Type returns the die type
@@ -95,13 +93,27 @@ type FateDie struct {
 	Result int `json:"result"`
 }
 
-func (f *FateDie) String() string {
+func (f FateDie) String() string {
 	return string(f.Result)
 }
 
 // Type returns the FateDie's type
 func (f FateDie) Type() string {
 	return "dF"
+}
+
+// Roll will Roll a given FateDie and set the die's result. Fate dice can have
+// results in [-1, 1].
+func (f *FateDie) Roll() (float64, error) {
+	if !f.rolled {
+		i, err := Intn(3)
+		if err != nil {
+			return 0, err
+		}
+		f.Result = i - 2
+		f.rolled = true
+	}
+	return float64(f.Result), nil
 }
 
 // NewFateDie create and returns a new FateDie. The error will always be nil.
@@ -111,32 +123,31 @@ func NewFateDie() (*FateDie, error) {
 	return f, nil
 }
 
-// Roll will Roll a given FateDie and set the die's result. Fate dice can have
-// results in [-1, 1].
-func (f *FateDie) Roll() float64 {
-	if !f.rolled {
-		f.Result = rand.Intn(3) - 2
-		f.rolled = true
-	}
-	return float64(f.Result)
+// A FateDieSet set is a group of fate/fudge dice from a notation
+type FateDieSet struct {
+	Count    uint       `json:"count"`
+	Dice     []*FateDie `json:"dice,omitempty"`
+	Drop     int        `json:"drop,omitempty"`
+	Expanded string     `json:"expanded"`
+	Result   float64    `json:"result"`
 }
 
-// A Dice set is a group of like-sided dice from a dice notation string
-type Dice struct {
-	Count     uint        `json:"count"`
-	Rollables []*Rollable `json:"dice,omitempty"`
-	Drop      int         `json:"drop,omitempty"`
-	Expanded  string      `json:"expanded"`
-	Result    float64     `json:"result"`
-	Size      int         `json:"size"`
+// A DieSet set is a group of like-sided dice from a dice notation string
+type DieSet struct {
+	Count    uint    `json:"count"`
+	Dice     []*Die  `json:"dice,omitempty"`
+	Drop     int     `json:"drop,omitempty"`
+	Expanded string  `json:"expanded"`
+	Result   float64 `json:"result"`
+	Size     int     `json:"size"`
 }
 
 // Notation returns the dice notation format of the dice group in the format
 // XdY, where X is the count of dice to roll and Y is the size of the dice
-func (d Dice) Notation() string {
+func (d DieSet) Notation() string {
 	var s bytes.Buffer
 
-	if l := len(d.Rollables); l > 1 {
+	if l := len(d.Dice); l > 1 {
 		s.WriteString(strconv.Itoa(l))
 	}
 	s.WriteString(strings.Join([]string{"d", strconv.Itoa(d.Size)}, ""))
@@ -144,44 +155,55 @@ func (d Dice) Notation() string {
 	return s.String()
 }
 
-func (d *Dice) String() string {
+func (d DieSet) String() string {
 	return strings.Join([]string{d.Expanded, "=>", strconv.FormatFloat(d.Result, 'f', -1, 64)}, " ")
 }
 
 // Type returns the Dice type
-func (d Dice) Type() string {
+func (d DieSet) Type() string {
 	return strings.Join([]string{"d", strconv.Itoa(d.Size)}, "")
 }
 
-// NewDice creates a new Dice object and returns its pointer
-func NewDice(size int, count uint) *Dice {
-	dice := make([]*Rollable, count)
+// NewDieSet creates a new DieSet.
+func NewDieSet(size int, count uint) DieSet {
+	dice := make([]*Die, count)
 	results := make([]int, count)
+	sum := 0
 	for i := range dice {
 		die, err := NewDie(size)
 		if err != nil {
 			continue
 		}
-		r := Rollable(die)
-		dice[i] = &r
+		dice[i] = die
 		results[i] = die.Result
+		sum += die.Result
 	}
-	expr := strings.Trim(strings.Join(strings.Fields(fmt.Sprint(results)), "+"), "[]")
-	return &Dice{
-		Count:     count,
-		Rollables: dice,
-		Expanded:  expr,
-		Result:    sumRollables(dice),
-		Size:      size,
+	return DieSet{
+		Count:    count,
+		Dice:     dice,
+		Expanded: expression(results),
+		Result:   (float64)(sum),
+		Size:     size,
 	}
 }
 
 // Roll rolls the dice within a Dice set and sums the result with `Sum()`
-func (d *Dice) Roll() float64 {
-	for _, i := range d.Rollables {
-		(*i).Roll()
+func (d *DieSet) Roll() (float64, error) {
+	for _, d := range d.Dice {
+		_, err := d.Roll()
+		if err != nil {
+			return 0, err
+		}
 	}
-	return float64(d.Sum())
+	return float64(d.Sum()), nil
+}
+
+// Roll rolls a set of rollables and returns the total.
+func Roll(rollables ...Rollable) (float64, error) {
+	for _, r := range rollables {
+		r.Roll()
+	}
+	return sumRollables(rollables...)
 }
 
 func sumDice(dice []*Die) int {
@@ -191,42 +213,35 @@ func sumDice(dice []*Die) int {
 	}
 	return sum
 }
-func sumRollables(rollables []*Rollable) float64 {
+
+func sumRollables(rollables ...Rollable) (float64, error) {
 	sum := 0.0
 	for _, r := range rollables {
-		sum += (*r).Roll()
+		i, err := r.(Rollable).Roll()
+		if err != nil {
+			return 0, err
+		}
+		sum += i
 	}
-	return sum
+	return sum, nil
 }
 
 // Sum returns and sets the total of a rolled dice set
-func (d Dice) Sum() float64 {
-	sum := sumRollables(d.Rollables)
-	d.Result = sum
+func (d DieSet) Sum() float64 {
+	d.Result = (float64)(sumDice(d.Dice))
 	return d.Result
 }
 
 // Parse parses a dice notation string and returns a Dice set representation.
-func Parse(notation string) (*Dice, error) {
+func Parse(notation string) (DieSet, error) {
 	return parse(notation)
 }
 
-// Parse sets a dice set's properties, given a notation. If properties of the
-// dice set have already been set this recreates the dice based on the given
-// notation.
-func (d *Dice) Parse(notation string) error {
-	d, err := parse(notation)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 // parse is the real-deal notation parsing method.
-func parse(notation string) (*Dice, error) {
+func parse(notation string) (DieSet, error) {
 	matches := DiceNotationRegex.FindStringSubmatch(notation)
 	if len(matches) < 3 {
-		return &Dice{}, &ErrParseError{notation, notation, "", ": failed to identify dice components"}
+		return DieSet{}, &ErrParseError{notation, notation, "", ": failed to identify dice components"}
 	}
 
 	// Parse and cast dice properties from regex capture values
@@ -238,14 +253,14 @@ func parse(notation string) (*Dice, error) {
 	size, err := strconv.ParseUint(matches[2], 10, 0)
 	if err == nil {
 		// valid size, so build the dice set
-		return NewDice(int(size), uint(count)), nil
+		return NewDieSet(int(size), uint(count)), nil
 	}
 
 	// Check for special dice types
 	if matches[2] == "F" {
-		return &Dice{}, errors.New("fudge dice not yet implemented")
+		return DieSet{}, errors.New("fudge dice not yet implemented")
 	}
 
 	// Couldn't parse the "size" as a uint and it's not a special die type
-	return &Dice{}, &ErrParseError{notation, matches[2], "size", ": invalid size"}
+	return DieSet{}, &ErrParseError{notation, matches[2], "size", ": invalid size"}
 }
