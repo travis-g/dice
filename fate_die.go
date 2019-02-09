@@ -147,6 +147,11 @@ func (d FateDieSet) Type() string {
 	return fateDieNotation
 }
 
+// Expression returns the expanded expression of a FateDieSet.
+func (d FateDieSet) Expression() string {
+	return d.Expanded
+}
+
 func sumFateDice(dice []RollableFateDie) int {
 	sum := 0
 	for _, d := range dice {

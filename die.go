@@ -169,6 +169,11 @@ func (d DieSet) Notation() string {
 	return s.String()
 }
 
+// Expression returns the expanded expression of a DieSet.
+func (d DieSet) Expression() string {
+	return d.Expanded
+}
+
 func sumDice(dice []RollableDie) int {
 	sum := 0
 	for _, d := range dice {

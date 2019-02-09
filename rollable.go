@@ -37,6 +37,8 @@ func sumRollables(rollables ...Rollable) (float64, error) {
 // A RollableSet are sets of Rollables
 type RollableSet interface {
 	Rollable
+
+	Expression() string
 }
 
 // Expand returns the expanded representation of a set based on the set's type.
