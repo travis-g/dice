@@ -2,6 +2,7 @@ package dice
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -69,6 +70,11 @@ func (f *FateDie) String() string {
 	return fateDieNotation
 }
 
+// GoString prints a viable golang code representation of a FateDie.
+func (f *FateDie) GoString() string {
+	return fmt.Sprintf("%#v", *f)
+}
+
 // Roll will Roll a given FateDie and set the die's result. Fate dice can have
 // results in [-1, 1].
 func (f *FateDie) Roll() (float64, error) {
@@ -117,6 +123,11 @@ func NewFateDieSet(count uint) FateDieSet {
 
 func (d FateDieSet) String() string {
 	return strings.Join([]string{d.Expanded, "=>", strconv.FormatFloat(d.Result, 'f', -1, 64)}, " ")
+}
+
+// GoString prints a viable golang code representation of a FateDieSet.
+func (d *FateDieSet) GoString() string {
+	return fmt.Sprintf("%#v", *d)
 }
 
 // Roll rolls the dice within a FateDieSet.

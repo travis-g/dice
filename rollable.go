@@ -7,6 +7,7 @@ type Rollable interface {
 	Roll() (float64, error)
 	String() string
 	Type() string
+	GoString() string
 }
 
 // Roll rolls a set of rollables and returns the total.

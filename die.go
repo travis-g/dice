@@ -77,6 +77,11 @@ func (d *Die) String() string {
 	return d.Type
 }
 
+// GoString prints a viable golang code representation of a Die.
+func (d *Die) GoString() string {
+	return fmt.Sprintf("%#v", *d)
+}
+
 // Roll will Roll a given Die (if unrolled) and set the die's result. Results
 // are in the range [1, size].
 func (d *Die) Roll() (float64, error) {
@@ -127,6 +132,11 @@ func NewDieSet(size int, count uint) DieSet {
 
 func (d DieSet) String() string {
 	return strings.Join([]string{d.Expanded, "=>", strconv.FormatFloat(d.Result, 'f', -1, 64)}, " ")
+}
+
+// GoString prints a viable golang code representation of a DieSet.
+func (d *DieSet) GoString() string {
+	return fmt.Sprintf("%#v", *d)
 }
 
 // Roll rolls the dice within a Dice set and sums the result with `Sum()`

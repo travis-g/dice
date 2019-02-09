@@ -63,6 +63,10 @@ func (de *DiceExpression) String() string {
 	return strings.Join([]string{de.Rolled, "=", fmt.Sprint(de.Result)}, " ")
 }
 
+func (de *DiceExpression) GoString() string {
+	return fmt.Sprintf("%#v", *de)
+}
+
 // Evaluate evaluates a string expression of dice and math, returning a synopsis
 // of the various stages of evaluation and/or an error. The evaluation order
 // needs to follow order of operations:
