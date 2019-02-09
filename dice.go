@@ -1,20 +1,19 @@
 package dice
 
 import (
-	"errors"
 	"strconv"
 )
 
 // Parse parses a dice notation string and returns a Dice set representation.
-func Parse(notation string) (DieSet, error) {
+func Parse(notation string) (RollableSet, error) {
 	return parse(notation)
 }
 
 // parse is the real-deal notation parsing method.
-func parse(notation string) (DieSet, error) {
+func parse(notation string) (RollableSet, error) {
 	matches := DiceNotationRegex.FindStringSubmatch(notation)
 	if len(matches) < 3 {
-		return DieSet{}, &ErrParseError{notation, notation, "", ": failed to identify dice components"}
+		return nil, &ErrParseError{notation, notation, "", ": failed to identify dice components"}
 	}
 
 	// Parse and cast dice properties from regex capture values
@@ -26,14 +25,16 @@ func parse(notation string) (DieSet, error) {
 	size, err := strconv.ParseUint(matches[2], 10, 0)
 	if err == nil {
 		// valid size, so build the dice set
-		return NewDieSet(int(size), uint(count)), nil
+		set := NewDieSet(int(size), uint(count))
+		return &set, nil
 	}
 
 	// Check for special dice types
 	if matches[2] == "F" {
-		return DieSet{}, errors.New("fudge dice not yet implemented")
+		set := NewFateDieSet(uint(count))
+		return &set, nil
 	}
 
 	// Couldn't parse the "size" as a uint and it's not a special die type
-	return DieSet{}, &ErrParseError{notation, matches[2], "size", ": invalid size"}
+	return &DieSet{}, &ErrParseError{notation, matches[2], "size", ": invalid size"}
 }

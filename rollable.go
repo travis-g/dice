@@ -20,7 +20,7 @@ func Roll(rollables ...Rollable) (float64, error) {
 func sumRollables(rollables ...Rollable) (float64, error) {
 	sum := 0.0
 	for _, r := range rollables {
-		i, err := r.(Rollable).Roll()
+		i, err := r.Roll()
 		if err != nil {
 			return 0, err
 		}
@@ -32,4 +32,16 @@ func sumRollables(rollables ...Rollable) (float64, error) {
 // A RollableSet are sets of Rollables
 type RollableSet interface {
 	Rollable
+}
+
+// Expand returns the expanded representation of a set based on the set's type.
+func Expand(set RollableSet) string {
+	switch t := set.(type) {
+	case *DieSet:
+		return t.Expanded
+	case *FateDieSet:
+		return t.Expanded
+	default:
+		return ""
+	}
 }

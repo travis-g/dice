@@ -1,11 +1,14 @@
 package dice
 
 import (
+	"errors"
 	"strconv"
 	"strings"
 )
 
-var _ Rollable = (*FateDie)(nil)
+const fateDieNotation = "dF"
+
+var _ Rollable = (*RollableFateDie)(nil)
 var _ Rollable = (*FateDieSet)(nil)
 var _ RollableSet = (*FateDieSet)(nil)
 
@@ -13,18 +16,57 @@ var _ RollableSet = (*FateDieSet)(nil)
 // In a pinch, a FateDie can be emulated by evaluating `1d3-2`.
 type FateDie struct {
 	rolled bool
-	Result int `json:"result"`
+	Result int    `json:"result"`
+	Type   string `json:"type"`
 }
 
-// NewFateDie create and returns a new FateDie. The error will always be nil.
-func NewFateDie() (*FateDie, error) {
-	f := new(FateDie)
+// RollableFateDie is a wrapper around FateDie that implements Rollable.
+type RollableFateDie struct {
+	*FateDie
+}
+
+// Get returns the wrapped FateDie.
+func (r *RollableFateDie) Get() *FateDie {
+	return r.FateDie
+}
+
+// Result returns the wrapped FateDie's result. If the FateDie had not been
+// rolled an error will be returned.
+func (r *RollableFateDie) Result() (float64, error) {
+	die := r.Get()
+	if die.rolled {
+		return (float64)(die.Result), nil
+	}
+	return 0, errors.New("unrolled die")
+}
+
+func (r *RollableFateDie) String() string {
+	die := r.Get()
+	if die.rolled {
+		return strconv.Itoa(die.Result)
+	}
+	return fateDieNotation
+}
+
+// Type returns the Fate die's type, which will always be "dF".
+func (r *RollableFateDie) Type() string {
+	return fateDieNotation
+}
+
+// NewFateDie create and returns a new FateDie.
+func NewFateDie() (RollableFateDie, error) {
+	f := &FateDie{
+		Type: fateDieNotation,
+	}
 	f.Roll()
-	return f, nil
+	return RollableFateDie{FateDie: f}, nil
 }
 
-func (f FateDie) String() string {
-	return (string)(f.Result)
+func (f *FateDie) String() string {
+	if f.rolled {
+		return strconv.Itoa(f.Result)
+	}
+	return fateDieNotation
 }
 
 // Roll will Roll a given FateDie and set the die's result. Fate dice can have
@@ -35,29 +77,24 @@ func (f *FateDie) Roll() (float64, error) {
 		if err != nil {
 			return 0, err
 		}
-		f.Result = i - 2
+		f.Result = i - 1
 		f.rolled = true
 	}
 	return (float64)(f.Result), nil
 }
 
-// Type returns the FateDie's type
-func (f FateDie) Type() string {
-	return "dF"
-}
-
 // A FateDieSet set is a group of fate/fudge dice from a notation
 type FateDieSet struct {
-	Count    uint      `json:"count"`
-	Dice     []FateDie `json:"dice,omitempty"`
-	Drop     int       `json:"drop,omitempty"`
-	Expanded string    `json:"expanded"`
-	Result   float64   `json:"result"`
+	Count    uint              `json:"count"`
+	Dice     []RollableFateDie `json:"dice,omitempty"`
+	Drop     int               `json:"drop,omitempty"`
+	Expanded string            `json:"expanded"`
+	Result   float64           `json:"result"`
 }
 
 // NewFateDieSet creates and returns a rolled FateDieSet.
 func NewFateDieSet(count uint) FateDieSet {
-	dice := make([]FateDie, count)
+	dice := make([]RollableFateDie, count)
 	results := make([]int, count)
 	sum := 0
 	for i := range dice {
@@ -65,9 +102,10 @@ func NewFateDieSet(count uint) FateDieSet {
 		if err != nil {
 			continue
 		}
-		dice[i] = *die
-		results[i] = die.Result
-		sum += die.Result
+		dice[i] = die
+		result := die.Get().Result
+		results[i] = result
+		sum += result
 	}
 	return FateDieSet{
 		Count:    count,
@@ -92,16 +130,19 @@ func (d *FateDieSet) Roll() (float64, error) {
 	return d.Sum(), nil
 }
 
-// Type returns the type of the dice within a FateDieSet, which will always be
-// "dF".
+// Type returns the type of the dice within a FateDieSet, which will always be "dF".
 func (d FateDieSet) Type() string {
 	return "dF"
 }
 
-func sumFateDice(dice []FateDie) int {
+func sumFateDice(dice []RollableFateDie) int {
 	sum := 0
 	for _, d := range dice {
-		sum += d.Result
+		result, err := d.Result()
+		if err != nil {
+			return 0
+		}
+		sum += (int)(result)
 	}
 	return sum
 }
