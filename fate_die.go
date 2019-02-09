@@ -144,7 +144,7 @@ func (d *FateDieSet) Roll() (float64, error) {
 
 // Type returns the type of the dice within a FateDieSet, which will always be "dF".
 func (d FateDieSet) Type() string {
-	return "dF"
+	return fateDieNotation
 }
 
 func sumFateDice(dice []RollableFateDie) int {
