@@ -7,10 +7,9 @@ import "fmt"
 type Rollable interface {
 	// Roll should be used to also set the object's Result
 	Roll() (float64, error)
-	String() string
 	Type() string
 
-	// Should have GoString() method
+	fmt.Stringer
 	fmt.GoStringer
 }
 
