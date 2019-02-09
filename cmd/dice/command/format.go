@@ -85,3 +85,7 @@ func toYaml(data map[string]interface{}) (string, error) {
 	// Yaml likes a trailing newline, I don't
 	return strings.TrimSpace(string(tmp)), nil
 }
+
+func toGoString(i interface{}) (string, error) {
+	return i.(fmt.GoStringer).GoString(), nil
+}

@@ -1,5 +1,7 @@
 package dice
 
+import "fmt"
+
 // A Rollable is any kind of rollable object. A Rollable could be a single die
 // or many dice of any type.
 type Rollable interface {
@@ -7,7 +9,9 @@ type Rollable interface {
 	Roll() (float64, error)
 	String() string
 	Type() string
-	GoString() string
+
+	// Should have GoString() method
+	fmt.GoStringer
 }
 
 // Roll rolls a set of rollables and returns the total.

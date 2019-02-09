@@ -33,6 +33,8 @@ func Output(c *cli.Context, i interface{}) (string, error) {
 		return toJSON(data)
 	case "yaml", "yml":
 		return toYaml(data)
+	case "gostring":
+		return toGoString(i)
 	default:
 		return "", fmt.Errorf("requested format %v unhandled", err)
 	}
