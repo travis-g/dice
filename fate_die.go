@@ -16,9 +16,10 @@ var _ RollableSet = (*FateDieSet)(nil)
 // A FateDie (a.k.a. "Fudge die") is a die with six sides, {-1, -1, 0, 0, 1, 1}.
 // In a pinch, a FateDie can be emulated by evaluating `1d3-2`.
 type FateDie struct {
-	rolled bool
-	Result int    `json:"result"`
-	Type   string `json:"type"`
+	rolled  bool
+	Result  int    `json:"result"`
+	Type    string `json:"type"`
+	Dropped bool   `json:"dropped,omitempty"`
 }
 
 // RollableFateDie is a wrapper around FateDie that implements Rollable.

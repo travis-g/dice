@@ -15,10 +15,11 @@ var _ RollableSet = (*DieSet)(nil)
 // A Die represents a variable-sided die in memory, including the result of
 // rolling it.
 type Die struct {
-	Type   string `json:"type"`
-	Result int    `json:"result"`
-	Size   int    `json:"size"`
-	rolled bool
+	Type    string `json:"type"`
+	Result  int    `json:"result"`
+	Size    int    `json:"size"`
+	Dropped bool   `json:"dropped,omitempty"`
+	rolled  bool
 }
 
 // RollableDie is a wrapper around Die that implements Rollable.
