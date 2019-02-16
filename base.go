@@ -4,18 +4,7 @@ import (
 	crand "crypto/rand"
 	"fmt"
 	"math/big"
-	"regexp"
 	"strings"
-)
-
-var (
-	// DiceNotationRegex is the compiled RegEx for parsing supported dice
-	// notations.
-	DiceNotationRegex = regexp.MustCompile(`(?P<count>\d*)d(?P<size>(?:\d{1,}|F))`)
-
-	// DropKeepNotationRegex is the compiled RegEx for parsing drop/keep dice
-	// notations (unimplemented).
-	DropKeepNotationRegex = regexp.MustCompile(`(?P<count>\d+)?d(?P<size>\d{1,})(?P<dropkeep>(?P<op>[dk][lh]?)(?P<num>\d{1,}))?`)
 )
 
 // CryptoInt64 is a convenience function that returns a cryptographically random

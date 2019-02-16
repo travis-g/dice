@@ -1,7 +1,18 @@
 package dice
 
 import (
+	"regexp"
 	"strconv"
+)
+
+var (
+	// DiceNotationRegex is the compiled RegEx for parsing supported dice
+	// notations.
+	DiceNotationRegex = regexp.MustCompile(`(?P<count>\d*)d(?P<size>(?:\d{1,}|F))`)
+
+	// DropKeepNotationRegex is the compiled RegEx for parsing drop/keep dice
+	// notations (unimplemented).
+	DropKeepNotationRegex = regexp.MustCompile(`(?P<count>\d+)?d(?P<size>\d{1,})(?P<dropkeep>(?P<op>[dk][lh]?)(?P<num>\d{1,}))?`)
 )
 
 // Parse parses a dice notation string and returns a Dice set representation.
