@@ -3,6 +3,7 @@ dice.exe
 !cmd/dice
 
 coverage.out
+.vscode
 
 # macOS
 .DS_Store

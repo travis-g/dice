@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math"
 	"sort"
-	"strings"
 
 	"github.com/Knetic/govaluate"
 	"github.com/travis-g/dice"
@@ -60,7 +59,8 @@ type DiceExpression struct {
 func (de *DiceExpression) String() string {
 	// HACK(tssde71): since de.Result is a float Sprint is the easiest way to
 	// auto-truncate any unnecessary decimals
-	return strings.Join([]string{de.Rolled, "=", fmt.Sprint(de.Result)}, " ")
+	return fmt.Sprintf("%s = %v", de.Rolled, de.Result)
+	// return strings.Join([]string{de.Rolled, "=", fmt.Sprint(de.Result)}, " ")
 }
 
 func (de *DiceExpression) GoString() string {
@@ -87,7 +87,7 @@ func Evaluate(expression string) (*DiceExpression, error) {
 	// evaluate and expand the rolls, replace the notation strings with their
 	// fully-rolled and expanded counterparts, and save the expanded expression
 	// to the object.
-	rolledBytes := dice.DiceNotationRegex.ReplaceAllFunc([]byte(de.Original), func(matchBytes []byte) []byte {
+	rolledBytes := dice.DropKeepNotationRegex.ReplaceAllFunc([]byte(de.Original), func(matchBytes []byte) []byte {
 		d, err := dice.Parse(string(matchBytes))
 		// record dice:
 		de.Dice = append(de.Dice, d)

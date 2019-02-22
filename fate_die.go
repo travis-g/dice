@@ -9,8 +9,8 @@ import (
 
 const fateDieNotation = "dF"
 
-var _ Rollable = (*RollableFateDie)(nil)
-var _ Rollable = (*FateDieSet)(nil)
+var _ Interface = (*RollableFateDie)(nil)
+var _ Interface = (*FateDieSet)(nil)
 var _ RollableSet = (*FateDieSet)(nil)
 
 // A FateDie (a.k.a. "Fudge die") is a die with six sides, {-1, -1, 0, 0, 1, 1}.
@@ -53,6 +53,12 @@ func (r *RollableFateDie) String() string {
 // Type returns the Fate die's type, which will always be "dF".
 func (r *RollableFateDie) Type() string {
 	return fateDieNotation
+}
+
+// Total returns the RollableFateDie's total (its Result).
+func (r *RollableFateDie) Total() float64 {
+	t, _ := r.Result()
+	return t
 }
 
 // NewFateDie create and returns a new FateDie.
@@ -150,6 +156,11 @@ func (d FateDieSet) Type() string {
 // Expression returns the expanded expression of a FateDieSet.
 func (d FateDieSet) Expression() string {
 	return d.Expanded
+}
+
+// Total returns the FateDieSet's total.
+func (d FateDieSet) Total() float64 {
+	return d.Sum()
 }
 
 func sumFateDice(dice []RollableFateDie) int {

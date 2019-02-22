@@ -2,6 +2,7 @@ package command
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/urfave/cli"
 )
@@ -24,7 +25,7 @@ func Output(c *cli.Context, i interface{}) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	switch format := c.String("format"); format {
+	switch format := strings.ToLower(c.String("format")); format {
 	case "":
 		return fmt.Sprintf("%s", i), nil
 	case "table":
@@ -36,7 +37,7 @@ func Output(c *cli.Context, i interface{}) (string, error) {
 	case "gostring":
 		return toGoString(i)
 	default:
-		return "", fmt.Errorf("requested format %v unhandled", err)
+		return "", fmt.Errorf("requested format %v unhandled", format)
 	}
 }
 

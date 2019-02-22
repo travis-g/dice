@@ -11,11 +11,16 @@ import (
 // passed and roll it, printing the result.
 func RollCommand(c *cli.Context) error {
 	roll := c.Args().Get(0)
-	dice, err := dice.Parse(roll)
+	group, err := dice.ParseGroup(roll)
 	if err != nil {
 		return err
 	}
-	out, err := Output(c, dice)
+	_, err = group.Roll()
+	if err != nil {
+		return err
+	}
+	props := dice.Properties(&group)
+	out, err := Output(c, &props)
 	if err != nil {
 		return err
 	}

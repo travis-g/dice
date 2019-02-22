@@ -33,7 +33,7 @@ func BenchmarkNewDieSet(b *testing.B) {
 			size := tc.size
 			count := tc.count
 			for n := 0; n < b.N; n++ {
-				NewDieSet(size, count)
+				NewDieSet(size, count, 0)
 			}
 		})
 	}
