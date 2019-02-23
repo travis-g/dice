@@ -18,8 +18,11 @@ func CryptoInt64() (int64, error) {
 	return i.Int64(), nil
 }
 
-// Intn is a convenience wrapper for emulating rand.Intn using crypto/rand. Panics if size <= 0.
+// Intn is a convenience wrapper for emulating rand.Intn using crypto/rand.
 func Intn(size int) (int, error) {
+	if size == 0 {
+		return 0, nil
+	}
 	bigInt, err := crypto.Int(crypto.Reader, big.NewInt((int64)(size)))
 	return (int)(bigInt.Int64()), err
 }
@@ -33,8 +36,8 @@ func expression(i ...interface{}) string {
 	return strings.Replace(raw, "+-", "-", -1)
 }
 
-// All returns true if all elements of a slice match a predicate.
-func All(vs []string, f func(string) bool) bool {
+// All returns true if all dice interfaces of a slice match a predicate.
+func All(vs []Interface, f func(Interface) bool) bool {
 	for _, v := range vs {
 		if !f(v) {
 			return false

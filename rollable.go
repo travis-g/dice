@@ -2,6 +2,7 @@ package dice
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 )
 
@@ -59,6 +60,7 @@ type GroupProperties struct {
 	Count      int         `json:"count"`
 	Result     float64     `json:"result"`
 	Expression string      `json:"expression,omitempty"`
+	Original   string      `json:"original,omitempty"`
 
 	// Dice is any dice rolled as part of the group.
 	Dice Group `json:"dice,omitempty"`
@@ -137,30 +139,46 @@ func (g Group) Expression() string {
 
 // Properties calculates properties from a given group.
 func Properties(g *Group) GroupProperties {
-	if len(*g) == 0 {
-		return GroupProperties{}
+	props := GroupProperties{
+		Count: len(*g),
+		Dice:  *g,
 	}
-	return GroupProperties{
-		Count:      len(*g),
-		Result:     g.Total(),
-		Type:       g.Type(),
-		Dice:       *g,
-		Expression: g.Expression(),
-	}
-}
+	dice := g.Self()
 
-// Type determine the type of a group of dice, if consistent.
-func (g Group) Type() interface{} {
-	// HACK(tssde71): replace with All()
-	var kind interface{}
-	switch t := g[0]; t.(type) {
-	// TODO(tssde71): add fate type
-	case *Die:
-		kind = TypePolyhedron
+	switch len(*g) {
+	// No dice; set unrolled by default
+	case 0:
+		props.Unrolled = true
+		return props
+	// only one die: use its properties
+	case 1:
+		goto GROUP_CONSISTENT
+	// There are multiple dice, so check that they're all of the same type
 	default:
-		kind = TypeInvalid
+		kind := reflect.TypeOf(dice[0]).String()
+		consistent := All(dice[1:], func(die Interface) bool {
+			this := reflect.TypeOf(die).String()
+			return this == kind
+		})
+		if !consistent {
+			goto GROUP_INCONSISTENT
+		}
+		goto GROUP_CONSISTENT
 	}
-	return kind
+
+GROUP_CONSISTENT:
+	props.Expression = g.Expression()
+	props.Result = g.Total()
+	switch t := dice[0].(type) {
+	case *Die:
+		props.Size = t.Size
+	}
+	return props
+
+GROUP_INCONSISTENT:
+	props.Expression = g.Expression()
+	props.Result = g.Total()
+	return props
 }
 
 // Roll rolls a group of dice and returns the total.
@@ -175,11 +193,21 @@ func NewGroup(props GroupProperties) Group {
 	}
 	group := make(Group, props.Count)
 
-	for i := range group {
-		group[i] = &Die{
-			Type:     fmt.Sprintf("d%d", props.Size),
-			Size:     props.Size,
-			Unrolled: true,
+	switch props.Type {
+	case TypeFate:
+		for i := range group {
+			group[i] = &FateDie{
+				Type:     fateDieNotation,
+				Unrolled: true,
+			}
+		}
+	default:
+		for i := range group {
+			group[i] = &Die{
+				Type:     fmt.Sprintf("d%d", props.Size),
+				Size:     props.Size,
+				Unrolled: true,
+			}
 		}
 	}
 	return group

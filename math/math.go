@@ -50,15 +50,14 @@ var (
 // This may be a simple expression like `d20` or more complex, like
 // `floor(max(d20,d12)/2+3)`.
 type DiceExpression struct {
-	Original string             `json:"original"`
-	Rolled   string             `json:"rolled"`
-	Result   float64            `json:"result"`
-	Dice     []dice.RollableSet `json:"dice"`
+	Original string       `json:"original"`
+	Rolled   string       `json:"rolled"`
+	Result   float64      `json:"result"`
+	Dice     []dice.Group `json:"dice"`
 }
 
 func (de *DiceExpression) String() string {
 	return fmt.Sprintf("%s = %v", de.Rolled, de.Result)
-	// return strings.Join([]string{de.Rolled, "=", fmt.Sprint(de.Result)}, " ")
 }
 
 // GoString returns a Go syntax representation of a DiceExpression.
@@ -80,14 +79,15 @@ func (de *DiceExpression) GoString() string {
 func Evaluate(expression string) (*DiceExpression, error) {
 	de := &DiceExpression{
 		Original: expression,
-		Dice:     make([]dice.RollableSet, 0),
+		Dice:     make([]dice.Group, 0),
 	}
 	// systematically parse the DiceExpression for dice notation substrings,
 	// evaluate and expand the rolls, replace the notation strings with their
 	// fully-rolled and expanded counterparts, and save the expanded expression
 	// to the object.
 	rolledBytes := dice.DropKeepNotationRegex.ReplaceAllFunc([]byte(de.Original), func(matchBytes []byte) []byte {
-		d, err := dice.Parse(string(matchBytes))
+		d, err := dice.ParseGroup(string(matchBytes))
+		d.Roll()
 		// record dice:
 		de.Dice = append(de.Dice, d)
 		if err != nil {
@@ -96,7 +96,7 @@ func Evaluate(expression string) (*DiceExpression, error) {
 		// write expanded result back as bytes
 		var buf bytes.Buffer
 		buf.WriteString(`(`)
-		buf.WriteString(dice.Expand(d))
+		buf.WriteString(d.Expression())
 		buf.WriteString(`)`)
 		return buf.Bytes()
 	})

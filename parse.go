@@ -12,7 +12,7 @@ var (
 
 	// DropKeepNotationRegex is the compiled RegEx for parsing drop/keep dice
 	// notations (unimplemented).
-	DropKeepNotationRegex = regexp.MustCompile(`((?P<group>\{.*\})|(?P<count>\d+)?d(?P<size>\d{1,}))(?P<dropkeep>(?P<op>[dk][lh]?)(?P<num>\d{1,}))?`)
+	DropKeepNotationRegex = regexp.MustCompile(`((?P<group>\{.*\})|(?P<count>\d+)?d(?P<size>\d{1,}|F))(?P<dropkeep>(?P<op>[dk][lh]?)(?P<num>\d{1,}))?`)
 )
 
 // Parse parses a dice notation string and returns a Dice set representation.
@@ -133,5 +133,18 @@ func ParseGroup(notation string) (Group, error) {
 		set := NewGroup(props)
 		return set, nil
 	}
+
+	// size was not a uint, check for special dice types
+	if components["size"] == "F" {
+		props := GroupProperties{
+			Type:     TypeFate,
+			Count:    int(count),
+			Drop:     dropkeep,
+			Unrolled: true,
+		}
+		set := NewGroup(props)
+		return set, nil
+	}
+
 	return Group{}, &ErrParseError{notation, components["size"], "size", ": invalid size"}
 }

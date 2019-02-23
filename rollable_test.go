@@ -47,6 +47,14 @@ func TestGroup_Total(t *testing.T) {
 			},
 			want: 4,
 		},
+		{
+			name: "mixed",
+			g: Group{
+				&Die{Result: 2, Dropped: true},
+				&FateDie{Result: -1},
+			},
+			want: -1,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
