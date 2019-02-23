@@ -1,7 +1,7 @@
 package dice
 
 import (
-	crand "crypto/rand"
+	crypto "crypto/rand"
 	"fmt"
 	"math/big"
 	"strings"
@@ -11,7 +11,7 @@ import (
 // int64. If there is a problem generating enough entropy it will return a
 // non-nil error.
 func CryptoInt64() (int64, error) {
-	i, err := crand.Int(crand.Reader, big.NewInt(int64(^uint64(0)>>1)))
+	i, err := crypto.Int(crypto.Reader, big.NewInt(int64(^uint64(0)>>1)))
 	if err != nil {
 		return 0, err
 	}
@@ -20,7 +20,7 @@ func CryptoInt64() (int64, error) {
 
 // Intn is a convenience wrapper for emulating rand.Intn using crypto/rand. Panics if size <= 0.
 func Intn(size int) (int, error) {
-	bigInt, err := crand.Int(crand.Reader, big.NewInt((int64)(size)))
+	bigInt, err := crypto.Int(crypto.Reader, big.NewInt((int64)(size)))
 	return (int)(bigInt.Int64()), err
 }
 
