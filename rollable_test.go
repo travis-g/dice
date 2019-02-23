@@ -1,16 +1,37 @@
 package dice
 
 import (
+	"fmt"
 	"testing"
 )
 
-var groupSets = []Group{
-	Group{
-		&Die{
-			Size:     6,
-			Unrolled: true,
-		},
+var groupProperties = []struct {
+	name  string
+	props GroupProperties
+}{{"3d6",
+	GroupProperties{
+		Type:     TypePolyhedron,
+		Size:     6,
+		Count:    3,
+		Unrolled: true,
 	},
+}, {"3dF",
+	GroupProperties{
+		Type:     TypeFate,
+		Count:    3,
+		Unrolled: true,
+	},
+},
+}
+
+func Benchmark(b *testing.B) {
+	for _, bench := range groupProperties {
+		b.Run(fmt.Sprintf("%s", bench.name), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				NewGroup(bench.props)
+			}
+		})
+	}
 }
 
 func TestGroup_Total(t *testing.T) {
