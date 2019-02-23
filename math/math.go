@@ -89,9 +89,14 @@ func Evaluate(expression string) (*DiceExpression, error) {
 		props, err := dice.ParseExpression(string(matchBytes))
 		d, err := dice.NewGroup(props)
 		d.Roll()
-		d.Drop(props.DropKeep)
+		drop := props.DropKeep
+		if drop != 0 {
+			d.Drop(drop)
+		}
 		// record dice:
-		de.Dice = append(de.Dice, dice.Properties(&d))
+		props = dice.Properties(&d)
+		props.DropKeep = drop
+		de.Dice = append(de.Dice, props)
 		if err != nil {
 			return []byte(``)
 		}
