@@ -6,7 +6,7 @@ import (
 	"math"
 	"sort"
 
-	"github.com/Knetic/govaluate"
+	eval "github.com/Knetic/govaluate"
 	"github.com/travis-g/dice"
 )
 
@@ -28,7 +28,7 @@ func min(args ...interface{}) (interface{}, error) {
 var (
 	// DiceFunctions are functions usable in dice arithmetic operations, such as
 	// `round()`, `min()`, and `max()`.
-	DiceFunctions = map[string]govaluate.ExpressionFunction{
+	DiceFunctions = map[string]eval.ExpressionFunction{
 		"abs": func(args ...interface{}) (interface{}, error) {
 			return math.Abs(args[0].(float64)), nil
 		},
@@ -57,12 +57,11 @@ type DiceExpression struct {
 }
 
 func (de *DiceExpression) String() string {
-	// HACK(tssde71): since de.Result is a float Sprint is the easiest way to
-	// auto-truncate any unnecessary decimals
 	return fmt.Sprintf("%s = %v", de.Rolled, de.Result)
 	// return strings.Join([]string{de.Rolled, "=", fmt.Sprint(de.Result)}, " ")
 }
 
+// GoString returns a Go syntax representation of a DiceExpression.
 func (de *DiceExpression) GoString() string {
 	return fmt.Sprintf("%#v", *de)
 }
@@ -104,7 +103,7 @@ func Evaluate(expression string) (*DiceExpression, error) {
 	de.Rolled = string(rolledBytes)
 
 	// populate the expression object with the roll and function data
-	exp, err := govaluate.NewEvaluableExpressionWithFunctions(de.Rolled, DiceFunctions)
+	exp, err := eval.NewEvaluableExpressionWithFunctions(de.Rolled, DiceFunctions)
 	if err != nil {
 		return nil, err
 	}
