@@ -20,12 +20,15 @@ var (
 			`)(?P<dropkeep>(?P<op>[dk][lh]?)(?P<num>\d{1,}))?`)
 )
 
-// ParseGroup parses a notation into a group of dice. It returns the group
+// ParseNotation parses a notation into a group of dice. It returns the group
 // unrolled.
-func ParseGroup(notation string) (Group, error) {
+//
+// TODO(travis-g): ParseNotation should return parsed properties from the notation,
+// and NewGroup() should be called separately, allowing this to be reused
+func ParseNotation(notation string) (GroupProperties, error) {
 	matches := DiceNotationRegex.FindStringSubmatch(notation)
 	if len(matches) < 3 {
-		return nil, &ErrParseError{notation, notation, "", ": failed to identify dice components"}
+		return GroupProperties{}, &ErrParseError{notation, notation, "", ": failed to identify dice components"}
 	}
 
 	// extract named capture groups to map
@@ -34,11 +37,6 @@ func ParseGroup(notation string) (Group, error) {
 		if i != 0 && name != "" {
 			components[name] = matches[i]
 		}
-	}
-
-	group := components["group"]
-	if group != "" {
-		return nil, &ErrNotImplemented{"arbitrary group rolls not implemented"}
 	}
 
 	// Parse and cast dice properties from regex capture values
@@ -57,11 +55,7 @@ func ParseGroup(notation string) (Group, error) {
 			Count:    int(count),
 			Unrolled: true,
 		}
-		set, err := NewGroup(props)
-		if err != nil {
-			return nil, err
-		}
-		return set, nil
+		return props, nil
 	}
 
 	// size was not a uint, check for special dice types
@@ -71,14 +65,10 @@ func ParseGroup(notation string) (Group, error) {
 			Count:    int(count),
 			Unrolled: true,
 		}
-		set, err := NewGroup(props)
-		if err != nil {
-			return nil, err
-		}
-		return set, nil
+		return props, nil
 	}
 
-	return Group{}, &ErrParseError{notation, components["size"], "size", ": invalid size"}
+	return GroupProperties{}, &ErrParseError{notation, components["size"], "size", ": invalid size"}
 }
 
 // ParseExpression parses a notation based on the DiceExpressionRegex, allowing
