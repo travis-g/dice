@@ -3,6 +3,7 @@ package dice
 import (
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 var (
@@ -22,9 +23,6 @@ var (
 
 // ParseNotation parses a notation into a group of dice. It returns the group
 // unrolled.
-//
-// TODO(travis-g): ParseNotation should return parsed properties from the notation,
-// and NewGroup() should be called separately, allowing this to be reused
 func ParseNotation(notation string) (GroupProperties, error) {
 	matches := DiceNotationRegex.FindStringSubmatch(notation)
 	if len(matches) < 3 {
@@ -73,10 +71,10 @@ func ParseNotation(notation string) (GroupProperties, error) {
 
 // ParseExpression parses a notation based on the DiceExpressionRegex, allowing
 // for drop/keep sets, reroll expressions, exploding dice, etc.
-func ParseExpression(notation string) (Group, error) {
+func ParseExpression(notation string) (GroupProperties, error) {
 	matches := DiceExpressionRegex.FindStringSubmatch(notation)
 	if len(matches) < 3 {
-		return nil, &ErrParseError{notation, notation, "", ": failed to identify dice components"}
+		return GroupProperties{}, &ErrParseError{notation, notation, "", ": failed to identify dice components"}
 	}
 
 	// extract named capture groups to map
@@ -90,14 +88,12 @@ func ParseExpression(notation string) (Group, error) {
 	// if group is found the core notation was not specified.
 	group := components["group"]
 	if group != "" {
-		return nil, &ErrNotImplemented{"arbitrary group rolls not implemented"}
+		return GroupProperties{}, &ErrNotImplemented{"arbitrary group rolls not implemented"}
 	}
 
-	// Parse dice properties from regex capture values
-	count, err := strconv.ParseInt(components["count"], 10, 0)
+	props, err := ParseNotation(strings.Join([]string{components["count"], components["size"]}, "d"))
 	if err != nil {
-		// either there was an implied count, ex 'd20', or count was invalid
-		count = 1
+		return props, err
 	}
 
 	var dropkeep int
@@ -107,50 +103,16 @@ func ParseExpression(notation string) (Group, error) {
 	case "d", "dl":
 		dropkeep = int(num)
 	case "k", "kh":
-		dropkeep = int(count - num)
+		dropkeep = props.Count - int(num)
 	case "dh":
 		dropkeep = -int(num)
 	case "kl":
-		dropkeep = -int(count - num)
+		dropkeep = -props.Count - int(num)
 	}
 
-	size, err := strconv.ParseUint(components["size"], 10, 0)
-	// err is nil, which means a valid uint size
-	if err == nil {
-		props := GroupProperties{
-			Type:     TypePolyhedron,
-			Size:     int(size),
-			Count:    int(count),
-			DropKeep: dropkeep,
-			Unrolled: true,
-		}
-		set, err := NewGroup(props)
-		if err != nil {
-			return nil, err
-		}
-		if dropkeep != 0 {
-			set.Drop(dropkeep)
-		}
-		return set, nil
+	if dropkeep != 0 {
+		props.DropKeep = dropkeep
 	}
 
-	// size was not a uint, check for special dice types
-	if components["size"] == "F" {
-		props := GroupProperties{
-			Type:     TypeFate,
-			Count:    int(count),
-			DropKeep: dropkeep,
-			Unrolled: true,
-		}
-		set, err := NewGroup(props)
-		if err != nil {
-			return nil, err
-		}
-		if dropkeep != 0 {
-			set.Drop(dropkeep)
-		}
-		return set, nil
-	}
-
-	return Group{}, &ErrParseError{notation, components["size"], "size", ": invalid size"}
+	return props, nil
 }
