@@ -106,7 +106,7 @@ func (g *Group) String() string {
 
 // GoString returns the Go syntax for a group.
 func (g Group) GoString() string {
-	return fmt.Sprintf("%#v", g.Pointers())
+	return fmt.Sprintf("%#v", g.Copy())
 }
 
 // Pointers returns the group as a slice of pointers to its dice.
