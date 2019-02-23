@@ -3,11 +3,11 @@ package dice
 import (
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 )
 
 var _ Interface = (*Group)(nil)
-var _ RollableSet = (*Group)(nil)
 
 // Type is the enum of types that a die or dice can be
 type Type uint
@@ -72,9 +72,9 @@ type GroupProperties struct {
 	// Dropped indicates the die should be excluded from totals.
 	Dropped bool `json:"dropped,omitempty"`
 
-	// Drop indicates how many child dice should be dropped (and from which
+	// DropKeep indicates how many child dice should be dropped (and from which
 	// direction) if describing a set.
-	Drop int `json:"drop,omitempty"`
+	DropKeep int `json:"drop,omitempty"`
 }
 
 func (g *GroupProperties) String() string {
@@ -106,11 +106,20 @@ func (g *Group) String() string {
 
 // GoString returns the Go syntax for a group.
 func (g Group) GoString() string {
-	return fmt.Sprintf("%#v", g.Self())
+	return fmt.Sprintf("%#v", g.Pointers())
 }
 
-// Self returns the group as a slice of interfaces
-func (g *Group) Self() []Interface {
+// Pointers returns the group as a slice of pointers to its dice.
+func (g *Group) Pointers() []*Interface {
+	self := make([]*Interface, len(*g))
+	for i, k := range *g {
+		self[i] = &k
+	}
+	return self
+}
+
+// Copy returns a copy of the dice within the group
+func (g *Group) Copy() []Interface {
 	self := make([]Interface, len(*g))
 	for i, k := range *g {
 		self[i] = k
@@ -137,13 +146,42 @@ func (g Group) Expression() string {
 	return strings.Replace(strings.Join(dice, "+"), "+-", "-", -1)
 }
 
+// Drop marks a dice within a group as dropped based on an input integer.
+func (g *Group) Drop(drop int) {
+	dice := g.Copy()
+	sort.Slice(dice, func(i, j int) bool {
+		return (dice[i]).Total() < (dice[j]).Total()
+	})
+	// fmt.Println(dice)
+	// drop lowest to highest
+	if drop > 0 {
+		for i := 0; i < drop; i++ {
+			switch t := (dice[i]).(type) {
+			case *Die:
+				t.Dropped = true
+			case *FateDie:
+				t.Dropped = true
+			}
+		}
+	} else if drop < 0 {
+		for i := len(dice) - 1; i >= len(dice)+drop; i-- {
+			switch t := (dice[i]).(type) {
+			case *Die:
+				t.Dropped = true
+			case *FateDie:
+				t.Dropped = true
+			}
+		}
+	}
+}
+
 // Properties calculates properties from a given group.
 func Properties(g *Group) GroupProperties {
 	props := GroupProperties{
 		Count: len(*g),
 		Dice:  *g,
 	}
-	dice := g.Self()
+	dice := g.Pointers()
 
 	switch len(*g) {
 	// No dice; set unrolled by default
@@ -156,7 +194,7 @@ func Properties(g *Group) GroupProperties {
 	// There are multiple dice, so check that they're all of the same type
 	default:
 		kind := reflect.TypeOf(dice[0]).String()
-		consistent := All(dice[1:], func(die Interface) bool {
+		consistent := All(dice[1:], func(die *Interface) bool {
 			this := reflect.TypeOf(die).String()
 			return this == kind
 		})
@@ -169,7 +207,7 @@ func Properties(g *Group) GroupProperties {
 GROUP_CONSISTENT:
 	props.Expression = g.Expression()
 	props.Result = g.Total()
-	switch t := dice[0].(type) {
+	switch t := (*dice[0]).(type) {
 	case *Die:
 		props.Size = t.Size
 	}
@@ -211,23 +249,4 @@ func NewGroup(props GroupProperties) Group {
 		}
 	}
 	return group
-}
-
-// A RollableSet are sets of Rollables.
-type RollableSet interface {
-	Interface
-
-	Expression() string
-}
-
-// Expand returns the expanded representation of a set based on the set's type.
-func Expand(set RollableSet) string {
-	switch t := set.(type) {
-	case *DieSet:
-		return t.Expanded
-	case *FateDieSet:
-		return t.Expanded
-	default:
-		return ""
-	}
 }

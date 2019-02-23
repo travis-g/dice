@@ -9,10 +9,7 @@ import (
 	"strings"
 )
 
-var _ Interface = (*RollableDie)(nil)
-var _ Interface = (*DieSet)(nil)
 var _ = Interface(&Die{})
-var _ RollableSet = (*DieSet)(nil)
 
 // A Die represents a variable-sided die in memory, including the result of
 // rolling it.
@@ -83,7 +80,7 @@ func NewDie(size int) (RollableDie, error) {
 // of die if it has not been rolled.
 func (d *Die) String() string {
 	if !d.Unrolled {
-		return fmt.Sprintf("%v", d.Result)
+		return fmt.Sprintf("%v", d.Total())
 	}
 	return d.Type
 }

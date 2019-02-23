@@ -9,10 +9,7 @@ import (
 
 const fateDieNotation = "dF"
 
-var _ Interface = (*RollableFateDie)(nil)
-var _ Interface = (*FateDieSet)(nil)
 var _ = Interface(&FateDie{})
-var _ RollableSet = (*FateDieSet)(nil)
 
 // A FateDie (a.k.a. "Fudge die") is a die with six sides, {-1, -1, 0, 0, 1, 1}.
 // In a pinch, a FateDie can be emulated by evaluating `1d3-2`.

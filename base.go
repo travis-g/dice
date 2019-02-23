@@ -37,7 +37,7 @@ func expression(i ...interface{}) string {
 }
 
 // All returns true if all dice interfaces of a slice match a predicate.
-func All(vs []Interface, f func(Interface) bool) bool {
+func All(vs []*Interface, f func(*Interface) bool) bool {
 	for _, v := range vs {
 		if !f(v) {
 			return false

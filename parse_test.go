@@ -48,15 +48,3 @@ var diceNotationStrings = []struct {
 	{"d20"},
 	{"1d20"},
 }
-
-func BenchmarkParse(b *testing.B) {
-	b.ReportAllocs()
-	for _, tc := range diceNotationStrings {
-		b.Run(tc.notation, func(b *testing.B) {
-			notation := tc.notation
-			for n := 0; n < b.N; n++ {
-				Parse(notation)
-			}
-		})
-	}
-}
