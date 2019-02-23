@@ -1,9 +1,11 @@
 package dice
 
+// ErrNotImplemented is an error returned when a feature is not yet implemented.
 type ErrNotImplemented struct {
 	message string
 }
 
+// NewErrNotImplemented returns a new not implemented error.
 func NewErrNotImplemented(message string) *ErrNotImplemented {
 	return &ErrNotImplemented{
 		message: message,
@@ -14,6 +16,8 @@ func (e *ErrNotImplemented) Error() string {
 	return e.message
 }
 
+// ErrParseError is an error encountered when parsing a string into dice
+// notation.
 type ErrParseError struct {
 	Notation     string
 	NotationElem string
@@ -30,18 +34,4 @@ func (e *ErrParseError) Error() string {
 	}
 	return "parsing dice " +
 		quote(e.Notation) + e.Message
-}
-
-type ErrImpossibleDie struct {
-	message string
-}
-
-func NewImpossibleDie(message string) *ErrImpossibleDie {
-	return &ErrImpossibleDie{
-		message: message,
-	}
-}
-
-func (e *ErrImpossibleDie) Error() string {
-	return e.message
 }
