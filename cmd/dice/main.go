@@ -53,7 +53,7 @@ func main() {
 		cli.Command{
 			Name:    "roll",
 			Aliases: []string{"r"},
-			Usage:   "roll plain dice",
+			Usage:   "roll plain dice groups",
 			Flags:   globalFlags,
 			Action: func(c *cli.Context) error {
 				return command.RollCommand(c)

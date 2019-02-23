@@ -85,8 +85,8 @@ func Evaluate(expression string) (*DiceExpression, error) {
 	// evaluate and expand the rolls, replace the notation strings with their
 	// fully-rolled and expanded counterparts, and save the expanded expression
 	// to the object.
-	rolledBytes := dice.DropKeepNotationRegex.ReplaceAllFunc([]byte(de.Original), func(matchBytes []byte) []byte {
-		d, err := dice.ParseGroup(string(matchBytes))
+	rolledBytes := dice.DiceExpressionRegex.ReplaceAllFunc([]byte(de.Original), func(matchBytes []byte) []byte {
+		d, err := dice.ParseExpression(string(matchBytes))
 		d.Roll()
 		// record dice:
 		de.Dice = append(de.Dice, d)
