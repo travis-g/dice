@@ -9,12 +9,11 @@ var _ = Interface(&Die{})
 // A Die represents a variable-sided die in memory, including the result of
 // rolling it.
 type Die struct {
-	Interface `json:"self,omitempty"`
-	Type      string  `json:"type"`
-	Result    float64 `json:"result"`
-	Size      int     `json:"size"`
-	Dropped   bool    `json:"dropped,omitempty"`
-	Unrolled  bool    `json:"unrolled,omitempty"`
+	Type     string  `json:"type"`
+	Result   float64 `json:"result"`
+	Size     int     `json:"size"`
+	Dropped  bool    `json:"dropped,omitempty"`
+	Unrolled bool    `json:"unrolled,omitempty"`
 }
 
 // String returns an expression-like representation of a rolled Die or the kind
