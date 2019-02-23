@@ -225,9 +225,9 @@ func Roll(g Group) (float64, error) {
 }
 
 // NewGroup creates a new group based on provided properties.
-func NewGroup(props GroupProperties) Group {
+func NewGroup(props GroupProperties) (Group, error) {
 	if props.Count == 0 {
-		return Group{}
+		return Group{}, nil
 	}
 	group := make(Group, props.Count)
 
@@ -239,7 +239,7 @@ func NewGroup(props GroupProperties) Group {
 				Unrolled: true,
 			}
 		}
-	default:
+	case TypePolyhedron:
 		for i := range group {
 			group[i] = &Die{
 				Type:     fmt.Sprintf("d%d", props.Size),
@@ -247,6 +247,8 @@ func NewGroup(props GroupProperties) Group {
 				Unrolled: true,
 			}
 		}
+	default:
+		return Group{}, fmt.Errorf("cannot create group of type %s", props.Type)
 	}
-	return group
+	return group, nil
 }

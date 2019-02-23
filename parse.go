@@ -67,7 +67,10 @@ func ParseGroup(notation string) (Group, error) {
 			DropKeep: dropkeep,
 			Unrolled: true,
 		}
-		set := NewGroup(props)
+		set, err := NewGroup(props)
+		if err != nil {
+			return nil, err
+		}
 		if dropkeep != 0 {
 			set.Drop(dropkeep)
 		}
@@ -82,7 +85,10 @@ func ParseGroup(notation string) (Group, error) {
 			DropKeep: dropkeep,
 			Unrolled: true,
 		}
-		set := NewGroup(props)
+		set, err := NewGroup(props)
+		if err != nil {
+			return nil, err
+		}
 		if dropkeep != 0 {
 			set.Drop(dropkeep)
 		}
