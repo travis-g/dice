@@ -148,7 +148,12 @@ func (g Group) Expression() string {
 
 // Drop marks a dice within a group as dropped based on an input integer.
 func (g *Group) Drop(drop int) {
+	if drop == 0 {
+		return
+	}
+	// create a copy of the array to sort and forward dice updates
 	dice := g.Copy()
+
 	sort.Slice(dice, func(i, j int) bool {
 		return (dice[i]).Total() < (dice[j]).Total()
 	})
