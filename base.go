@@ -18,13 +18,19 @@ func CryptoInt64() (int64, error) {
 	return i.Int64(), nil
 }
 
-// Intn is a convenience wrapper for emulating rand.Intn using crypto/rand.
-func Intn(size int) (int, error) {
-	if size == 0 {
-		return 0, nil
+// Intn is a convenience wrapper for emulating rand.Intn using crypto/rand. As
+// crypto.Int panics if max <= 0, if size is <= 0 an ErrSizeZero error is
+// returned and n will be 0. If there is a problem generating enough entropy it
+// will return a non-nil error.
+func Intn(size int) (n int, err error) {
+	if size <= 0 {
+		n = 0
+		err = &ErrSizeZero{}
+		return
 	}
-	bigInt, err := crypto.Int(crypto.Reader, big.NewInt((int64)(size)))
-	return (int)(bigInt.Int64()), err
+	bigInt, err := crypto.Int(crypto.Reader, big.NewInt(int64(size)))
+	n = int(bigInt.Int64())
+	return
 }
 
 func quote(s string) string {

@@ -253,7 +253,7 @@ func NewGroup(props GroupProperties) (Group, error) {
 			}
 		}
 	default:
-		return Group{}, fmt.Errorf("cannot create group of type %s", props.Type)
+		return Group{}, fmt.Errorf("type %s not a valid dice.Type", props.Type)
 	}
 	return group, nil
 }
