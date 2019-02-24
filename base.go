@@ -13,7 +13,7 @@ import (
 func CryptoInt64() (int64, error) {
 	i, err := crypto.Int(crypto.Reader, big.NewInt(int64(^uint64(0)>>1)))
 	if err != nil {
-		return 0, err
+		return i.Int64(), err
 	}
 	return i.Int64(), nil
 }
