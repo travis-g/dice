@@ -33,21 +33,13 @@ func Intn(size int) (n int, err error) {
 	return
 }
 
+// quote returns the input string wrapped within quotation marks.
 func quote(s string) string {
 	return strings.Join([]string{"\"", s, "\""}, "")
 }
 
+// expression creates a math expression from an arbitrary set of interfaces.
 func expression(i ...interface{}) string {
 	raw := strings.Trim(strings.Join(strings.Fields(fmt.Sprint(i...)), "+"), "[]")
 	return strings.Replace(raw, "+-", "-", -1)
-}
-
-// All returns true if all dice interfaces of a slice match a predicate.
-func All(vs []*Interface, f func(*Interface) bool) bool {
-	for _, v := range vs {
-		if !f(v) {
-			return false
-		}
-	}
-	return true
 }

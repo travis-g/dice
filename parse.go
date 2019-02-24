@@ -10,9 +10,11 @@ var (
 	// DiceNotationPattern is the base XdY notation pattern for matching dice
 	// strings.
 	DiceNotationPattern = `(?P<count>\d+)?d(?P<size>\d{1,}|F)`
+
 	// DiceNotationRegex is the compiled RegEx for parsing supported dice
 	// notations.
 	DiceNotationRegex = regexp.MustCompile(DiceNotationPattern)
+
 	// DiceExpressionRegex is the compiled RegEx for parsing drop/keep dice
 	// notations and other expressions that modify the dice group.
 	DiceExpressionRegex = regexp.MustCompile(
@@ -91,6 +93,7 @@ func ParseExpression(notation string) (GroupProperties, error) {
 		return GroupProperties{}, &ErrNotImplemented{"arbitrary group rolls not implemented"}
 	}
 
+	// Call ParseNotation with the core dice count and size.
 	props, err := ParseNotation(strings.Join([]string{components["count"], components["size"]}, "d"))
 	if err != nil {
 		return props, err

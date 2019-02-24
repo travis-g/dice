@@ -55,9 +55,12 @@ type Group []Interface
 
 // GroupProperties describes a die.
 type GroupProperties struct {
+	// Type is the type of dice within the group. If the properties object will
+	// be used to create a new Group of dice, Type should be provided as a
+	// dice.Type/uint.
 	Type       interface{} `json:"type,omitempty"`
-	Size       int         `json:"size,omitempty"`
 	Count      int         `json:"count"`
+	Size       int         `json:"size,omitempty"`
 	Result     float64     `json:"result"`
 	Expression string      `json:"expression,omitempty"`
 	Original   string      `json:"original,omitempty"`
@@ -189,11 +192,11 @@ func Properties(g *Group) GroupProperties {
 	dice := g.Pointers()
 
 	switch len(*g) {
-	// No dice; set unrolled by default
+	// No dice: set unrolled by default and return
 	case 0:
 		props.Unrolled = true
 		return props
-	// only one die: use its properties
+	// Only one die: use its properties
 	case 1:
 		goto GROUP_CONSISTENT
 	// There are multiple dice, so check that they're all of the same type
@@ -229,7 +232,7 @@ func Roll(g Group) (float64, error) {
 	return g.Roll()
 }
 
-// NewGroup creates a new group based on provided properties.
+// NewGroup creates a new group based on provided seed of properties.
 func NewGroup(props GroupProperties) (Group, error) {
 	if props.Count == 0 {
 		return Group{}, nil
@@ -256,4 +259,15 @@ func NewGroup(props GroupProperties) (Group, error) {
 		return Group{}, fmt.Errorf("type %s not a valid dice.Type", props.Type)
 	}
 	return group, nil
+}
+
+// All is a helper function that returns true if all dice Interfaces of a slice
+// match a predicate.
+func All(vs []*Interface, f func(*Interface) bool) bool {
+	for _, v := range vs {
+		if !f(v) {
+			return false
+		}
+	}
+	return true
 }
