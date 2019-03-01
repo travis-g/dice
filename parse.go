@@ -16,7 +16,7 @@ var (
 	DiceNotationRegex = regexp.MustCompile(DiceNotationPattern)
 
 	// DiceExpressionRegex is the compiled RegEx for parsing drop/keep dice
-	// notations and other expressions that modify the dice group.
+	// notations and other expressions that would modify a dice group's result.
 	DiceExpressionRegex = regexp.MustCompile(
 		`((?P<group>\{.*\})|` +
 			DiceNotationPattern +

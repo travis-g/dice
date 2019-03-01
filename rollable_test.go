@@ -43,35 +43,35 @@ func TestGroup_Total(t *testing.T) {
 		{
 			name: "basic",
 			g: Group{
-				&Die{Result: 2},
-				&Die{Result: 3},
-				&Die{Result: 4},
+				&PolyhedralDie{Result: 2},
+				&PolyhedralDie{Result: 3},
+				&PolyhedralDie{Result: 4},
 			},
 			want: 9,
 		},
 		{
 			name: "nested",
 			g: Group{
-				&Die{Result: 2},
+				&PolyhedralDie{Result: 2},
 				&Group{
-					&Die{Result: 3},
+					&PolyhedralDie{Result: 3},
 				},
-				&Die{Result: 4},
+				&PolyhedralDie{Result: 4},
 			},
 			want: 9,
 		},
 		{
 			name: "dropped",
 			g: Group{
-				&Die{Result: 2, Dropped: true},
-				&Die{Result: 4},
+				&PolyhedralDie{Result: 2, Dropped: true},
+				&PolyhedralDie{Result: 4},
 			},
 			want: 4,
 		},
 		{
 			name: "mixed",
 			g: Group{
-				&Die{Result: 2, Dropped: true},
+				&PolyhedralDie{Result: 2, Dropped: true},
 				&FateDie{Result: -1},
 			},
 			want: -1,
@@ -95,18 +95,18 @@ func TestGroup_Expression(t *testing.T) {
 		{
 			name: "basic",
 			g: Group{
-				&Die{Result: 2},
-				&Die{Result: 3},
-				&Die{Result: 4},
+				&PolyhedralDie{Result: 2},
+				&PolyhedralDie{Result: 3},
+				&PolyhedralDie{Result: 4},
 			},
 			want: "2+3+4",
 		},
 		{
 			name: "unrolled",
 			g: Group{
-				&Die{Type: "d3", Unrolled: true},
-				&Die{Result: 3},
-				&Die{Result: 4},
+				&PolyhedralDie{Type: "d3", Unrolled: true},
+				&PolyhedralDie{Result: 3},
+				&PolyhedralDie{Result: 4},
 			},
 			want: "d3+3+4",
 		},

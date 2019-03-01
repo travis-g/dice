@@ -10,24 +10,9 @@ import (
 	"github.com/travis-g/dice"
 )
 
-// These functions must take interfaces as arguments since they must be valid
-// govaluate.ExpressionFunctions.
-func max(args ...interface{}) (interface{}, error) {
-	sort.Slice(args[:], func(i, j int) bool {
-		return args[i].(float64) < args[j].(float64)
-	})
-	return args[len(args)-1], nil
-}
-func min(args ...interface{}) (interface{}, error) {
-	sort.Slice(args[:], func(i, j int) bool {
-		return args[i].(float64) < args[j].(float64)
-	})
-	return args[0], nil
-}
-
 var (
 	// DiceFunctions are functions usable in dice arithmetic operations, such as
-	// `round()`, `min()`, and `max()`.
+	// round, min, and max.
 	DiceFunctions = map[string]eval.ExpressionFunction{
 		"abs": func(args ...interface{}) (interface{}, error) {
 			return math.Abs(args[0].(float64)), nil
@@ -38,46 +23,63 @@ var (
 		"floor": func(args ...interface{}) (interface{}, error) {
 			return math.Floor(args[0].(float64)), nil
 		},
-		"max": max,
-		"min": min,
+		"max": func(args ...interface{}) (interface{}, error) {
+			sort.Slice(args[:], func(i, j int) bool {
+				return args[i].(float64) < args[j].(float64)
+			})
+			return args[len(args)-1], nil
+		},
+		"min": func(args ...interface{}) (interface{}, error) {
+			sort.Slice(args[:], func(i, j int) bool {
+				return args[i].(float64) < args[j].(float64)
+			})
+			return args[0], nil
+		},
 		"round": func(args ...interface{}) (interface{}, error) {
 			return math.Round(args[0].(float64)), nil
 		},
 	}
 )
 
-// A DiceExpression is a representation of a dice roll that must be evaluated.
-// This may be a simple expression like `d20` or more complex, like
-// `floor(max(d20,d12)/2+3)`.
-type DiceExpression struct {
-	Original string                 `json:"original"`
-	Rolled   string                 `json:"rolled"`
-	Result   float64                `json:"result"`
-	Dice     []dice.GroupProperties `json:"dice"`
+// An Expression is a representation of a dice roll that has been evaluated.
+type Expression struct {
+	// Original is the original expression input.
+	Original string `json:"original"`
+	// Rolled is the original expression but with any dice expressions rolled
+	// and expanded.
+	Rolled string `json:"rolled"`
+	// Result is the expression's evaluated total.
+	Result float64 `json:"result"`
+	// Dice is the list of dice groups rolled as part of the expression.
+	Dice []dice.GroupProperties `json:"dice,omitempty"`
 }
 
-func (de *DiceExpression) String() string {
+func (de *Expression) String() string {
 	return fmt.Sprintf("%s = %v", de.Rolled, de.Result)
 }
 
-// GoString returns a Go syntax representation of a DiceExpression.
-func (de *DiceExpression) GoString() string {
+// GoString returns a Go syntax of an expression.
+func (de *Expression) GoString() string {
 	return fmt.Sprintf("%#v", *de)
 }
 
-// Evaluate evaluates a string expression of dice and math, returning a synopsis
-// of the various stages of evaluation and/or an error. The evaluation order
-// needs to follow order of operations:
+// Evaluate evaluates a string expression of dice, math, or a combination of the
+// two, and returns the resulting Expression. The evaluation order needs to
+// follow order of operations.
 //
-//  1. Roll all dice by matching for regex and substituting the roll values,
-//  2. Perform any function-based operations (adv, dis, floor),
-//  3. Multiplication/division,
-//  4. Addition/subtraction
+// A parsable expression could be a simple expression like
 //
-// Evaluate can likely benefit immensely from optimization and more fine-grained
+//  d20+1
+//
+// or something more complex, like
+//
+//  floor(max(d20,2d12k1)/2+3)
+//
+// The expression must evaluate to a float result. Evaluate can likely benefit
+// immensely from optimization/a custom implementation and more fine-grained
 // unit tests/benchmarks.
-func Evaluate(expression string) (*DiceExpression, error) {
-	de := &DiceExpression{
+func Evaluate(expression string) (*Expression, error) {
+	de := &Expression{
 		Original: expression,
 		Dice:     make([]dice.GroupProperties, 0),
 	}
@@ -126,5 +128,5 @@ func Evaluate(expression string) (*DiceExpression, error) {
 		return de, nil
 	}
 
-	return nil, fmt.Errorf("error evaluating roll")
+	return de, fmt.Errorf("result %v not a float", err)
 }

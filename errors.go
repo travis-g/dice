@@ -1,11 +1,12 @@
 package dice
 
-// ErrSizeZero is an error returned when an attempt to create a or roll a 0-sized die is made.
-type ErrSizeZero struct{}
+import "errors"
 
-func (e *ErrSizeZero) Error() string {
-	return "dice cannot have 0 sides"
-}
+var (
+	// ErrSizeZero is returned when an attempt to create or roll a 0-sized die
+	// is made.
+	ErrSizeZero = errors.New("die cannot have 0 sides")
+)
 
 // ErrNotImplemented is an error returned when a feature is not yet implemented.
 type ErrNotImplemented struct {

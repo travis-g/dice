@@ -20,7 +20,7 @@ func BenchmarkEvaluate(b *testing.B) {
 		{"3d20+2d4"},
 		{"100d6"},
 	}
-	var de *DiceExpression
+	var de *Expression
 	for _, bmark := range benchmarks {
 		b.Run(bmark.expression, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
@@ -48,7 +48,7 @@ func BenchmarkEvaluateCount(b *testing.B) {
 		{"50d20"},
 		{"100d20"},
 	}
-	var de *DiceExpression
+	var de *Expression
 	for _, bmark := range benchmarks {
 		b.Run(bmark.expression, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
@@ -76,7 +76,7 @@ func BenchmarkEvaluateSize(b *testing.B) {
 		{"1d50"},
 		{"1d100"},
 	}
-	var de *DiceExpression
+	var de *Expression
 	for _, bmark := range benchmarks {
 		b.Run(bmark.expression, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
@@ -99,7 +99,7 @@ func BenchmarkEvaluateDiceFunctions(b *testing.B) {
 		{"ceil", "ceil(0.5)"},
 		{"round", "round(0.5)"},
 	}
-	var de *DiceExpression
+	var de *Expression
 	for _, bmark := range benchmarks {
 		b.Run(bmark.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
@@ -118,7 +118,7 @@ func TestEvaluate(t *testing.T) {
 		{"1", 1},
 		{"d1", 1},
 	}
-	var de *DiceExpression
+	var de *Expression
 	for _, tc := range testCases {
 		de, err := Evaluate(tc.expression)
 		if err != nil {
@@ -147,7 +147,7 @@ func TestDiceFunctions(t *testing.T) {
 		{"round-down", "round(0.49)", 0},
 		{"round-up", "round(0.5)", 1},
 	}
-	var de *DiceExpression
+	var de *Expression
 	for _, tc := range testCases {
 		de, err := Evaluate(tc.expression)
 		if err != nil {

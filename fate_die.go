@@ -8,9 +8,8 @@ const fateDieNotation = "dF"
 
 var _ = Interface(&FateDie{})
 
-// A FateDie is a die with six sides, {-1, -1, 0, 0, 1, 1}. Also called a Fudge
-// die, but is used in specific systems. In a pinch, a FateDie can be emulated
-// with a traditional polyhedral die by evaluating 1d3-2.
+// A FateDie is a die with six sides, {-1, -1, 0, 0, 1, 1}. A FateDie can be
+// emulated with a traditional polyhedral die by evaluating "1d3-2".
 type FateDie struct {
 	Result   int    `json:"result"`
 	Type     string `json:"type"`
@@ -30,11 +29,11 @@ func (f *FateDie) GoString() string {
 	return fmt.Sprintf("%#v", *f)
 }
 
-// Roll will Roll a given FateDie and set the die's result. Fate dice can have
+// Roll implements the dice.Interface Roll method. Fate dice can have integer
 // results in [-1, 1].
 func (f *FateDie) Roll() (float64, error) {
 	if !f.Unrolled {
-		return float64(f.Result), nil
+		return float64(f.Total()), nil
 	}
 	i, err := Intn(3)
 	if err != nil {
@@ -45,7 +44,9 @@ func (f *FateDie) Roll() (float64, error) {
 	return float64(f.Result), nil
 }
 
-// Total returns the result of a Fate die. If dropped, 0 is returned.
+// Total implements the dice.Interface Total method. If dropped, 0 is returned.
+// Note that the Dropped bool itself should be checked to ensure the fate die
+// was indeed dropped, and did not simply roll a 0.
 func (f *FateDie) Total() float64 {
 	if f.Dropped {
 		return 0.0

@@ -10,17 +10,17 @@ import (
 var _ Interface = (*Group)(nil)
 
 // Type is the enum of types that a die or dice can be
-type Type uint
+type Type int
 
 const (
 	// TypeInvalid is any invalid type
-	TypeInvalid Type = 0
+	TypeInvalid Type = -1
 
-	// TypePolyhedron indicates a die is any standard polyhedron
-	TypePolyhedron Type = iota
+	// TypePolyhedron indicates a die is a nonspecific standard polyhedron
+	TypePolyhedron Type = 0
 
 	// TypeFate indicates the die is a Fate/Fudge die
-	TypeFate
+	TypeFate Type = iota
 
 	// TypeMultiple indicates a dice group is a mix of types
 	TypeMultiple
@@ -42,10 +42,15 @@ func (t Type) String() string {
 // A Interface is any kind of rollable object. A Interface could be a single die
 // or many dice of any type.
 type Interface interface {
-	// Roll should be used to also set the object's Result
+	// Roll will roll the object (if unrolled) and set the objects's result. If
+	// the die already has a result it will not be rerolled.
 	Roll() (float64, error)
+
+	// Total should return the totaled result. If the object is marked dropped 0
+	// should be returned.
 	Total() float64
 
+	// String/printing methods
 	fmt.Stringer
 	fmt.GoStringer
 }
@@ -89,7 +94,8 @@ func (g *GroupProperties) GoString() string {
 	return fmt.Sprintf("%#v", *g)
 }
 
-// Total sums a group of Rollables.
+// Total implements the dice.Interface Total method and sums a group of
+// Rollables' totals.
 func (g Group) Total() float64 {
 	sum := 0.0
 	for _, dice := range g {
@@ -130,7 +136,8 @@ func (g *Group) Copy() []Interface {
 	return self
 }
 
-// Roll rolls each dice interface within the group.
+// Roll implements the dice.Interface Roll method by rolling each
+// object/Interface within the group.
 func (g *Group) Roll() (float64, error) {
 	for _, dice := range *g {
 		dice.Roll()
@@ -149,12 +156,15 @@ func (g Group) Expression() string {
 	return strings.Replace(strings.Join(dice, "+"), "+-", "-", -1)
 }
 
-// Drop marks a dice within a group as dropped based on an input integer.
+// Drop marks a die/dice within a group as dropped based on an input integer. If
+// n is positive it will drop the n objects with the lowest Totals; if n is
+// negative, it will drop the n objects with the highest Totals.
 func (g *Group) Drop(drop int) {
 	if drop == 0 {
 		return
 	}
-	// create a copy of the array to sort and forward dice updates
+	// create a copy of the array to sort and forward dice updates rather than
+	// modifying the original order of the dice
 	dice := g.Copy()
 
 	sort.Slice(dice, func(i, j int) bool {
@@ -165,7 +175,7 @@ func (g *Group) Drop(drop int) {
 	if drop > 0 {
 		for i := 0; i < drop; i++ {
 			switch t := (dice[i]).(type) {
-			case *Die:
+			case *PolyhedralDie:
 				t.Dropped = true
 			case *FateDie:
 				t.Dropped = true
@@ -174,7 +184,7 @@ func (g *Group) Drop(drop int) {
 	} else if drop < 0 {
 		for i := len(dice) - 1; i >= len(dice)+drop; i-- {
 			switch t := (dice[i]).(type) {
-			case *Die:
+			case *PolyhedralDie:
 				t.Dropped = true
 			case *FateDie:
 				t.Dropped = true
@@ -216,7 +226,7 @@ GROUP_CONSISTENT:
 	props.Expression = g.Expression()
 	props.Result = g.Total()
 	switch t := (*dice[0]).(type) {
-	case *Die:
+	case *PolyhedralDie:
 		props.Size = t.Size
 	}
 	return props
@@ -227,7 +237,7 @@ GROUP_INCONSISTENT:
 	return props
 }
 
-// Roll rolls a group of dice and returns the total.
+// Roll rolls an arbitrary group of dice and returns the total.
 func Roll(g Group) (float64, error) {
 	return g.Roll()
 }
@@ -249,7 +259,7 @@ func NewGroup(props GroupProperties) (Group, error) {
 		}
 	case TypePolyhedron:
 		for i := range group {
-			group[i] = &Die{
+			group[i] = &PolyhedralDie{
 				Type:     fmt.Sprintf("d%d", props.Size),
 				Size:     props.Size,
 				Unrolled: true,
@@ -261,8 +271,8 @@ func NewGroup(props GroupProperties) (Group, error) {
 	return group, nil
 }
 
-// All is a helper function that returns true if all dice Interfaces of a slice
-// match a predicate.
+// All is a helper function that returns true if all dice.Interfaces of a slice
+// match a predicate. All will return false on the first failure.
 func All(vs []*Interface, f func(*Interface) bool) bool {
 	for _, v := range vs {
 		if !f(v) {
