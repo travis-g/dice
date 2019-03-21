@@ -110,7 +110,7 @@ func ParseExpression(notation string) (GroupProperties, error) {
 	case "dh":
 		dropkeep = -int(num)
 	case "kl":
-		dropkeep = -props.Count - int(num)
+		dropkeep = int(num) - props.Count
 	}
 
 	if dropkeep != 0 {
