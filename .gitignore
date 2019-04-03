@@ -1,6 +1,9 @@
 dice
 dice.exe
 !cmd/dice
+parser
+parser.exe
+!comd/parser
 
 coverage.out
 .vscode

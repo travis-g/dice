@@ -59,7 +59,7 @@ func ParseNotation(notation string) (GroupProperties, error) {
 	}
 
 	// size was not a uint, check for special dice types
-	switch components["size"] {
+	switch s := components["size"]; s {
 	case "F":
 		props := GroupProperties{
 			Type:     TypeFate,
@@ -68,7 +68,7 @@ func ParseNotation(notation string) (GroupProperties, error) {
 		}
 		return props, nil
 	default:
-		return GroupProperties{}, &ErrParseError{notation, components["size"], "size", ": invalid size"}
+		return GroupProperties{}, &ErrParseError{notation, s, "size", ": invalid size"}
 	}
 }
 
