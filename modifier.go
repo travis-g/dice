@@ -1,8 +1,10 @@
 package dice
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"strconv"
 )
 
 type CompareOp string
@@ -26,7 +28,14 @@ type RerollModifier struct {
 }
 
 func (m *RerollModifier) String() string {
-	return fmt.Sprintf("r%s%d", m.Compare, m.Point)
+	var buf bytes.Buffer
+	buf.WriteString("r")
+	// concise output if checking equals
+	if m.Compare != "=" {
+		buf.WriteString(m.Compare)
+	}
+	buf.WriteString(strconv.Itoa(m.Point))
+	return buf.String()
 }
 
 func (m *RerollModifier) Apply(ctx context.Context, d *PolyhedralDie) error {
