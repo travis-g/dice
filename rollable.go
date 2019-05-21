@@ -1,6 +1,7 @@
 package dice
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"sort"
@@ -10,20 +11,15 @@ import (
 var _ Interface = (*Group)(nil)
 
 // Type is the enum of types that a die or dice can be
-type Type int
+type Type uint
 
+// Types of dice/dice groups
 const (
-	// TypeInvalid is any invalid type
-	TypeInvalid Type = -1
-
-	// TypePolyhedron indicates a die is a nonspecific standard polyhedron
-	TypePolyhedron Type = 0
-
-	// TypeFate indicates the die is a Fate/Fudge die
-	TypeFate Type = iota
-
-	// TypeMultiple indicates a dice group is a mix of types
-	TypeMultiple
+	// TypeUnknown is any invalid/inconsistent type
+	TypeUnknown    Type = 0
+	TypePolyhedron Type = 1
+	TypeFate       Type = 2
+	TypeMultiple   Type = 3
 )
 
 func (t Type) String() string {
@@ -35,7 +31,7 @@ func (t Type) String() string {
 	case TypeMultiple:
 		return "multiple"
 	default:
-		return "invalid"
+		return "unknown"
 	}
 }
 
@@ -44,11 +40,11 @@ func (t Type) String() string {
 type Interface interface {
 	// Roll will roll the object (if unrolled) and set the objects's result. If
 	// the die already has a result it will not be rerolled.
-	Roll() (float64, error)
+	Roll(context.Context) (float64, error)
 
 	// Total should return the totaled result. If the object is marked dropped 0
 	// should be returned.
-	Total() float64
+	Total(context.Context) (float64, error)
 
 	// String/printing methods
 	fmt.Stringer
@@ -83,6 +79,9 @@ type GroupProperties struct {
 	// DropKeep indicates how many child dice should be dropped (and from which
 	// direction) if describing a set.
 	DropKeep int `json:"drop,omitempty"`
+
+	// Modifiers is the string of modifiers added to a given Group
+	Modifiers []Modifier `json:"modifiers,omitempty"`
 }
 
 func (g *GroupProperties) String() string {
@@ -96,13 +95,16 @@ func (g *GroupProperties) GoString() string {
 
 // Total implements the dice.Interface Total method and sums a group of
 // Rollables' totals.
-func (g Group) Total() float64 {
-	sum := 0.0
-	for _, dice := range g {
-		dice.Roll()
-		sum += dice.Total()
+func (g *Group) Total(ctx context.Context) (total float64, err error) {
+	total = 0.0
+	for _, dice := range *g {
+		result, err := dice.Total(ctx)
+		if err != nil {
+			return total, err
+		}
+		total += result
 	}
-	return sum
+	return
 }
 
 func (g *Group) String() string {
@@ -110,7 +112,8 @@ func (g *Group) String() string {
 	for i, dice := range *g {
 		temp[i] = fmt.Sprintf("%v", dice.String())
 	}
-	return fmt.Sprintf("%s => %v", strings.Join(temp, "+"), g.Total())
+	t, _ := g.Total(context.Background())
+	return fmt.Sprintf("%s => %v", strings.Join(temp, "+"), t)
 }
 
 // GoString returns the Go syntax for a group.
@@ -138,18 +141,18 @@ func (g *Group) Copy() []Interface {
 
 // Roll implements the dice.Interface Roll method by rolling each
 // object/Interface within the group.
-func (g *Group) Roll() (float64, error) {
+func (g *Group) Roll(ctx context.Context) (float64, error) {
 	for _, dice := range *g {
-		dice.Roll()
+		dice.Roll(ctx)
 	}
-	return g.Total(), nil
+	return g.Total(ctx)
 }
 
 // Expression returns an expression to represent the group's total. Dice in the
 // group that are unrolled are replaced with their roll notations
-func (g Group) Expression() string {
-	dice := make([]string, len(g))
-	for i, die := range g {
+func (g *Group) Expression() string {
+	dice := make([]string, len(*g))
+	for i, die := range *g {
 		dice[i] = die.String()
 	}
 	// simplify the expression
@@ -168,7 +171,9 @@ func (g *Group) Drop(drop int) {
 	dice := g.Copy()
 
 	sort.Slice(dice, func(i, j int) bool {
-		return (dice[i]).Total() < (dice[j]).Total()
+		ti, _ := (dice[i]).Total(context.Background())
+		tj, _ := (dice[j]).Total(context.Background())
+		return ti < tj
 	})
 	// fmt.Println(dice)
 	// drop lowest to highest
@@ -194,7 +199,7 @@ func (g *Group) Drop(drop int) {
 }
 
 // Properties calculates properties from a given group.
-func Properties(g *Group) GroupProperties {
+func Properties(ctx context.Context, g *Group) GroupProperties {
 	props := GroupProperties{
 		Count: len(*g),
 		Dice:  *g,
@@ -224,7 +229,7 @@ func Properties(g *Group) GroupProperties {
 
 GROUP_CONSISTENT:
 	props.Expression = g.Expression()
-	props.Result = g.Total()
+	props.Result, _ = g.Total(ctx)
 	switch t := (*dice[0]).(type) {
 	case *PolyhedralDie:
 		props.Size = t.Size
@@ -233,13 +238,13 @@ GROUP_CONSISTENT:
 
 GROUP_INCONSISTENT:
 	props.Expression = g.Expression()
-	props.Result = g.Total()
+	props.Result, _ = g.Total(ctx)
 	return props
 }
 
 // Roll rolls an arbitrary group of dice and returns the total.
-func Roll(g Group) (float64, error) {
-	return g.Roll()
+func Roll(ctx context.Context, g *Group) (float64, error) {
+	return g.Roll(ctx)
 }
 
 // NewGroup creates a new group based on provided seed of properties.

@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/travis-g/dice/math"
@@ -11,8 +12,10 @@ import (
 // math.DiceExpression and print the result or return any errors during
 // evaluation.
 func EvalCommand(c *cli.Context) error {
+	ctx := context.Background()
+
 	eval := c.Args().Get(0)
-	exp, err := math.Evaluate(eval)
+	exp, err := math.Evaluate(ctx, eval)
 	if err != nil {
 		return err
 	}

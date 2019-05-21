@@ -2,6 +2,7 @@ package command
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 
@@ -13,6 +14,7 @@ const replPrompt = ">>> "
 
 // REPLCommand is a command that will initiate a dice REPL.
 func REPLCommand(c *cli.Context) error {
+	ctx := context.Background()
 	scanner := bufio.NewScanner(os.Stdin)
 
 	fmt.Println("Use quit() or Ctrl-C to exit")
@@ -27,7 +29,7 @@ func REPLCommand(c *cli.Context) error {
 
 		line := scanner.Text()
 		if line != "quit()" {
-			exp, err := math.Evaluate(line)
+			exp, err := math.Evaluate(ctx, line)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err)
 				continue

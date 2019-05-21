@@ -1,9 +1,15 @@
 package math
 
-import "testing"
+import (
+	"context"
+	"testing"
+)
 
 // package-level variable to prevent optimizations
-var i interface{}
+var (
+	i   interface{}
+	ctx = context.Background()
+)
 
 func BenchmarkEvaluate(b *testing.B) {
 	b.ReportAllocs()
@@ -24,7 +30,7 @@ func BenchmarkEvaluate(b *testing.B) {
 	for _, bmark := range benchmarks {
 		b.Run(bmark.expression, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				de, _ = Evaluate(bmark.expression)
+				de, _ = Evaluate(ctx, bmark.expression)
 			}
 		})
 	}
@@ -52,7 +58,7 @@ func BenchmarkEvaluateCount(b *testing.B) {
 	for _, bmark := range benchmarks {
 		b.Run(bmark.expression, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				de, _ = Evaluate(bmark.expression)
+				de, _ = Evaluate(ctx, bmark.expression)
 			}
 		})
 	}
@@ -80,7 +86,7 @@ func BenchmarkEvaluateSize(b *testing.B) {
 	for _, bmark := range benchmarks {
 		b.Run(bmark.expression, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				de, _ = Evaluate(bmark.expression)
+				de, _ = Evaluate(ctx, bmark.expression)
 			}
 		})
 	}
@@ -103,7 +109,7 @@ func BenchmarkEvaluateDiceFunctions(b *testing.B) {
 	for _, bmark := range benchmarks {
 		b.Run(bmark.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				de, _ = Evaluate(bmark.expression)
+				de, _ = Evaluate(ctx, bmark.expression)
 			}
 		})
 	}
@@ -120,7 +126,7 @@ func TestEvaluate(t *testing.T) {
 	}
 	var de *Expression
 	for _, tc := range testCases {
-		de, err := Evaluate(tc.expression)
+		de, err := Evaluate(ctx, tc.expression)
 		if err != nil {
 			t.Fatalf("error evaluating \"%s\": %s", tc.expression, err)
 		}
@@ -149,7 +155,7 @@ func TestDiceFunctions(t *testing.T) {
 	}
 	var de *Expression
 	for _, tc := range testCases {
-		de, err := Evaluate(tc.expression)
+		de, err := Evaluate(ctx, tc.expression)
 		if err != nil {
 			t.Fatalf("error evaluating %s: %s", tc.expression, err)
 		}

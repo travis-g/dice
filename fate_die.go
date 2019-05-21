@@ -1,6 +1,7 @@
 package dice
 
 import (
+	"context"
 	"fmt"
 )
 
@@ -31,9 +32,10 @@ func (f *FateDie) GoString() string {
 
 // Roll implements the dice.Interface Roll method. Fate dice can have integer
 // results in [-1, 1].
-func (f *FateDie) Roll() (float64, error) {
+func (f *FateDie) Roll(ctx context.Context) (float64, error) {
 	if !f.Unrolled {
-		return float64(f.Total()), nil
+		t, err := f.Total(ctx)
+		return float64(t), err
 	}
 	i, err := Intn(3)
 	if err != nil {
@@ -47,12 +49,13 @@ func (f *FateDie) Roll() (float64, error) {
 // Total implements the dice.Interface Total method. If dropped, 0 is returned.
 // Note that the Dropped bool itself should be checked to ensure the fate die
 // was indeed dropped, and did not simply roll a 0.
-func (f *FateDie) Total() float64 {
+func (f *FateDie) Total(ctx context.Context) (float64, error) {
 	if f.Dropped {
-		return 0.0
+		return 0.0, nil
 	}
+	var err error
 	if f.Unrolled {
-		f.Roll()
+		_, err = f.Roll(ctx)
 	}
-	return float64(f.Result)
+	return float64(f.Result), err
 }

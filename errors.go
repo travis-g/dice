@@ -6,6 +6,10 @@ var (
 	// ErrSizeZero is returned when an attempt to create or roll a 0-sized die
 	// is made.
 	ErrSizeZero = errors.New("die cannot have 0 sides")
+
+	// ErrUnrolled is returned when an operation that requires a rolled die is
+	// preformed on an unrolled die
+	ErrUnrolled = errors.New("die is unrolled")
 )
 
 // ErrNotImplemented is an error returned when a feature is not yet implemented.

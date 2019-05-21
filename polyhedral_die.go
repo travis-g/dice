@@ -1,6 +1,7 @@
 package dice
 
 import (
+	"context"
 	"fmt"
 )
 
@@ -9,18 +10,20 @@ var _ = Interface(&PolyhedralDie{})
 // A PolyhedralDie represents a variable-sided die in memory, including the result of
 // rolling it.
 type PolyhedralDie struct {
-	Type     string  `json:"type"`
-	Result   float64 `json:"result"`
-	Size     int     `json:"size"`
-	Dropped  bool    `json:"dropped,omitempty"`
-	Unrolled bool    `json:"unrolled,omitempty"`
+	Type      string  `json:"type"`
+	Result    float64 `json:"result"`
+	Size      int     `json:"size"`
+	Dropped   bool    `json:"dropped,omitempty"`
+	Unrolled  bool    `json:"unrolled,omitempty"`
+	Modifiers []Modifier
 }
 
 // String returns an expression-like representation of a rolled die or its type,
 // if it has not been rolled.
 func (d *PolyhedralDie) String() string {
 	if !d.Unrolled {
-		return fmt.Sprintf("%v", d.Total())
+		t, _ := d.Total(context.Background())
+		return fmt.Sprintf("%v", t)
 	}
 	return d.Type
 }
@@ -31,19 +34,19 @@ func (d *PolyhedralDie) GoString() string {
 }
 
 // Total implements the dice.Interface Total method.
-func (d *PolyhedralDie) Total() float64 {
+func (d *PolyhedralDie) Total(ctx context.Context) (float64, error) {
 	if d.Dropped {
-		return 0.0
+		return 0.0, nil
 	}
 	if d.Unrolled {
-		d.Roll()
+		d.Roll(ctx)
 	}
-	return d.Result
+	return d.Result, nil
 }
 
 // Roll implements the dice.Interface Roll method. Results for polyhedral dice
 // are in the range [1, size].
-func (d *PolyhedralDie) Roll() (float64, error) {
+func (d *PolyhedralDie) Roll(ctx context.Context) (float64, error) {
 	if !d.Unrolled {
 		return d.Result, nil
 	}
@@ -55,5 +58,9 @@ func (d *PolyhedralDie) Roll() (float64, error) {
 		d.Result = float64(1 + i)
 		d.Unrolled = false
 	}
+	// TODO: process modifiers that may result in a reroll
+	// for _, mod := range d.Modifiers {
+	// 	mod.Apply(ctx, d)
+	// }
 	return d.Result, nil
 }

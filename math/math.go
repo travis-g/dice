@@ -2,6 +2,7 @@ package math
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"math"
 	"sort"
@@ -78,7 +79,7 @@ func (de *Expression) GoString() string {
 // The expression must evaluate to a float result. Evaluate can likely benefit
 // immensely from optimization/a custom implementation and more fine-grained
 // unit tests/benchmarks.
-func Evaluate(expression string) (*Expression, error) {
+func Evaluate(ctx context.Context, expression string) (*Expression, error) {
 	de := &Expression{
 		Original: expression,
 		Dice:     make([]dice.GroupProperties, 0),
@@ -90,13 +91,13 @@ func Evaluate(expression string) (*Expression, error) {
 	rolledBytes := dice.DiceExpressionRegex.ReplaceAllFunc([]byte(de.Original), func(matchBytes []byte) []byte {
 		props, err := dice.ParseExpression(string(matchBytes))
 		d, err := dice.NewGroup(props)
-		d.Roll()
+		d.Roll(ctx)
 		drop := props.DropKeep
 		if drop != 0 {
 			d.Drop(drop)
 		}
 		// record dice:
-		props = dice.Properties(&d)
+		props = dice.Properties(ctx, &d)
 		props.DropKeep = drop
 		de.Dice = append(de.Dice, props)
 		if err != nil {

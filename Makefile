@@ -19,6 +19,6 @@ cover:
 	@go tool cover -html=coverage.out
 
 clean:
-	@rm -f dice dice.exe coverage.out
+	@rm -f dice dice.exe parser parser.exe coverage.out
 
 .PHONY: clean build

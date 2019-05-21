@@ -1,6 +1,7 @@
 package dice
 
 import (
+	"context"
 	"fmt"
 	"testing"
 )
@@ -23,6 +24,8 @@ var groupProperties = []struct {
 	},
 },
 }
+
+var ctx = context.Background()
 
 func Benchmark(b *testing.B) {
 	for _, bench := range groupProperties {
@@ -79,7 +82,11 @@ func TestGroup_Total(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.g.Total(); got != tt.want {
+			total, err := tt.g.Total(ctx)
+			if err != nil {
+				t.Errorf("Got error on %v: %v", tt, err)
+			}
+			if got := total; got != tt.want {
 				t.Errorf("Group.Total() = %v, want %v", got, tt.want)
 			}
 		})
