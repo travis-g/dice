@@ -10,19 +10,18 @@ import (
 
 var _ Interface = (*Group)(nil)
 
-// Type is the enum of types that a die or dice can be
-type Type uint
+// DieType is the enum of types that a die or dice can be
+type DieType string
 
 // Types of dice/dice groups
 const (
 	// TypeUnknown is any invalid/inconsistent type
-	TypeUnknown    Type = 0
-	TypePolyhedron Type = 1
-	TypeFate       Type = 2
-	TypeMultiple   Type = 3
+	TypePolyhedron DieType = "polyhedron"
+	TypeFate       DieType = "fate"
+	TypeMultiple   DieType = "multiple"
 )
 
-func (t Type) String() string {
+func (t DieType) String() string {
 	switch t {
 	case TypePolyhedron:
 		return "polyhedron"

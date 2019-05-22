@@ -26,7 +26,7 @@ var (
 	penetratingRegex    = regexp.MustCompile(`!p` + comparePointPattern + `?`)
 	explodingRegex      = regexp.MustCompile(`!` + comparePointPattern + `?`)
 	rerollRegex         = regexp.MustCompile(
-		`(?P<reroll>r[o]?)` + comparePointPattern + `?`)
+		`r(?P<once>o?)` + comparePointPattern + `?`)
 
 	sortRegex     = regexp.MustCompile(`(?P<sort>s[ad]?)`)
 	dropKeepRegex = regexp.MustCompile(`(?P<op>[dk][lh]?)(?P<num>\d+)`)
@@ -161,11 +161,9 @@ func main() {
 	fmt.Printf("post funcs: %#v\n", postfuncs)
 	fmt.Printf("props: %#v\n", test)
 
-	die := dice.PolyhedralDie{
-		Size:      2,
-		Unrolled:  true,
-		Modifiers: test.Modifiers,
-	}
+	die := dice.NewDie(test.Size)
+	die.Modifiers = test.Modifiers
+	fmt.Println(die)
 	die.Roll(ctx)
-	fmt.Println()
+	fmt.Println(die)
 }

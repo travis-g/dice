@@ -16,8 +16,18 @@ const (
 )
 
 type Modifier interface {
-	Apply(context.Context, *PolyhedralDie) error
+	Apply(context.Context, *Die) error
 	fmt.Stringer
+}
+
+type ModifierList []Modifier
+
+func (m ModifierList) String() string {
+	var buf bytes.Buffer
+	for _, mod := range m {
+		buf.WriteString(mod.String())
+	}
+	return buf.String()
 }
 
 var _ = Modifier(&RerollModifier{})
@@ -38,22 +48,19 @@ func (m *RerollModifier) String() string {
 	return buf.String()
 }
 
-func (m *RerollModifier) Apply(ctx context.Context, d *PolyhedralDie) error {
+func (m *RerollModifier) Apply(ctx context.Context, d *Die) error {
 	switch m.Compare {
 	case "", CompareEquals:
 		for d.Result == float64(m.Point) {
-			d.Unrolled = true
-			d.Roll(ctx)
+			d.Reroll(ctx)
 		}
 	case CompareLess:
 		for d.Result <= float64(m.Point) {
-			d.Unrolled = true
-			d.Roll(ctx)
+			d.Reroll(ctx)
 		}
 	case CompareGreater:
 		for d.Result > float64(m.Point) {
-			d.Unrolled = true
-			d.Roll(ctx)
+			d.Reroll(ctx)
 		}
 	}
 	return nil
