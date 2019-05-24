@@ -17,7 +17,7 @@ type DieType string
 const (
 	// TypeUnknown is any invalid/inconsistent type
 	TypePolyhedron DieType = "polyhedron"
-	TypeFate       DieType = "fate"
+	TypeFudge      DieType = "fudge"
 	TypeMultiple   DieType = "multiple"
 )
 
@@ -25,8 +25,8 @@ func (t DieType) String() string {
 	switch t {
 	case TypePolyhedron:
 		return "polyhedron"
-	case TypeFate:
-		return "fate"
+	case TypeFudge:
+		return "fudge"
 	case TypeMultiple:
 		return "multiple"
 	default:
@@ -47,7 +47,6 @@ type Interface interface {
 
 	// String/printing methods
 	fmt.Stringer
-	fmt.GoStringer
 }
 
 // A Group is a slice of dice interfaces.
@@ -254,7 +253,7 @@ func NewGroup(props GroupProperties) (Group, error) {
 	group := make(Group, props.Count)
 
 	switch props.Type {
-	case TypeFate:
+	case TypeFudge:
 		for i := range group {
 			group[i] = &FateDie{
 				Type:     fateDieNotation,

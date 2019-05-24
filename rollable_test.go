@@ -18,7 +18,7 @@ var groupProperties = []struct {
 	},
 }, {"3dF",
 	GroupProperties{
-		Type:     TypeFate,
+		Type:     TypeFudge,
 		Count:    3,
 		Unrolled: true,
 	},

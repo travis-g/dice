@@ -10,6 +10,10 @@ var (
 	// ErrUnrolled is returned when an operation that requires a rolled die is
 	// preformed on an unrolled die
 	ErrUnrolled = errors.New("die is unrolled")
+
+	// ErrRolled is returned when an attempt is made to roll a die that had been
+	// rolled already
+	ErrRolled = errors.New("die already rolled")
 )
 
 // ErrNotImplemented is an error returned when a feature is not yet implemented.

@@ -62,7 +62,8 @@ func ParseNotation(notation string) (GroupProperties, error) {
 	switch s := components["size"]; s {
 	case "F":
 		props := GroupProperties{
-			Type:     TypeFate,
+			Type:     TypeFudge,
+			Size:     1,
 			Count:    int(count),
 			Unrolled: true,
 		}

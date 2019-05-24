@@ -6,12 +6,14 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/travis-g/dice"
 )
@@ -50,7 +52,8 @@ const (
 )
 
 func main() {
-	var ctx = context.Background()
+	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*2)
+	defer cancelFunc()
 
 	// callbacks to roll on each die roll
 	rollfuncs := []string(nil)
@@ -161,9 +164,24 @@ func main() {
 	fmt.Printf("post funcs: %#v\n", postfuncs)
 	fmt.Printf("props: %#v\n", test)
 
-	die := dice.NewDie(test.Size)
+	die, err := dice.NewDie(&dice.DieProperties{
+		Type:         dice.TypePolyhedron,
+		Size:         test.Size,
+		Result:       0,
+		Dropped:      false,
+		DieModifiers: dice.ModifierList(test.Modifiers),
+	})
+	if err != nil {
+		fmt.Println(err)
+	}
 	die.Modifiers = test.Modifiers
 	fmt.Println(die)
-	die.Roll(ctx)
+	_, err = die.Roll(ctx)
+	if err != nil {
+		fmt.Println(err)
+	}
 	fmt.Println(die)
+	_ = json.NewEncoder(os.Stdout).Encode(
+		die,
+	)
 }
