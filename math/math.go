@@ -89,7 +89,7 @@ func Evaluate(ctx context.Context, expression string) (*Expression, error) {
 	// fully-rolled and expanded counterparts, and save the expanded expression
 	// to the object.
 	rolledBytes := dice.DiceExpressionRegex.ReplaceAllFunc([]byte(de.Original), func(matchBytes []byte) []byte {
-		props, err := dice.ParseExpression(string(matchBytes))
+		props, _ := dice.ParseExpression(string(matchBytes))
 		d, err := dice.NewGroup(props)
 		d.Roll(ctx)
 		drop := props.DropKeep

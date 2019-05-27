@@ -1,5 +1,7 @@
 # Dice
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/travis-g/dice)](https://goreportcard.com/report/github.com/travis-g/dice)
+
 Dice is a CLI solution to your dice-rolling needs. It's also technically a calculator.
 
 [Dice notation][dice-notation] is an algebra-like system for indicating dice rolls in games. Dice rolls are usually given in the form ![AdX+B][tex-AdX+B], where ![A][tex-A] is the number of ![X][tex-X]-sided dice to roll, with an optional modifier ![B][tex-B]. ![B][tex-B] could be an integer or potentially another dice notation string. Additionally, ![A][tex-A] can be omitted if the number of ![X][tex-X]-sided dice to roll is 1: ![1dX][tex-1dX] can be written as simply ![dX][tex-dX].

@@ -18,7 +18,7 @@ func RollCommand(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	group, err := dice.NewGroup(props)
+	group, _ := dice.NewGroup(props)
 	_, err = group.Roll(ctx)
 	if err != nil {
 		return err
