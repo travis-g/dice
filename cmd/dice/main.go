@@ -33,7 +33,7 @@ func main() {
 	}
 
 	cmd.Commands = []cli.Command{
-		cli.Command{
+		{
 			Name:    "eval",
 			Aliases: []string{"e"},
 			Usage:   "evaluate a dice expression",
@@ -42,7 +42,7 @@ func main() {
 				return command.EvalCommand(c)
 			},
 		},
-		cli.Command{
+		{
 			Name:  "repl",
 			Usage: "enter a REPL mode",
 			Flags: globalFlags,
@@ -50,7 +50,7 @@ func main() {
 				return command.REPLCommand(c)
 			},
 		},
-		cli.Command{
+		{
 			Name:    "roll",
 			Aliases: []string{"r"},
 			Usage:   "roll plain dice groups",

@@ -1,4 +1,8 @@
-build: test
+fmt:
+	@echo "==> Running gofmt..."
+	gofmt -s -w .
+
+build: fmt test
 	@echo "==> Building library..."
 	go build -ldflags="-s -w" ./...
 	@echo "==> Building the CLI..."
