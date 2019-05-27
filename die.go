@@ -7,25 +7,39 @@ import (
 	"sync/atomic"
 )
 
-var _ = Interface(&Die{})
-
-// Die represents a polyhedral die. A Die should use a mutex lock for thread
-// safety and a lock to prevent unintended re-rolling/possible wastes of system
-// entropy.
+// Die represents a typed die. A Die should use a mutex lock for thread safety
+// and call `Reroll()` manually to prevent unintended re-rolling/possible wastes
+// of system entropy.
+//
+// At its core, Die should be handled as an RWMutex: depending on state
+// (rolled/settled, mid-roll, etc.) it may or may not be safe to read the die's
+// properties at any specific time. When a Die is being read, RLock() it to
+// prevent writes. When it's being modified, Lock() it to prevent race condition
+// other writes as well as reads.
+//
+// The thread safety of any given Die should be left up to the implementer to
+// check, as oftentimes an individual die is rolled once, returned, and printed
+// synchronously. It is only when dice are cached, monitored, etc. that thread
+// safety is required.
 type Die struct {
-	// Use an RWMutex to prevent a complete lock when the Die only needs to be
-	// read
-	l      sync.RWMutex
+	// embed an RWMutex's properties/methods
+	sync.RWMutex
+
+	// Rolled state and the count of total rolls. Handle changes atomically.
 	rolled uint32
 	rolls  uint32
 
-	Type      DieType      `json:"type"`
+	// Generic properties
+	Type      DieType      `json:"type,omitempty"`
 	Size      int          `json:"size"`
 	Result    float64      `json:"result,omitempty"`
 	Dropped   bool         `json:"dropped,omitempty"`
 	Modifiers ModifierList `json:"-"`
 }
 
+// A DieProperties object is the set of properties (usually extracted from a
+// notation) that should be used to define a Die or group of like dice (a slice
+// of multiple Die).
 type DieProperties struct {
 	Type    DieType `json:"type,omitempty"`
 	Size    int     `json:"size,omitempty"`
@@ -37,7 +51,7 @@ type DieProperties struct {
 	GroupModifiers ModifierList `json:"group_modifiers,omitempty"`
 }
 
-// NewDie create a new Die to roll
+// NewDie create a new Die to roll off of a supplied property set.
 func NewDie(props *DieProperties) (*Die, error) {
 	if props.Size == 0 {
 		return nil, ErrSizeZero
@@ -57,27 +71,28 @@ func NewDie(props *DieProperties) (*Die, error) {
 // Roll implements the Roller interface and is thread-safe. The error returned
 // will be an ErrRolled error if the die was already rolled. The Roll function
 // should be what checks any context maximums, as this is the function that
-// gatekeeps entropy use (net new rolls, rerolls, etc.)
+// gatekeeps entropy use (net new rolls, rerolls, etc.).
+//
+// Note: In order for the modifiers to mutate the die (ex. rerolls), the die
+// must be unlocked, which may lead to thread safety issues.
 func (d *Die) Roll(ctx context.Context) (float64, error) {
 	// wait until we can safely roll the die, then re-lock the mutex
-	d.l.Lock()
+	d.Lock()
 	// if die was already rolled, return its existing roll and an error and
 	// defer unlocking the die
 	if d.rolled == 1 {
-		defer d.l.Unlock()
+		defer d.Unlock()
 		return d.Result, ErrRolled
 	}
 
 	err := roll(ctx, d)
 	if err != nil {
 		fmt.Println(err)
-		defer d.l.Unlock()
+		defer d.Unlock()
 		return d.Result, err
 	}
 
-	// HACK: in order for the modifiers to mutate the die (ex. rerolls), the die
-	// must be unlocked, which may lead to thread safety issues
-	d.l.Unlock()
+	d.Unlock()
 	for _, mod := range d.Modifiers {
 		mod.Apply(ctx, d)
 	}
@@ -109,23 +124,23 @@ func roll(ctx context.Context, d *Die) error {
 	return nil
 }
 
-// Reroll performs a thread-safe reroll after resetting a Die
+// Reroll performs a thread-safe reroll after resetting a Die.
 func (d *Die) Reroll(ctx context.Context) (float64, error) {
-	// take the mutex before rerolling
-	d.l.Lock()
-	defer d.l.Unlock()
+	d.Lock()
+	defer d.Unlock()
 	d.reset()
 	err := roll(ctx, d)
 	return d.Result, err
 }
 
+// reroll performs a thread unsafe reroll.
 func (d *Die) reroll(ctx context.Context) (err error) {
 	d.reset()
 	err = roll(ctx, d)
 	return
 }
 
-// reset resets a Die's properties so that it can be re-rolled
+// reset resets a Die's properties so that it can be re-rolled.
 func (d *Die) reset() {
 	d.rolled = 0
 	d.Result = 0
@@ -135,8 +150,8 @@ func (d *Die) reset() {
 // String returns an expression-like representation of a rolled die or its type,
 // if it has not been rolled.
 func (d *Die) String() string {
-	d.l.RLock()
-	defer d.l.RUnlock()
+	d.RLock()
+	defer d.RUnlock()
 	if d.rolled == 1 {
 		return fmt.Sprintf("%v", d.Result)
 	}
@@ -154,10 +169,10 @@ func (d *Die) String() string {
 }
 
 // Total implements the dice.Interface Total method. An ErrUnrolled error will
-// be returned if the die has not been rolled. This method is not thread-safe.
+// be returned if the die has not been rolled.
 func (d *Die) Total(ctx context.Context) (float64, error) {
-	d.l.RLock()
-	defer d.l.RUnlock()
+	d.RLock()
+	defer d.RUnlock()
 	if d.rolled == 0 {
 		return 0.0, ErrUnrolled
 	}

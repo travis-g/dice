@@ -15,10 +15,10 @@ type DieType string
 
 // Types of dice/dice groups
 const (
-	// TypeUnknown is any invalid/inconsistent type
-	TypePolyhedron DieType = "polyhedron"
+	TypePolyhedron DieType = ""
 	TypeFudge      DieType = "fudge"
 	TypeMultiple   DieType = "multiple"
+	TypeUnknown    DieType = "unknown"
 )
 
 func (t DieType) String() string {
