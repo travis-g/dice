@@ -43,33 +43,29 @@ type RerollModifier struct {
 	Once    bool   `json:"once"`
 }
 
-// func (m *RerollModifier) UnmarshalJSON(data []byte) error {
-// 	// alias type to prevent an infinite loop
-// 	type Alias RerollModifier
-// 	return nil
-// }
-
 func (m *RerollModifier) String() string {
 	var buf bytes.Buffer
-	buf.WriteString("r")
+	write := buf.WriteString
+	write("r")
 	if m.Once {
-		buf.WriteString("o")
+		write("o")
 	}
 	// inferred equals if not specified
 	if m.Compare != "=" {
-		buf.WriteString(m.Compare)
+		write(m.Compare)
 	}
-	buf.WriteString(strconv.Itoa(m.Point))
+	write(strconv.Itoa(m.Point))
 	return buf.String()
 }
 
-// Apply executes a RerollModifier against a Die
+// Apply executes a RerollModifier against a Die. The modifier may be slightly
+// modified the first time it is applied to ensure property consistency.
 func (m *RerollModifier) Apply(ctx context.Context, d *Die) error {
 	if m.Compare == "" {
 		m.Compare = CompareEquals
 	}
 	switch m.Compare {
-	case "", CompareEquals:
+	case CompareEquals:
 		for d.Result == float64(m.Point) {
 			d.reroll(ctx)
 		}
@@ -82,7 +78,9 @@ func (m *RerollModifier) Apply(ctx context.Context, d *Die) error {
 			d.reroll(ctx)
 		}
 	default:
-		return &ErrNotImplemented{"uncaught case for reroll"}
+		return &ErrNotImplemented{
+			fmt.Sprintf("uncaught case for reroll compare: %s", m.Compare),
+		}
 	}
 	return nil
 }

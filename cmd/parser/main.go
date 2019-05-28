@@ -105,7 +105,7 @@ func main() {
 					Point:   point,
 				})
 				// remove the reroll modifier from the string
-				return []byte(nil)
+				return []byte{}
 			})
 			modifiers = string(remainingBytes)
 
@@ -166,7 +166,7 @@ func main() {
 
 	die, err := dice.NewDie(&dice.DieProperties{
 		Type:         dice.TypePolyhedron,
-		Size:         test.Size,
+		Size:         uint(test.Size),
 		Result:       0,
 		Dropped:      false,
 		DieModifiers: dice.ModifierList(test.Modifiers),

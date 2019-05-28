@@ -13,12 +13,16 @@ var _ Interface = (*Group)(nil)
 // DieType is the enum of types that a die or dice can be
 type DieType string
 
-// Types of dice/dice groups
+// Types of dice/dice groups.
 const (
+	// Concrete dice types: these can be used to instantiate a new rollable.
 	TypePolyhedron DieType = ""
 	TypeFudge      DieType = "fudge"
-	TypeMultiple   DieType = "multiple"
-	TypeUnknown    DieType = "unknown"
+
+	// Meta dice types: these are used to classify rollable groups and unknown
+	// dice.
+	TypeMultiple DieType = "multiple"
+	TypeUnknown  DieType = "unknown"
 )
 
 func (t DieType) String() string {

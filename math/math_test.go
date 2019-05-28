@@ -2,6 +2,7 @@ package math
 
 import (
 	"context"
+	"fmt"
 	"testing"
 )
 
@@ -9,6 +10,12 @@ import (
 var (
 	i   interface{}
 	ctx = context.Background()
+)
+
+// Check implements
+var (
+	_ = fmt.Stringer(&Expression{})
+	_ = fmt.GoStringer(&Expression{})
 )
 
 func BenchmarkEvaluate(b *testing.B) {

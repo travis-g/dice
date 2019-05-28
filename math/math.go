@@ -46,39 +46,46 @@ var (
 type Expression struct {
 	// Original is the original expression input.
 	Original string `json:"original"`
+
 	// Rolled is the original expression but with any dice expressions rolled
 	// and expanded.
 	Rolled string `json:"rolled"`
+
 	// Result is the expression's evaluated total.
 	Result float64 `json:"result"`
-	// Dice is the list of dice groups rolled as part of the expression.
+
+	// Dice is the list of dice groups rolled as part of the expression. As dice
+	// are rolled, their GroupProperties are retrieved.
 	Dice []dice.GroupProperties `json:"dice,omitempty"`
 }
 
+// String implements fmt.Stringer.
 func (de *Expression) String() string {
 	return fmt.Sprintf("%s = %v", de.Rolled, de.Result)
 }
 
-// GoString returns a Go syntax of an expression.
+// GoString implements fmt.GoStringer.
 func (de *Expression) GoString() string {
 	return fmt.Sprintf("%#v", *de)
 }
 
-// Evaluate evaluates a string expression of dice, math, or a combination of the
-// two, and returns the resulting Expression. The evaluation order needs to
-// follow order of operations.
-//
-// A parsable expression could be a simple expression like
-//
-//  d20+1
-//
-// or something more complex, like
-//
-//  floor(max(d20,2d12k1)/2+3)
-//
-// The expression must evaluate to a float result. Evaluate can likely benefit
-// immensely from optimization/a custom implementation and more fine-grained
-// unit tests/benchmarks.
+/*
+Evaluate evaluates a string expression of dice, math, or a combination of the
+two, and returns the resulting Expression. The evaluation order needs to follow
+order of operations.
+
+The expression passed must evaluate to a float64 result. A parsable expression
+could be a simple expression or more complex.
+
+	d20
+	2d20dl1+5
+	4d6-3d5+30
+	min(d20,d20)+1
+	floor(max(d20,2d12k1)/2+3)
+
+Evaluate can likely benefit immensely from optimization and a custom parser
+implementation along with more fine-grained unit tests/benchmarks.
+*/
 func Evaluate(ctx context.Context, expression string) (*Expression, error) {
 	de := &Expression{
 		Original: expression,
@@ -91,6 +98,9 @@ func Evaluate(ctx context.Context, expression string) (*Expression, error) {
 	rolledBytes := dice.DiceExpressionRegex.ReplaceAllFunc([]byte(de.Original), func(matchBytes []byte) []byte {
 		props, _ := dice.ParseExpression(string(matchBytes))
 		d, err := dice.NewGroup(props)
+		if err != nil {
+			return []byte{}
+		}
 		d.Roll(ctx)
 		drop := props.DropKeep
 		if drop != 0 {
@@ -100,14 +110,13 @@ func Evaluate(ctx context.Context, expression string) (*Expression, error) {
 		props = dice.Properties(ctx, &d)
 		props.DropKeep = drop
 		de.Dice = append(de.Dice, props)
-		if err != nil {
-			return []byte(``)
-		}
+
 		// write expanded result back as bytes
 		var buf bytes.Buffer
-		buf.WriteString(`(`)
-		buf.WriteString(d.Expression())
-		buf.WriteString(`)`)
+		write := buf.WriteString
+		write(`(`)
+		write(d.Expression())
+		write(`)`)
 		return buf.Bytes()
 	})
 	de.Rolled = string(rolledBytes)
@@ -125,9 +134,9 @@ func Evaluate(ctx context.Context, expression string) (*Expression, error) {
 	}
 	// result should be a float
 	var ok bool
-	if de.Result, ok = result.(float64); ok {
-		return de, nil
+	if de.Result, ok = result.(float64); !ok {
+		return de, fmt.Errorf("result %v not a float", err)
 	}
 
-	return de, fmt.Errorf("result %v not a float", err)
+	return de, nil
 }

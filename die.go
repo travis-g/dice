@@ -23,7 +23,7 @@ import (
 // safety is required.
 type Die struct {
 	// embed an RWMutex's properties/methods
-	sync.RWMutex
+	sync.RWMutex `json:"-"`
 
 	// Rolled state and the count of total rolls. Handle changes atomically.
 	rolled uint32
@@ -31,7 +31,7 @@ type Die struct {
 
 	// Generic properties
 	Type      DieType      `json:"type,omitempty"`
-	Size      int          `json:"size"`
+	Size      uint         `json:"size"`
 	Result    float64      `json:"result,omitempty"`
 	Dropped   bool         `json:"dropped,omitempty"`
 	Modifiers ModifierList `json:"-"`
@@ -42,7 +42,7 @@ type Die struct {
 // of multiple Die).
 type DieProperties struct {
 	Type    DieType `json:"type,omitempty"`
-	Size    int     `json:"size,omitempty"`
+	Size    uint    `json:"size,omitempty"`
 	Result  float64 `json:"result,omitempty"`
 	Dropped bool    `json:"dropped,omitempty"`
 
@@ -51,21 +51,32 @@ type DieProperties struct {
 	GroupModifiers ModifierList `json:"group_modifiers,omitempty"`
 }
 
-// NewDie create a new Die to roll off of a supplied property set.
+// NewDie creates a new Die to roll off of a supplied property set. The property
+// set is modified/linted to better suit defaults in the event a properties list
+// is reused. A concrete DieType must be used to create a new Die: see the
+// DieType documentation.
 func NewDie(props *DieProperties) (*Die, error) {
-	if props.Size == 0 {
+	if props.Size == 0 && props.Type != TypeFudge {
 		return nil, ErrSizeZero
 	}
-	if props.Type == TypeMultiple {
-		return nil, fmt.Errorf("cannot create single die of type TypeMultiple")
+	// If the property set was for a default fudge die set, make sure that the
+	// size is non-zero.
+	if props.Type == TypeFudge && props.Size == 0 {
+		props.Size = 1
 	}
-	return &Die{
-		Type:      props.Type,
-		Size:      props.Size,
-		Result:    props.Result,
-		Dropped:   props.Dropped,
-		Modifiers: props.DieModifiers,
-	}, nil
+	switch props.Type {
+	case TypePolyhedron, TypeFudge:
+		// return a new unrolled Die if the type is valid
+		return &Die{
+			Type:      props.Type,
+			Size:      props.Size,
+			Result:    props.Result,
+			Dropped:   props.Dropped,
+			Modifiers: props.DieModifiers,
+		}, nil
+	default:
+		return nil, fmt.Errorf("cannot create Die of type %s", props.Type)
+	}
 }
 
 // Roll implements the Roller interface and is thread-safe. The error returned
@@ -73,11 +84,14 @@ func NewDie(props *DieProperties) (*Die, error) {
 // should be what checks any context maximums, as this is the function that
 // gatekeeps entropy use (net new rolls, rerolls, etc.).
 //
-// Note: In order for the modifiers to mutate the die (ex. rerolls), the die
-// must be unlocked, which may lead to thread safety issues.
+// In order for the modifiers to mutate the die (ex. rerolls), the die must be
+// unlocked before the modifiers can be applied, which may lead to thread safety
+// issues.
 func (d *Die) Roll(ctx context.Context) (float64, error) {
 	// wait until we can safely roll the die, then re-lock the mutex
 	d.Lock()
+	defer d.Unlock()
+
 	// if die was already rolled, return its existing roll and an error and
 	// defer unlocking the die
 	if d.rolled == 1 {
@@ -87,12 +101,10 @@ func (d *Die) Roll(ctx context.Context) (float64, error) {
 
 	err := roll(ctx, d)
 	if err != nil {
-		fmt.Println(err)
 		defer d.Unlock()
 		return d.Result, err
 	}
 
-	d.Unlock()
 	for _, mod := range d.Modifiers {
 		mod.Apply(ctx, d)
 	}
@@ -100,7 +112,7 @@ func (d *Die) Roll(ctx context.Context) (float64, error) {
 }
 
 // rolls a die based on the die's Size. This does not ensure thread-safety: the
-// die's mutex should be locked before attempting to roll.
+// die's mutex should be locked.
 func roll(ctx context.Context, d *Die) error {
 	atomic.AddUint32(&d.rolls, 1)
 	if ok := atomic.CompareAndSwapUint32(&d.rolled, 0, 1); !ok {
@@ -109,13 +121,13 @@ func roll(ctx context.Context, d *Die) error {
 
 	switch d.Type {
 	case TypeFudge:
-		i, err := Intn(d.Size*2 + 1)
+		i, err := Intn(int(d.Size*2 + 1))
 		if err != nil {
 			return err
 		}
-		d.Result = float64(i - d.Size)
+		d.Result = float64(i - int(d.Size))
 	default:
-		i, err := Intn(d.Size)
+		i, err := Intn(int(d.Size))
 		if err != nil {
 			return err
 		}
@@ -128,8 +140,7 @@ func roll(ctx context.Context, d *Die) error {
 func (d *Die) Reroll(ctx context.Context) (float64, error) {
 	d.Lock()
 	defer d.Unlock()
-	d.reset()
-	err := roll(ctx, d)
+	err := d.reroll(ctx)
 	return d.Result, err
 }
 
