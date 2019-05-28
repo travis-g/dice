@@ -1,6 +1,6 @@
 # Dice
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/travis-g/dice)](https://goreportcard.com/report/github.com/travis-g/dice)
+[![GoDoc](https://godoc.org/github.com/travis-g/dice?status.svg)](https://godoc.org/github.com/travis-g/dice) [![Go Report Card](https://goreportcard.com/badge/github.com/travis-g/dice)](https://goreportcard.com/report/github.com/travis-g/dice)
 
 Dice is a CLI solution to your dice-rolling needs. It's also technically a calculator.
 
