@@ -7,7 +7,7 @@ import (
 
 const fateDieNotation = "dF"
 
-var _ = Interface(&FateDie{})
+var _ = Roller(&FateDie{})
 
 // A FateDie is a die with six sides, {-1, -1, 0, 0, 1, 1}. A FateDie can be
 // emulated with a traditional polyhedral die by evaluating "1d3-2".
@@ -32,18 +32,17 @@ func (f *FateDie) GoString() string {
 
 // Roll implements the dice.Interface Roll method. Fate dice can have integer
 // results in [-1, 1].
-func (f *FateDie) Roll(ctx context.Context) (float64, error) {
+func (f *FateDie) Roll(ctx context.Context) error {
 	if !f.Unrolled {
-		t, err := f.Total(ctx)
-		return float64(t), err
+		return nil
 	}
 	i, err := Intn(3)
 	if err != nil {
-		return 0, err
+		return err
 	}
 	f.Result = i - 1
 	f.Unrolled = false
-	return float64(f.Result), nil
+	return nil
 }
 
 // Total implements the dice.Interface Total method. If dropped, 0 is returned.
@@ -55,7 +54,7 @@ func (f *FateDie) Total(ctx context.Context) (float64, error) {
 	}
 	var err error
 	if f.Unrolled {
-		_, err = f.Roll(ctx)
+		err = f.Roll(ctx)
 	}
 	return float64(f.Result), err
 }

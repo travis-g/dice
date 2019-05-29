@@ -7,8 +7,10 @@ import (
 	"strconv"
 )
 
+// CompareOp is an comparison operator usable in modifiers.
 type CompareOp string
 
+// Comparison operators.
 const (
 	CompareEquals  = "="
 	CompareLess    = "<"

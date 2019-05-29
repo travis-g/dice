@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-var _ = Interface(&PolyhedralDie{})
+var _ = Roller(&PolyhedralDie{})
 
 // A PolyhedralDie represents a variable-sided die in memory, including the result of
 // rolling it.
@@ -46,14 +46,14 @@ func (d *PolyhedralDie) Total(ctx context.Context) (float64, error) {
 
 // Roll implements the dice.Interface Roll method. Results for polyhedral dice
 // are in the range [1, size].
-func (d *PolyhedralDie) Roll(ctx context.Context) (float64, error) {
+func (d *PolyhedralDie) Roll(ctx context.Context) error {
 	if !d.Unrolled {
-		return d.Result, nil
+		return nil
 	}
 	if d.Result == 0 {
 		i, err := Intn(d.Size)
 		if err != nil {
-			return 0, err
+			return err
 		}
 		d.Result = float64(1 + i)
 		d.Unrolled = false
@@ -62,5 +62,5 @@ func (d *PolyhedralDie) Roll(ctx context.Context) (float64, error) {
 	// for _, mod := range d.Modifiers {
 	// 	mod.Apply(ctx, d)
 	// }
-	return d.Result, nil
+	return nil
 }

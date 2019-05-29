@@ -33,9 +33,6 @@ var (
 	dropKeepRegex = regexp.MustCompile(`(?P<op>[dk][lh]?)(?P<num>\d+)`)
 )
 
-// A DiceFunc is a function called immediately after a die is rolled.
-type DiceFunc func(ctx context.Context, die dice.Interface) error
-
 // Prefixes that indicate a modifier start in a string
 const (
 	rerollPrefix = "r"
@@ -157,7 +154,7 @@ func main() {
 	fmt.Printf("post funcs: %#v\n", postfuncs)
 	fmt.Printf("props: %#v\n", test)
 
-	die, err := dice.NewDie(&dice.DieProperties{
+	die, err := dice.NewRoller(&dice.DieProperties{
 		Type:         dice.TypePolyhedron,
 		Size:         uint(test.Size),
 		Result:       0,

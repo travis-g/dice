@@ -7,23 +7,6 @@ import (
 	"sync/atomic"
 )
 
-// Roller must be implemented for an object to be considered rollable.
-type Roller interface {
-	// Roll rolls the object and records results appropriately.
-	Roll(context.Context) error
-
-	// Total returns the summed results.
-	Total(context.Context) (float64, error)
-
-	// Must implement a String method; if the object has not been rolled String
-	// should return a stringified representation of that can be re-parsed to
-	// yield the same property set.
-	fmt.Stringer
-}
-
-// Factory is the factory function to create a Roller.
-type Factory func(context.Context, *DieProperties) (Roller, error)
-
 // Die represents a typed die. A Die should use a mutex lock for thread safety
 // and call `Reroll()` manually to prevent unintended re-rolling/possible wastes
 // of system entropy.
@@ -69,39 +52,6 @@ type DieProperties struct {
 	GroupModifiers ModifierList `json:"group_modifiers,omitempty"`
 }
 
-// NewDie creates a new Die to roll off of a supplied property set. The property
-// set is modified/linted to better suit defaults in the event a properties list
-// is reused. A concrete DieType must be used to create a new Die: see the
-// DieType documentation.
-func NewDie(props *DieProperties) (Roller, error) {
-	if props.Size == 0 && props.Type != TypeFudge {
-		return nil, ErrSizeZero
-	}
-	// If the property set was for a default fudge die set, make sure that the
-	// size is non-zero.
-	if props.Type == TypeFudge && props.Size == 0 {
-		props.Size = 1
-	}
-	switch props.Type {
-	case TypePolyhedron, TypeFudge:
-		// return a new unrolled Die if the type is valid
-		die := &Die{
-			Type:      props.Type,
-			Size:      props.Size,
-			Result:    props.Result,
-			Dropped:   props.Dropped,
-			Modifiers: props.DieModifiers,
-		}
-		if props.Rolled {
-			die.rolled = 1
-			die.rolls = 1
-		}
-		return die, nil
-	default:
-		return nil, fmt.Errorf("cannot create Die of type %s", props.Type)
-	}
-}
-
 // Roll implements the Roller interface and is thread-safe. The error returned
 // will be an ErrRolled error if the die was already rolled. The Roll function
 // should be what checks any context maximums, as this is the function that
@@ -113,16 +63,18 @@ func (d *Die) Roll(ctx context.Context) error {
 	d.Lock()
 	defer d.Unlock()
 
-	// if die was already rolled, return its existing roll and an error
+	// Return its existing roll and an error if the Die had been rolled
 	if d.rolled == 1 {
 		return ErrRolled
 	}
 
+	// Roll the Die using
 	err := d.roll(ctx)
 	if err != nil {
 		return err
 	}
 
+	// Apply modifiers
 	for _, mod := range d.Modifiers {
 		mod.Apply(ctx, d)
 	}

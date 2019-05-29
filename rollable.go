@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-var _ Interface = (*Group)(nil)
+var _ Roller = (*Group)(nil)
 
 // DieType is the enum of types that a die or dice can be
 type DieType string
@@ -38,23 +38,55 @@ func (t DieType) String() string {
 	}
 }
 
-// A Interface is any kind of rollable object. A Interface could be a single die
-// or many dice of any type.
-type Interface interface {
-	// Roll will roll the object (if unrolled) and set the objects's result. If
-	// the die already has a result it will not be rerolled.
-	Roll(context.Context) (float64, error)
+// Roller must be implemented for an object to be considered rollable.
+type Roller interface {
+	// Roll rolls the object and records results appropriately.
+	Roll(context.Context) error
 
-	// Total should return the totaled result. If the object is marked dropped 0
-	// should be returned.
+	// Total returns the summed results.
 	Total(context.Context) (float64, error)
 
-	// String/printing methods
+	// Must implement a String method; if the object has not been rolled String
+	// should return a stringified representation of that can be re-parsed to
+	// yield the same property set.
 	fmt.Stringer
 }
 
+// NewRoller creates a new Die to roll off of a supplied property set. The property
+// set is modified/linted to better suit defaults in the event a properties list
+// is reused. A concrete DieType must be used to create a new Die: see the
+// DieType documentation.
+func NewRoller(props *DieProperties) (Roller, error) {
+	if props.Size == 0 && props.Type != TypeFudge {
+		return nil, ErrSizeZero
+	}
+	// If the property set was for a default fudge die set, make sure that the
+	// size is non-zero.
+	if props.Type == TypeFudge && props.Size == 0 {
+		props.Size = 1
+	}
+	switch props.Type {
+	case TypePolyhedron, TypeFudge:
+		// return a new unrolled Die if the type is valid
+		die := &Die{
+			Type:      props.Type,
+			Size:      props.Size,
+			Result:    props.Result,
+			Dropped:   props.Dropped,
+			Modifiers: props.DieModifiers,
+		}
+		if props.Rolled {
+			die.rolled = 1
+			die.rolls = 1
+		}
+		return die, nil
+	default:
+		return nil, fmt.Errorf("cannot create Die of type %s", props.Type)
+	}
+}
+
 // A Group is a slice of dice interfaces.
-type Group []Interface
+type Group []Roller
 
 // GroupProperties describes a die.
 type GroupProperties struct {
@@ -121,8 +153,8 @@ func (g Group) GoString() string {
 }
 
 // Pointers returns the group as a slice of pointers to its dice.
-func (g *Group) Pointers() []*Interface {
-	self := make([]*Interface, len(*g))
+func (g *Group) Pointers() []*Roller {
+	self := make([]*Roller, len(*g))
 	for i, k := range *g {
 		self[i] = &k
 	}
@@ -130,8 +162,8 @@ func (g *Group) Pointers() []*Interface {
 }
 
 // Copy returns a copy of the dice within the group
-func (g *Group) Copy() []Interface {
-	self := make([]Interface, len(*g))
+func (g *Group) Copy() []Roller {
+	self := make([]Roller, len(*g))
 	for i, k := range *g {
 		self[i] = k
 	}
@@ -140,11 +172,14 @@ func (g *Group) Copy() []Interface {
 
 // Roll implements the dice.Interface Roll method by rolling each
 // object/Interface within the group.
-func (g *Group) Roll(ctx context.Context) (float64, error) {
+func (g *Group) Roll(ctx context.Context) (err error) {
 	for _, dice := range *g {
-		dice.Roll(ctx)
+		err = dice.Roll(ctx)
+		if err != nil {
+			break
+		}
 	}
-	return g.Total(ctx)
+	return err
 }
 
 // Expression returns an expression to represent the group's total. Dice in the
@@ -216,7 +251,7 @@ func Properties(ctx context.Context, g *Group) GroupProperties {
 	// There are multiple dice, so check that they're all of the same type
 	default:
 		kind := reflect.TypeOf(dice[0]).String()
-		consistent := All(dice[1:], func(die *Interface) bool {
+		consistent := All(dice[1:], func(die *Roller) bool {
 			this := reflect.TypeOf(die).String()
 			return this == kind
 		})
@@ -242,7 +277,7 @@ GROUP_INCONSISTENT:
 }
 
 // Roll rolls an arbitrary group of dice and returns the total.
-func Roll(ctx context.Context, g *Group) (float64, error) {
+func Roll(ctx context.Context, g *Group) error {
 	return g.Roll(ctx)
 }
 
@@ -277,7 +312,7 @@ func NewGroup(props GroupProperties) (Group, error) {
 
 // All is a helper function that returns true if all dice.Interfaces of a slice
 // match a predicate. All will return false on the first failure.
-func All(vs []*Interface, f func(*Interface) bool) bool {
+func All(vs []*Roller, f func(*Roller) bool) bool {
 	for _, v := range vs {
 		if !f(v) {
 			return false
