@@ -7,7 +7,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -36,12 +35,6 @@ var (
 
 // A DiceFunc is a function called immediately after a die is rolled.
 type DiceFunc func(ctx context.Context, die dice.Interface) error
-
-func SortFunc(ctx context.Context, args map[string]string) DiceFunc {
-	return func(ctx context.Context, die dice.Interface) error {
-		return errors.New("not implemented")
-	}
-}
 
 // Prefixes that indicate a modifier start in a string
 const (
@@ -174,9 +167,8 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
-	die.Modifiers = test.Modifiers
 	fmt.Println(die)
-	_, err = die.Roll(ctx)
+	err = die.Roll(ctx)
 	if err != nil {
 		fmt.Println(err)
 	}

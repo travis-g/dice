@@ -7,6 +7,23 @@ import (
 	"sync/atomic"
 )
 
+// Roller must be implemented for an object to be considered rollable.
+type Roller interface {
+	// Roll rolls the object and records results appropriately.
+	Roll(context.Context) error
+
+	// Total returns the summed results.
+	Total(context.Context) (float64, error)
+
+	// Must implement a String method; if the object has not been rolled String
+	// should return a stringified representation of that can be re-parsed to
+	// yield the same property set.
+	fmt.Stringer
+}
+
+// Factory is the factory function to create a Roller.
+type Factory func(context.Context, *DieProperties) (Roller, error)
+
 // Die represents a typed die. A Die should use a mutex lock for thread safety
 // and call `Reroll()` manually to prevent unintended re-rolling/possible wastes
 // of system entropy.
@@ -32,9 +49,9 @@ type Die struct {
 	// Generic properties
 	Type      DieType      `json:"type,omitempty"`
 	Size      uint         `json:"size"`
-	Result    float64      `json:"result,omitempty"`
+	Result    float64      `json:"result"`
 	Dropped   bool         `json:"dropped,omitempty"`
-	Modifiers ModifierList `json:"-"`
+	Modifiers ModifierList `json:"modifiers,omitempty"`
 }
 
 // A DieProperties object is the set of properties (usually extracted from a
@@ -44,6 +61,7 @@ type DieProperties struct {
 	Type    DieType `json:"type,omitempty"`
 	Size    uint    `json:"size,omitempty"`
 	Result  float64 `json:"result,omitempty"`
+	Rolled  bool    `json:"rolled,omitempty"`
 	Dropped bool    `json:"dropped,omitempty"`
 
 	// Modifiers for the dice or parent set
@@ -55,7 +73,7 @@ type DieProperties struct {
 // set is modified/linted to better suit defaults in the event a properties list
 // is reused. A concrete DieType must be used to create a new Die: see the
 // DieType documentation.
-func NewDie(props *DieProperties) (*Die, error) {
+func NewDie(props *DieProperties) (Roller, error) {
 	if props.Size == 0 && props.Type != TypeFudge {
 		return nil, ErrSizeZero
 	}
@@ -67,13 +85,18 @@ func NewDie(props *DieProperties) (*Die, error) {
 	switch props.Type {
 	case TypePolyhedron, TypeFudge:
 		// return a new unrolled Die if the type is valid
-		return &Die{
+		die := &Die{
 			Type:      props.Type,
 			Size:      props.Size,
 			Result:    props.Result,
 			Dropped:   props.Dropped,
 			Modifiers: props.DieModifiers,
-		}, nil
+		}
+		if props.Rolled {
+			die.rolled = 1
+			die.rolls = 1
+		}
+		return die, nil
 	default:
 		return nil, fmt.Errorf("cannot create Die of type %s", props.Type)
 	}
@@ -84,36 +107,31 @@ func NewDie(props *DieProperties) (*Die, error) {
 // should be what checks any context maximums, as this is the function that
 // gatekeeps entropy use (net new rolls, rerolls, etc.).
 //
-// In order for the modifiers to mutate the die (ex. rerolls), the die must be
-// unlocked before the modifiers can be applied, which may lead to thread safety
-// issues.
-func (d *Die) Roll(ctx context.Context) (float64, error) {
+// The lock should be taken before rolling.
+func (d *Die) Roll(ctx context.Context) error {
 	// wait until we can safely roll the die, then re-lock the mutex
 	d.Lock()
 	defer d.Unlock()
 
-	// if die was already rolled, return its existing roll and an error and
-	// defer unlocking the die
+	// if die was already rolled, return its existing roll and an error
 	if d.rolled == 1 {
-		defer d.Unlock()
-		return d.Result, ErrRolled
+		return ErrRolled
 	}
 
-	err := roll(ctx, d)
+	err := d.roll(ctx)
 	if err != nil {
-		defer d.Unlock()
-		return d.Result, err
+		return err
 	}
 
 	for _, mod := range d.Modifiers {
 		mod.Apply(ctx, d)
 	}
-	return d.Result, nil
+	return nil
 }
 
 // rolls a die based on the die's Size. This does not ensure thread-safety: the
 // die's mutex should be locked.
-func roll(ctx context.Context, d *Die) error {
+func (d *Die) roll(ctx context.Context) error {
 	atomic.AddUint32(&d.rolls, 1)
 	if ok := atomic.CompareAndSwapUint32(&d.rolled, 0, 1); !ok {
 		return ErrRolled
@@ -147,7 +165,7 @@ func (d *Die) Reroll(ctx context.Context) (float64, error) {
 // reroll performs a thread unsafe reroll.
 func (d *Die) reroll(ctx context.Context) (err error) {
 	d.reset()
-	err = roll(ctx, d)
+	err = d.roll(ctx)
 	return
 }
 
@@ -168,12 +186,12 @@ func (d *Die) String() string {
 	}
 	switch d.Type {
 	case TypePolyhedron:
-		return fmt.Sprintf("d%d", d.Size)
+		return fmt.Sprintf("d%d%s", d.Size, d.Modifiers)
 	case TypeFudge:
 		if d.Size == 1 {
-			return "dF"
+			return fmt.Sprintf("dF%s", d.Modifiers)
 		}
-		return fmt.Sprintf("f%d", d.Size)
+		return fmt.Sprintf("f%d%s", d.Size, d.Modifiers)
 	default:
 		return d.Type.String()
 	}
@@ -181,7 +199,7 @@ func (d *Die) String() string {
 
 // Total implements the dice.Interface Total method. An ErrUnrolled error will
 // be returned if the die has not been rolled.
-func (d *Die) Total(ctx context.Context) (float64, error) {
+func (d *Die) Total(_ context.Context) (float64, error) {
 	d.RLock()
 	defer d.RUnlock()
 	if d.rolled == 0 {

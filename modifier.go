@@ -33,23 +33,16 @@ func (m ModifierList) String() string {
 	return buf.String()
 }
 
-var _ = Modifier(&RerollModifier{})
-
-// RerollModifier is a modifier that rerolls a Die if a comparison is true, and
-// possibly once and only once.
+// RerollModifier is a modifier that rerolls a Die if a comparison is true.
 type RerollModifier struct {
 	Compare string `json:"compare"`
 	Point   int    `json:"point"`
-	Once    bool   `json:"once"`
 }
 
 func (m *RerollModifier) String() string {
 	var buf bytes.Buffer
 	write := buf.WriteString
 	write("r")
-	if m.Once {
-		write("o")
-	}
 	// inferred equals if not specified
 	if m.Compare != "=" {
 		write(m.Compare)

@@ -58,15 +58,12 @@ type Group []Interface
 
 // GroupProperties describes a die.
 type GroupProperties struct {
-	// Type is the type of dice within the group. If the properties object will
-	// be used to create a new Group of dice, Type should be provided as a
-	// dice.Type/uint.
-	Type       interface{} `json:"type,omitempty"`
-	Count      int         `json:"count"`
-	Size       int         `json:"size,omitempty"`
-	Result     float64     `json:"result"`
-	Expression string      `json:"expression,omitempty"`
-	Original   string      `json:"original,omitempty"`
+	Type       DieType `json:"type,omitempty"`
+	Count      int     `json:"count"`
+	Size       int     `json:"size,omitempty"`
+	Result     float64 `json:"result"`
+	Expression string  `json:"expression,omitempty"`
+	Original   string  `json:"original,omitempty"`
 
 	// Dice is any dice rolled as part of the group.
 	Dice Group `json:"dice,omitempty"`
@@ -260,14 +257,14 @@ func NewGroup(props GroupProperties) (Group, error) {
 	case TypeFudge:
 		for i := range group {
 			group[i] = &FateDie{
-				Type:     fateDieNotation,
+				Type:     TypeFudge.String(),
 				Unrolled: true,
 			}
 		}
 	case TypePolyhedron:
 		for i := range group {
 			group[i] = &PolyhedralDie{
-				Type:     fmt.Sprintf("d%d", props.Size),
+				Type:     TypePolyhedron.String(),
 				Size:     props.Size,
 				Unrolled: true,
 			}

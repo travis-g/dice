@@ -1,8 +1,9 @@
 package dice
 
+import "sync"
+
 type rwMutexer interface {
-	Lock()
-	Unlock()
+	sync.Locker
 	RLock()
 	RUnlock()
 }
@@ -11,4 +12,4 @@ type rwMutexer interface {
 var _ = rwMutexer(&Die{})
 
 // ensure Die is a rollable Interface
-var _ = Interface(&Die{})
+var _ Roller = (*Die)(nil)

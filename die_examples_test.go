@@ -2,7 +2,7 @@ package dice
 
 import "fmt"
 
-func ExampleDie_output() {
+func ExampleDie() {
 	die := &Die{
 		Size: 20,
 	}
@@ -14,7 +14,7 @@ func ExampleDie_output() {
 	// Output: d20 dF
 }
 
-func ExampleNewDie_output() {
+func ExampleNewDie() {
 	die, _ := NewDie(&DieProperties{
 		Type: TypePolyhedron,
 		Size: 6,

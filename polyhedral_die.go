@@ -18,8 +18,8 @@ type PolyhedralDie struct {
 	Modifiers []Modifier
 }
 
-// String returns an expression-like representation of a rolled die or its type,
-// if it has not been rolled.
+// String returns an expression-like representation of a rolled die or its
+// notation/type, if it has not been rolled.
 func (d *PolyhedralDie) String() string {
 	if !d.Unrolled {
 		t, _ := d.Total(context.Background())
