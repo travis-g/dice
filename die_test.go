@@ -8,8 +8,8 @@ type rwMutexer interface {
 	RUnlock()
 }
 
-// ensure Die can be implemented like a mutex for thread safety
+// ensure Die can be implemented like an RWMutex for thread safety
 var _ = rwMutexer(&Die{})
 
-// ensure Die is a rollable Interface
+// ensure Die implements Roller
 var _ Roller = (*Die)(nil)

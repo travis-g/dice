@@ -2,8 +2,11 @@ package dice
 
 import (
 	"fmt"
+	"math/rand"
 	"testing"
 )
+
+var _ = (rand.Source64)(&source{})
 
 func BenchmarkIntn(b *testing.B) {
 	b.ReportAllocs()

@@ -51,10 +51,7 @@ func (d *PolyhedralDie) Roll(ctx context.Context) error {
 		return nil
 	}
 	if d.Result == 0 {
-		i, err := Intn(d.Size)
-		if err != nil {
-			return err
-		}
+		i := Source.Intn(d.Size)
 		d.Result = float64(1 + i)
 		d.Unrolled = false
 	}

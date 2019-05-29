@@ -23,7 +23,7 @@ import (
 // safety is required.
 type Die struct {
 	// embed an RWMutex's properties/methods
-	sync.RWMutex `json:"-"`
+	sync.RWMutex
 
 	// Rolled state and the count of total rolls. Handle changes atomically.
 	rolled uint32
@@ -63,7 +63,7 @@ func (d *Die) Roll(ctx context.Context) error {
 	d.Lock()
 	defer d.Unlock()
 
-	// Return its existing roll and an error if the Die had been rolled
+	// Return an error if the Die had been rolled
 	if d.rolled == 1 {
 		return ErrRolled
 	}

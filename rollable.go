@@ -124,8 +124,7 @@ func (g *GroupProperties) GoString() string {
 	return fmt.Sprintf("%#v", *g)
 }
 
-// Total implements the dice.Interface Total method and sums a group of
-// Rollables' totals.
+// Total implements the Total method and sums a group of Rollables' totals.
 func (g *Group) Total(ctx context.Context) (total float64, err error) {
 	total = 0.0
 	for _, dice := range *g {

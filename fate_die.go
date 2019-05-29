@@ -36,10 +36,7 @@ func (f *FateDie) Roll(ctx context.Context) error {
 	if !f.Unrolled {
 		return nil
 	}
-	i, err := Intn(3)
-	if err != nil {
-		return err
-	}
+	i := Source.Intn(3)
 	f.Result = i - 1
 	f.Unrolled = false
 	return nil
