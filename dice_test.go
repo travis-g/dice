@@ -53,7 +53,7 @@ func (c *CustomDie) String() string {
 // Ensure that CustomDie implements dice.Roller
 var _ dice.Roller = (*CustomDie)(nil)
 
-func Example() {
+func Example_customDie() {
 	ctx := context.Background()
 
 	// customDie can only roll 6s.

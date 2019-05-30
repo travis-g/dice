@@ -215,7 +215,7 @@ func (g *Group) Drop(drop int) {
 			switch t := (dice[i]).(type) {
 			case *PolyhedralDie:
 				t.Dropped = true
-			case *FateDie:
+			case *FudgeDie:
 				t.Dropped = true
 			}
 		}
@@ -224,7 +224,7 @@ func (g *Group) Drop(drop int) {
 			switch t := (dice[i]).(type) {
 			case *PolyhedralDie:
 				t.Dropped = true
-			case *FateDie:
+			case *FudgeDie:
 				t.Dropped = true
 			}
 		}
@@ -290,7 +290,7 @@ func NewGroup(props GroupProperties) (Group, error) {
 	switch props.Type {
 	case TypeFudge:
 		for i := range group {
-			group[i] = &FateDie{
+			group[i] = &FudgeDie{
 				Type:     TypeFudge.String(),
 				Unrolled: true,
 			}

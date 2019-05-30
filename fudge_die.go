@@ -7,18 +7,18 @@ import (
 
 const fateDieNotation = "dF"
 
-var _ = Roller(&FateDie{})
+var _ = Roller(&FudgeDie{})
 
-// A FateDie is a die with six sides, {-1, -1, 0, 0, 1, 1}. A FateDie can be
+// A FudgeDie is a die with six sides, {-1, -1, 0, 0, 1, 1}. A FudgeDie can be
 // emulated with a traditional polyhedral die by evaluating "1d3-2".
-type FateDie struct {
+type FudgeDie struct {
 	Result   int    `json:"result"`
 	Type     string `json:"type"`
 	Dropped  bool   `json:"dropped,omitempty"`
 	Unrolled bool   `json:"unrolled,omitempty"`
 }
 
-func (f *FateDie) String() string {
+func (f *FudgeDie) String() string {
 	if !f.Unrolled {
 		return fmt.Sprintf("%v", f.Result)
 	}
@@ -26,13 +26,13 @@ func (f *FateDie) String() string {
 }
 
 // GoString prints a viable golang code representation of a FateDie.
-func (f *FateDie) GoString() string {
+func (f *FudgeDie) GoString() string {
 	return fmt.Sprintf("%#v", *f)
 }
 
 // Roll implements the dice.Interface Roll method. Fate dice can have integer
 // results in [-1, 1].
-func (f *FateDie) Roll(ctx context.Context) error {
+func (f *FudgeDie) Roll(ctx context.Context) error {
 	if !f.Unrolled {
 		return nil
 	}
@@ -45,7 +45,7 @@ func (f *FateDie) Roll(ctx context.Context) error {
 // Total implements the dice.Interface Total method. If dropped, 0 is returned.
 // Note that the Dropped bool itself should be checked to ensure the fate die
 // was indeed dropped, and did not simply roll a 0.
-func (f *FateDie) Total(ctx context.Context) (float64, error) {
+func (f *FudgeDie) Total(ctx context.Context) (float64, error) {
 	if f.Dropped {
 		return 0.0, nil
 	}

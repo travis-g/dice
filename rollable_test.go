@@ -75,7 +75,7 @@ func TestGroup_Total(t *testing.T) {
 			name: "mixed",
 			g: Group{
 				&PolyhedralDie{Result: 2, Dropped: true},
-				&FateDie{Result: -1},
+				&FudgeDie{Result: -1},
 			},
 			want: -1,
 		},
