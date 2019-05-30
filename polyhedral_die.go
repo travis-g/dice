@@ -3,6 +3,8 @@ package dice
 import (
 	"context"
 	"fmt"
+	"sync"
+	"sync/atomic"
 )
 
 var _ = Roller(&PolyhedralDie{})
@@ -10,36 +12,45 @@ var _ = Roller(&PolyhedralDie{})
 // A PolyhedralDie represents a variable-sided die in memory, including the result of
 // rolling it.
 type PolyhedralDie struct {
-	Type      string  `json:"type"`
-	Result    float64 `json:"result"`
-	Size      int     `json:"size"`
-	Dropped   bool    `json:"dropped,omitempty"`
-	Unrolled  bool    `json:"unrolled,omitempty"`
-	Modifiers []Modifier
+	sync.RWMutex
+
+	// Rolled state. Handle changes atomically.
+	rolled uint32
+
+	// Generic properties
+	Result    float64      `json:"result"`
+	Size      int          `json:"size"`
+	Dropped   bool         `json:"dropped,omitempty"`
+	Modifiers ModifierList `json:"modifiers,omitempty"`
 }
 
 // String returns an expression-like representation of a rolled die or its
 // notation/type, if it has not been rolled.
 func (d *PolyhedralDie) String() string {
-	if !d.Unrolled {
-		t, _ := d.Total(context.Background())
-		return fmt.Sprintf("%v", t)
+	d.RLock()
+	defer d.RUnlock()
+	if d.rolled == 1 || d.Result != 0 {
+		return fmt.Sprintf("%v", d.Result)
 	}
-	return d.Type
+	return fmt.Sprintf("d%d%s", d.Size, d.Modifiers)
 }
 
 // GoString prints the Go syntax of a die.
 func (d *PolyhedralDie) GoString() string {
-	return fmt.Sprintf("%#v", *d)
+	d.RLock()
+	defer d.RUnlock()
+	return fmt.Sprintf("%#v", d)
 }
 
 // Total implements the dice.Interface Total method.
 func (d *PolyhedralDie) Total(ctx context.Context) (float64, error) {
+	d.RLock()
+	defer d.RUnlock()
+	if d.rolled == 0 && d.Result == 0 {
+		return 0.0, ErrUnrolled
+	}
 	if d.Dropped {
 		return 0.0, nil
-	}
-	if d.Unrolled {
-		d.Roll(ctx)
 	}
 	return d.Result, nil
 }
@@ -47,17 +58,33 @@ func (d *PolyhedralDie) Total(ctx context.Context) (float64, error) {
 // Roll implements the dice.Interface Roll method. Results for polyhedral dice
 // are in the range [1, size].
 func (d *PolyhedralDie) Roll(ctx context.Context) error {
-	if !d.Unrolled {
-		return nil
+	d.Lock()
+	defer d.Unlock()
+
+	// Return an error if the Die had been rolled
+	if d.rolled == 1 {
+		return ErrRolled
 	}
-	if d.Result == 0 {
-		i := Source.Intn(d.Size)
-		d.Result = float64(1 + i)
-		d.Unrolled = false
+
+	err := d.roll()
+	if err != nil {
+		return err
 	}
-	// TODO: process modifiers that may result in a reroll
+
 	// for _, mod := range d.Modifiers {
-	// 	mod.Apply(ctx, d)
+	// 	err := mod.Apply(ctx, d)
+	// 	if err != nil {
+	// 		return err
+	// 	}
 	// }
+	return nil
+}
+
+func (d *PolyhedralDie) roll() error {
+	if ok := atomic.CompareAndSwapUint32(&d.rolled, 0, 1); !ok {
+		return ErrRolled
+	}
+	i := Source.Intn(int(d.Size))
+	d.Result = float64(1 + i)
 	return nil
 }

@@ -59,21 +59,29 @@ func (m *RerollModifier) Apply(ctx context.Context, d *Die) error {
 	if m.Compare == "" {
 		m.Compare = CompareEquals
 	}
+	result, err := d.Total(ctx)
+	if err != nil {
+		return err
+	}
+	recheck := func() {
+		err = d.reroll(ctx)
+		result, err = d.Total(ctx)
+	}
 	switch m.Compare {
 	case CompareEquals:
-		for d.Result == float64(m.Point) {
-			d.reroll(ctx)
+		for result == float64(m.Point) {
+			recheck()
 		}
 	case CompareLess:
-		for d.Result <= float64(m.Point) {
-			d.reroll(ctx)
+		for result <= float64(m.Point) {
+			recheck()
 		}
 	case CompareGreater:
-		for d.Result > float64(m.Point) {
-			d.reroll(ctx)
+		for result > float64(m.Point) {
+			recheck()
 		}
 	default:
-		return &ErrNotImplemented{
+		err = &ErrNotImplemented{
 			fmt.Sprintf("uncaught case for reroll compare: %s", m.Compare),
 		}
 	}

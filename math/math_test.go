@@ -3,7 +3,10 @@ package math
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"testing"
+
+	"github.com/travis-g/dice"
 )
 
 // package-level variable to prevent optimizations
@@ -17,6 +20,16 @@ var (
 	_ = fmt.Stringer(&Expression{})
 	_ = fmt.GoStringer(&Expression{})
 )
+
+// function to set math/rand as the RNG source
+func sourceMathRand() {
+	seed, _ := dice.CryptoInt64()
+	dice.Source = rand.New(rand.NewSource(seed))
+}
+
+func init() {
+	sourceMathRand()
+}
 
 func BenchmarkEvaluate(b *testing.B) {
 	b.ReportAllocs()

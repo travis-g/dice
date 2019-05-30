@@ -56,8 +56,6 @@ type DieProperties struct {
 // will be an ErrRolled error if the die was already rolled. The Roll function
 // should be what checks any context maximums, as this is the function that
 // gatekeeps entropy use (net new rolls, rerolls, etc.).
-//
-// The lock should be taken before rolling.
 func (d *Die) Roll(ctx context.Context) error {
 	// wait until we can safely roll the die, then re-lock the mutex
 	d.Lock()
@@ -91,16 +89,10 @@ func (d *Die) roll(ctx context.Context) error {
 
 	switch d.Type {
 	case TypeFudge:
-		i, err := Intn(int(d.Size*2 + 1))
-		if err != nil {
-			return err
-		}
+		i := Source.Intn(int(d.Size*2 + 1))
 		d.Result = float64(i - int(d.Size))
 	default:
-		i, err := Intn(int(d.Size))
-		if err != nil {
-			return err
-		}
+		i := Source.Intn(int(d.Size))
 		d.Result = float64(1 + i)
 	}
 	return nil
@@ -152,8 +144,6 @@ func (d *Die) String() string {
 // Total implements the dice.Interface Total method. An ErrUnrolled error will
 // be returned if the die has not been rolled.
 func (d *Die) Total(_ context.Context) (float64, error) {
-	d.RLock()
-	defer d.RUnlock()
 	if d.rolled == 0 {
 		return 0.0, ErrUnrolled
 	}

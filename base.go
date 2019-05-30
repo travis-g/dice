@@ -11,20 +11,24 @@ import (
 )
 
 // Source is the dice package's global PRNG source.
-var Source *rand.Rand
+//
+// Source must be safe for concurrent use: to use something akin to math/rand's
+// global reader (which is thread safe) try binding a Source64 with a Mutex. See
+// math/rand's source code for an example.
+var Source = rand.New(&csprngSource{})
 
-// source is a wrapper for crypto.Reader that implements rand.Source
-type source struct{}
+// csprngSource is a wrapper for crypto.Reader that implements rand.Source64
+type csprngSource struct{}
 
-func (s *source) Seed(int64) {
+func (s *csprngSource) Seed(int64) {
 	// noop
 }
 
-func (s *source) Int63() int64 {
+func (s *csprngSource) Int63() int64 {
 	return int64(s.Uint64() & ^uint64(1<<63))
 }
 
-func (s *source) Uint64() (u uint64) {
+func (s *csprngSource) Uint64() (u uint64) {
 	err := binary.Read(crypto.Reader, binary.BigEndian, &u)
 	if err != nil {
 		panic(err)
@@ -32,22 +36,12 @@ func (s *source) Uint64() (u uint64) {
 	return
 }
 
-func init() {
-	// seed global math/rand instance
-	seed, err := CryptoInt64()
-	if err != nil {
-		panic(err)
-	}
-	rand.Seed(seed)
-	// set the global package Source to a rand.Rand that sources crypto.Reader
-	Source = rand.New(&source{})
-}
-
 // CryptoInt64 is a convenience function that returns a cryptographically random
 // int64. If there is a problem generating enough entropy it will return a
 // non-nil error.
 //
-// This function was designed to seed math/rand with a uniform random value.
+// This function was designed to seed math/rand Sources with uniform random
+// values.
 func CryptoInt64() (int64, error) {
 	i, err := crypto.Int(crypto.Reader, big.NewInt(math.MaxInt64))
 	if err != nil {
@@ -60,6 +54,8 @@ func CryptoInt64() (int64, error) {
 // Rather than panicking if max <= 0, if max <= 0 an ErrSizeZero error is
 // returned and n will be 0. Any other errors encountered when generating the
 // integer are passed through by err.
+//
+// Intn does not use the package's global Source.
 func Intn(max int) (n int, err error) {
 	if max <= 0 {
 		n = 0

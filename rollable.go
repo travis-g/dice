@@ -298,9 +298,7 @@ func NewGroup(props GroupProperties) (Group, error) {
 	case TypePolyhedron:
 		for i := range group {
 			group[i] = &PolyhedralDie{
-				Type:     TypePolyhedron.String(),
-				Size:     props.Size,
-				Unrolled: true,
+				Size: props.Size,
 			}
 		}
 	default:

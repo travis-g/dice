@@ -1,12 +1,18 @@
 package dice
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+)
 
 func ExampleNewRoller() {
-	die, _ := NewRoller(&DieProperties{
+	ctx := context.Background()
+	roll, _ := NewRoller(&DieProperties{
 		Type: TypePolyhedron,
 		Size: 6,
 	})
-	fmt.Print(die)
-	// Output: d6
+	die := roll.(*Die)
+	fmt.Println(die)
+	_ = roll.Roll(ctx)
+	fmt.Println(die)
 }

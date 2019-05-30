@@ -27,7 +27,7 @@ var groupProperties = []struct {
 
 var ctx = context.Background()
 
-func Benchmark(b *testing.B) {
+func BenchmarkNewGroup(b *testing.B) {
 	for _, bench := range groupProperties {
 		b.Run(fmt.Sprintf("%s", bench.name), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
@@ -111,7 +111,7 @@ func TestGroup_Expression(t *testing.T) {
 		{
 			name: "unrolled",
 			g: Group{
-				&PolyhedralDie{Type: "d3", Unrolled: true},
+				&PolyhedralDie{Size: 3},
 				&PolyhedralDie{Result: 3},
 				&PolyhedralDie{Result: 4},
 			},

@@ -6,7 +6,25 @@ import (
 	"testing"
 )
 
-var _ = (rand.Source64)(&source{})
+var _ = (rand.Source64)(&csprngSource{})
+
+func BenchmarkSource_Intn(b *testing.B) {
+	b.ReportAllocs()
+	benchmarks := []struct {
+		size int
+	}{
+		{6},
+		{20},
+		{100},
+	}
+	for _, bmark := range benchmarks {
+		b.Run(fmt.Sprintf("%d", bmark.size), func(b *testing.B) {
+			for n := 0; n < b.N; n++ {
+				Source.Intn(bmark.size)
+			}
+		})
+	}
+}
 
 func BenchmarkIntn(b *testing.B) {
 	b.ReportAllocs()
