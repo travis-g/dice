@@ -25,4 +25,8 @@ cover:
 clean:
 	@rm -f dice dice.exe parser parser.exe coverage.out
 
-.PHONY: clean build
+godoc:
+	@echo "==> View godoc at http://localhost:8080/pkg/github.com/travis-g/dice/"
+	@godoc -http ":8080"
+
+.PHONY: clean build godoc
