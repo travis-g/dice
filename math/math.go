@@ -11,36 +11,34 @@ import (
 	"github.com/travis-g/dice"
 )
 
-var (
-	// DiceFunctions are functions usable in dice arithmetic operations, such as
-	// round, min, and max.
-	DiceFunctions = map[string]eval.ExpressionFunction{
-		"abs": func(args ...interface{}) (interface{}, error) {
-			return math.Abs(args[0].(float64)), nil
-		},
-		"ceil": func(args ...interface{}) (interface{}, error) {
-			return math.Ceil(args[0].(float64)), nil
-		},
-		"floor": func(args ...interface{}) (interface{}, error) {
-			return math.Floor(args[0].(float64)), nil
-		},
-		"max": func(args ...interface{}) (interface{}, error) {
-			sort.Slice(args[:], func(i, j int) bool {
-				return args[i].(float64) < args[j].(float64)
-			})
-			return args[len(args)-1], nil
-		},
-		"min": func(args ...interface{}) (interface{}, error) {
-			sort.Slice(args[:], func(i, j int) bool {
-				return args[i].(float64) < args[j].(float64)
-			})
-			return args[0], nil
-		},
-		"round": func(args ...interface{}) (interface{}, error) {
-			return math.Round(args[0].(float64)), nil
-		},
-	}
-)
+// DiceFunctions are functions usable in dice arithmetic operations, such as
+// round, min, and max.
+var DiceFunctions = map[string]eval.ExpressionFunction{
+	"abs": func(args ...interface{}) (interface{}, error) {
+		return math.Abs(args[0].(float64)), nil
+	},
+	"ceil": func(args ...interface{}) (interface{}, error) {
+		return math.Ceil(args[0].(float64)), nil
+	},
+	"floor": func(args ...interface{}) (interface{}, error) {
+		return math.Floor(args[0].(float64)), nil
+	},
+	"max": func(args ...interface{}) (interface{}, error) {
+		sort.Slice(args[:], func(i, j int) bool {
+			return args[i].(float64) < args[j].(float64)
+		})
+		return args[len(args)-1], nil
+	},
+	"min": func(args ...interface{}) (interface{}, error) {
+		sort.Slice(args[:], func(i, j int) bool {
+			return args[i].(float64) < args[j].(float64)
+		})
+		return args[0], nil
+	},
+	"round": func(args ...interface{}) (interface{}, error) {
+		return math.Round(args[0].(float64)), nil
+	},
+}
 
 // An Expression is a representation of a dice roll that has been evaluated.
 type Expression struct {

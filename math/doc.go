@@ -16,8 +16,8 @@ https://github.com/Knetic/govaluate.
 
 Benchmarks
 
-The benchmarks for math's functions should use math/rand as the RNG source
-(rather than crypto/rand) to limit the affect of random number generation
-slowness.
+The benchmarks for the math package's functions use math/rand as the random byte
+source rather than crypto/rand in order to limit slowness attributed to sourcing
+entropy.
 */
 package math
