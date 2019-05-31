@@ -3,19 +3,74 @@ package dice
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
+
+	"github.com/pkg/errors"
 )
 
 // CompareOp is an comparison operator usable in modifiers.
-type CompareOp string
+type CompareOp int
 
 // Comparison operators.
 const (
-	CompareEquals  = "="
-	CompareLess    = "<"
-	CompareGreater = ">"
+	EMPTY CompareOp = iota
+
+	compareOpStart
+	EQL // =
+	LSS // <
+	GTR // >
+	LEQ // <=
+	GEQ // >=
+	compareOpEnd
 )
+
+var compares = [...]string{
+	EMPTY: "",
+
+	EQL: "=",
+	LSS: "<",
+	GTR: ">",
+	LEQ: "<=",
+	GEQ: ">=",
+}
+var compareStringMap map[string]CompareOp
+
+func init() {
+	compareStringMap = make(map[string]CompareOp)
+	for i := compareOpStart + 1; i < compareOpEnd; i++ {
+		compareStringMap[compares[i]] = i
+	}
+}
+
+func CompareOpLookup(s string) CompareOp {
+	return compareStringMap[s]
+}
+
+func (c CompareOp) String() string {
+	s := ""
+	if 0 <= c && c < CompareOp(len(compares)) {
+		s = compares[c]
+	}
+	return s
+}
+
+// MarshalJSON ensures the CompareOp is encoded as its string representation.
+func (c *CompareOp) MarshalJSON() ([]byte, error) {
+	return json.Marshal(c.String())
+}
+
+// UnmarshalJSON enables string JSON encoded string versions of CompareOps to be
+// converted to their appropriate counterparts.
+func (c *CompareOp) UnmarshalJSON(data []byte) error {
+	var str string
+	if err := json.Unmarshal(data, &str); err != nil {
+		return errors.Wrap(err, "error unmarshaling json to CompareOp")
+	}
+	*c = CompareOpLookup(str)
+	return nil
+}
 
 // A Modifier is a dice modifier that can apply to a set or a single die
 type Modifier interface {
@@ -35,10 +90,15 @@ func (m ModifierList) String() string {
 	return buf.String()
 }
 
+// ComparePoint is the base comparison
+type ComparePoint struct {
+	Compare CompareOp `json:"compare"`
+	Point   int       `json:"point"`
+}
+
 // RerollModifier is a modifier that rerolls a Die if a comparison is true.
 type RerollModifier struct {
-	Compare string `json:"compare"`
-	Point   int    `json:"point"`
+	ComparePoint
 }
 
 func (m *RerollModifier) String() string {
@@ -46,8 +106,8 @@ func (m *RerollModifier) String() string {
 	write := buf.WriteString
 	write("r")
 	// inferred equals if not specified
-	if m.Compare != "=" {
-		write(m.Compare)
+	if m.Compare != EQL {
+		write(m.Compare.String())
 	}
 	write(strconv.Itoa(m.Point))
 	return buf.String()
@@ -56,8 +116,8 @@ func (m *RerollModifier) String() string {
 // Apply executes a RerollModifier against a Die. The modifier may be slightly
 // modified the first time it is applied to ensure property consistency.
 func (m *RerollModifier) Apply(ctx context.Context, d *Die) error {
-	if m.Compare == "" {
-		m.Compare = CompareEquals
+	if m.Compare == EMPTY {
+		m.Compare = EQL
 	}
 	result, err := d.Total(ctx)
 	if err != nil {
@@ -68,15 +128,15 @@ func (m *RerollModifier) Apply(ctx context.Context, d *Die) error {
 		result, err = d.Total(ctx)
 	}
 	switch m.Compare {
-	case CompareEquals:
+	case EQL:
 		for result == float64(m.Point) {
 			recheck()
 		}
-	case CompareLess:
+	case LSS:
 		for result <= float64(m.Point) {
 			recheck()
 		}
-	case CompareGreater:
+	case GTR:
 		for result > float64(m.Point) {
 			recheck()
 		}

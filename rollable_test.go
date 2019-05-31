@@ -6,6 +6,8 @@ import (
 	"testing"
 )
 
+var _ Roller = (*RollerGroup)(nil)
+
 func newInt(i int) *int {
 	return &i
 }

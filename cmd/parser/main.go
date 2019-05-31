@@ -91,8 +91,10 @@ func main() {
 				rollfuncs = append(rollfuncs, fmt.Sprintf("%v", props))
 				point, _ := strconv.Atoi(props["point"])
 				test.Modifiers = append(test.Modifiers, &dice.RerollModifier{
-					Compare: props["compare"],
-					Point:   point,
+					ComparePoint: dice.ComparePoint{
+						Compare: dice.CompareOpLookup(props["compare"]),
+						Point:   point,
+					},
 				})
 				// remove the reroll modifier from the string
 				return []byte{}
@@ -173,4 +175,14 @@ func main() {
 	_ = json.NewEncoder(os.Stdout).Encode(
 		die,
 	)
+	var die2 dice.Die
+	err = json.Unmarshal([]byte(`{"size":6}`), &die2)
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = die2.Roll(ctx)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(&die2)
 }

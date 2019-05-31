@@ -1,40 +1,33 @@
 package dice
 
-import "testing"
+import (
+	"testing"
+)
 
 var _ = Modifier(&RerollModifier{})
 
-func TestRerollModifier_String(t *testing.T) {
-	type fields struct {
-		Compare string
-		Point   int
+func TestCompareOp_UnmarshalJSON(t *testing.T) {
+	type args struct {
+		data []byte
 	}
+	var c CompareOp
 	tests := []struct {
-		name   string
-		fields fields
-		want   string
+		name    string
+		c       *CompareOp
+		args    args
+		wantErr bool
 	}{
-		{"CompareEquals2",
-			fields{"=", 2},
-			"r2"},
-		{"CompareEqualsImplicit2",
-			fields{"", 2},
-			"r2"},
-		{"CompareLess3",
-			fields{"<", 3},
-			"r<3"},
-		{"CompareGreater3",
-			fields{">", 3},
-			"r>3"},
+		{"encoded", &c, args{
+			[]byte(`"\u003c"`),
+		}, false},
+		{"improper", &c, args{
+			[]byte(`"<"`),
+		}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := &RerollModifier{
-				Compare: tt.fields.Compare,
-				Point:   tt.fields.Point,
-			}
-			if got := m.String(); got != tt.want {
-				t.Errorf("RerollModifier.String() = %v, want %v", got, tt.want)
+			if err := tt.c.UnmarshalJSON(tt.args.data); (err != nil) != tt.wantErr {
+				t.Errorf("CompareOp.UnmarshalJSON() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
