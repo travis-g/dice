@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 var _ Roller = (*Group)(nil)
@@ -48,7 +50,7 @@ type Roller interface {
 
 	// Must implement a String method; if the object has not been rolled String
 	// should return a stringified representation of that can be re-parsed to
-	// yield the same property set.
+	// yield an equivalent property set.
 	fmt.Stringer
 }
 
@@ -71,7 +73,7 @@ func NewRoller(props *DieProperties) (Roller, error) {
 		die := &Die{
 			Type:      props.Type,
 			Size:      props.Size,
-			Result:    props.Result,
+			Result:    &props.Result,
 			Dropped:   props.Dropped,
 			Modifiers: props.DieModifiers,
 		}
@@ -85,8 +87,44 @@ func NewRoller(props *DieProperties) (Roller, error) {
 	}
 }
 
-// A Group is a slice of dice interfaces.
+// A Group is a slice of rollable dice.
 type Group []Roller
+
+// RollerGroup is a wrapper around a Group that implements Roller.
+type RollerGroup struct {
+	Group
+}
+
+// Roll rolls each die embedded in the DiceGroup.
+func (d *RollerGroup) Roll(ctx context.Context) error {
+	for _, die := range d.Group {
+		if err := die.Roll(ctx); err != nil {
+			return errors.Wrap(err, "error rolling Group")
+		}
+	}
+	return nil
+}
+
+func (d *RollerGroup) Total(ctx context.Context) (float64, error) {
+	total := 0.0
+	for _, die := range d.Group {
+		result, err := die.Total(ctx)
+		if err != nil {
+			return total, errors.Wrap(err, "error totaling Group")
+		}
+		total += result
+	}
+	return total, nil
+}
+
+func (d *RollerGroup) String() string {
+	strs := make([]string, len(d.Group))
+	for i, die := range d.Group {
+		strs[i] = die.String()
+	}
+	total, _ := d.Total(context.TODO())
+	return fmt.Sprintf("%s => %v", strings.Join(strs, "+"), total)
+}
 
 // GroupProperties describes a die.
 type GroupProperties struct {
@@ -112,7 +150,7 @@ type GroupProperties struct {
 	DropKeep int `json:"drop,omitempty"`
 
 	// Modifiers is the string of modifiers added to a given Group
-	Modifiers []Modifier `json:"modifiers,omitempty"`
+	Modifiers ModifierList `json:"modifiers,omitempty"`
 }
 
 func (g *GroupProperties) String() string {
