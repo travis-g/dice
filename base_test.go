@@ -6,6 +6,8 @@ import (
 	"testing"
 )
 
+// Ensure csprngSource statisfies the rand.Source64 interface; rand.Source64
+// sources use half the entropy of a regular rand.Source.
 var _ = (rand.Source64)(&csprngSource{})
 
 func BenchmarkSource_Intn(b *testing.B) {
@@ -38,7 +40,7 @@ func BenchmarkIntn(b *testing.B) {
 	for _, bmark := range benchmarks {
 		b.Run(fmt.Sprintf("%d", bmark.size), func(b *testing.B) {
 			for n := 0; n < b.N; n++ {
-				Intn(bmark.size)
+				CryptoIntn(bmark.size)
 			}
 		})
 	}
