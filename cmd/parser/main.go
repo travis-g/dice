@@ -92,7 +92,7 @@ func main() {
 				point, _ := strconv.Atoi(props["point"])
 				test.Modifiers = append(test.Modifiers, &dice.RerollModifier{
 					ComparePoint: dice.ComparePoint{
-						Compare: dice.CompareOpLookup(props["compare"]),
+						Compare: dice.LookupCompareOp(props["compare"]),
 						Point:   point,
 					},
 				})

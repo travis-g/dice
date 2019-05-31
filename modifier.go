@@ -44,7 +44,8 @@ func init() {
 	}
 }
 
-func CompareOpLookup(s string) CompareOp {
+// LookupCompareOp returns the CompareOp that is represented by a given string.
+func LookupCompareOp(s string) CompareOp {
 	return compareStringMap[s]
 }
 
@@ -61,14 +62,14 @@ func (c *CompareOp) MarshalJSON() ([]byte, error) {
 	return json.Marshal(c.String())
 }
 
-// UnmarshalJSON enables string JSON encoded string versions of CompareOps to be
+// UnmarshalJSON enables JSON encoded string versions of CompareOps to be
 // converted to their appropriate counterparts.
 func (c *CompareOp) UnmarshalJSON(data []byte) error {
 	var str string
 	if err := json.Unmarshal(data, &str); err != nil {
 		return errors.Wrap(err, "error unmarshaling json to CompareOp")
 	}
-	*c = CompareOpLookup(str)
+	*c = LookupCompareOp(str)
 	return nil
 }
 
