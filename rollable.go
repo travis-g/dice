@@ -105,6 +105,7 @@ func (d *RollerGroup) Roll(ctx context.Context) error {
 	return nil
 }
 
+// Total combines the results of all dice within the group.
 func (d *RollerGroup) Total(ctx context.Context) (float64, error) {
 	total := 0.0
 	for _, die := range d.Group {

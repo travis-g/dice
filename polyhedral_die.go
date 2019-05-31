@@ -18,7 +18,7 @@ type PolyhedralDie struct {
 	rolled uint32
 
 	// Generic properties
-	Result    float64      `json:"result"`
+	Result    *int         `json:"result"`
 	Size      int          `json:"size"`
 	Dropped   bool         `json:"dropped,omitempty"`
 	Modifiers ModifierList `json:"modifiers,omitempty"`
@@ -29,8 +29,8 @@ type PolyhedralDie struct {
 func (d *PolyhedralDie) String() string {
 	d.RLock()
 	defer d.RUnlock()
-	if d.rolled == 1 || d.Result != 0 {
-		return fmt.Sprintf("%v", d.Result)
+	if d.rolled == 1 || d.Result != nil {
+		return fmt.Sprintf("%v", *d.Result)
 	}
 	return fmt.Sprintf("d%d%s", d.Size, d.Modifiers)
 }
@@ -46,13 +46,13 @@ func (d *PolyhedralDie) GoString() string {
 func (d *PolyhedralDie) Total(ctx context.Context) (float64, error) {
 	d.RLock()
 	defer d.RUnlock()
-	if d.rolled == 0 && d.Result == 0 {
+	if d.rolled == 0 && d.Result == nil {
 		return 0.0, ErrUnrolled
 	}
 	if d.Dropped {
 		return 0.0, nil
 	}
-	return d.Result, nil
+	return float64(*d.Result), nil
 }
 
 // Roll implements the dice.Interface Roll method. Results for polyhedral dice
@@ -84,7 +84,7 @@ func (d *PolyhedralDie) roll() error {
 	if ok := atomic.CompareAndSwapUint32(&d.rolled, 0, 1); !ok {
 		return ErrRolled
 	}
-	i := Source.Intn(int(d.Size))
-	d.Result = float64(1 + i)
+	i := 1 + Source.Intn(int(d.Size))
+	d.Result = &i
 	return nil
 }

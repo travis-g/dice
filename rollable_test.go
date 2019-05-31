@@ -6,6 +6,10 @@ import (
 	"testing"
 )
 
+func newInt(i int) *int {
+	return &i
+}
+
 var groupProperties = []struct {
 	name  string
 	props GroupProperties
@@ -46,36 +50,36 @@ func TestGroup_Total(t *testing.T) {
 		{
 			name: "basic",
 			g: Group{
-				&PolyhedralDie{Result: 2},
-				&PolyhedralDie{Result: 3},
-				&PolyhedralDie{Result: 4},
+				&PolyhedralDie{Result: newInt(2)},
+				&PolyhedralDie{Result: newInt(3)},
+				&PolyhedralDie{Result: newInt(4)},
 			},
 			want: 9,
 		},
 		{
 			name: "nested",
 			g: Group{
-				&PolyhedralDie{Result: 2},
+				&PolyhedralDie{Result: newInt(2)},
 				&Group{
-					&PolyhedralDie{Result: 3},
+					&PolyhedralDie{Result: newInt(3)},
 				},
-				&PolyhedralDie{Result: 4},
+				&PolyhedralDie{Result: newInt(4)},
 			},
 			want: 9,
 		},
 		{
 			name: "dropped",
 			g: Group{
-				&PolyhedralDie{Result: 2, Dropped: true},
-				&PolyhedralDie{Result: 4},
+				&PolyhedralDie{Result: newInt(2), Dropped: true},
+				&PolyhedralDie{Result: newInt(4)},
 			},
 			want: 4,
 		},
 		{
 			name: "mixed",
 			g: Group{
-				&PolyhedralDie{Result: 2, Dropped: true},
-				&FudgeDie{Result: -1},
+				&PolyhedralDie{Result: newInt(2), Dropped: true},
+				&FudgeDie{Result: newInt(-1)},
 			},
 			want: -1,
 		},
@@ -102,9 +106,9 @@ func TestGroup_Expression(t *testing.T) {
 		{
 			name: "basic",
 			g: Group{
-				&PolyhedralDie{Result: 2},
-				&PolyhedralDie{Result: 3},
-				&PolyhedralDie{Result: 4},
+				&PolyhedralDie{Result: newInt(2)},
+				&PolyhedralDie{Result: newInt(3)},
+				&PolyhedralDie{Result: newInt(4)},
 			},
 			want: "2+3+4",
 		},
@@ -112,8 +116,8 @@ func TestGroup_Expression(t *testing.T) {
 			name: "unrolled",
 			g: Group{
 				&PolyhedralDie{Size: 3},
-				&PolyhedralDie{Result: 3},
-				&PolyhedralDie{Result: 4},
+				&PolyhedralDie{Result: newInt(3)},
+				&PolyhedralDie{Result: newInt(4)},
 			},
 			want: "d3+3+4",
 		},

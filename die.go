@@ -32,7 +32,7 @@ type Die struct {
 	// Generic properties
 	Type      DieType      `json:"type,omitempty"`
 	Size      uint         `json:"size"`
-	Result    float64      `json:"result"`
+	Result    *float64     `json:"result,omitempty"`
 	Dropped   bool         `json:"dropped,omitempty"`
 	Modifiers ModifierList `json:"modifiers,omitempty"`
 }
@@ -89,11 +89,11 @@ func (d *Die) roll(ctx context.Context) error {
 
 	switch d.Type {
 	case TypeFudge:
-		i := Source.Intn(int(d.Size*2 + 1))
-		d.Result = float64(i - int(d.Size))
+		i := float64(Source.Intn(int(d.Size*2+1)) - int(d.Size))
+		d.Result = &i
 	default:
-		i := Source.Intn(int(d.Size))
-		d.Result = float64(1 + i)
+		i := float64(1 + Source.Intn(int(d.Size)))
+		d.Result = &i
 	}
 	return nil
 }
@@ -103,7 +103,7 @@ func (d *Die) Reroll(ctx context.Context) (float64, error) {
 	d.Lock()
 	defer d.Unlock()
 	err := d.reroll(ctx)
-	return d.Result, err
+	return *d.Result, err
 }
 
 // reroll performs a thread unsafe reroll.
@@ -116,7 +116,7 @@ func (d *Die) reroll(ctx context.Context) (err error) {
 // reset resets a Die's properties so that it can be re-rolled.
 func (d *Die) reset() {
 	d.rolled = 0
-	d.Result = 0
+	d.Result = nil
 	d.Dropped = false
 }
 
@@ -126,7 +126,7 @@ func (d *Die) String() string {
 	d.RLock()
 	defer d.RUnlock()
 	if d.rolled == 1 {
-		return fmt.Sprintf("%v", d.Result)
+		return fmt.Sprintf("%v", *d.Result)
 	}
 	switch d.Type {
 	case TypePolyhedron:
@@ -150,5 +150,5 @@ func (d *Die) Total(_ context.Context) (float64, error) {
 	if d.Dropped {
 		return 0.0, nil
 	}
-	return d.Result, nil
+	return *d.Result, nil
 }

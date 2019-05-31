@@ -12,7 +12,7 @@ var _ = Roller(&FudgeDie{})
 // A FudgeDie is a die with six sides, {-1, -1, 0, 0, 1, 1}. A FudgeDie can be
 // emulated with a traditional polyhedral die by evaluating "1d3-2".
 type FudgeDie struct {
-	Result   int    `json:"result"`
+	Result   *int   `json:"result"`
 	Type     string `json:"type"`
 	Dropped  bool   `json:"dropped,omitempty"`
 	Unrolled bool   `json:"unrolled,omitempty"`
@@ -20,7 +20,7 @@ type FudgeDie struct {
 
 func (f *FudgeDie) String() string {
 	if !f.Unrolled {
-		return fmt.Sprintf("%v", f.Result)
+		return fmt.Sprintf("%v", *f.Result)
 	}
 	return fateDieNotation
 }
@@ -36,8 +36,8 @@ func (f *FudgeDie) Roll(ctx context.Context) error {
 	if !f.Unrolled {
 		return nil
 	}
-	i := Source.Intn(3)
-	f.Result = i - 1
+	i := Source.Intn(3) - 1
+	f.Result = &i
 	f.Unrolled = false
 	return nil
 }
@@ -53,5 +53,5 @@ func (f *FudgeDie) Total(ctx context.Context) (float64, error) {
 	if f.Unrolled {
 		err = f.Roll(ctx)
 	}
-	return float64(f.Result), err
+	return float64(*f.Result), err
 }
