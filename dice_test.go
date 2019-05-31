@@ -67,6 +67,9 @@ func Example_customDie() {
 		fmt.Fprintln(os.Stderr, err)
 	}
 	result, err := customDie.Total(ctx)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+	}
 	fmt.Fprintln(os.Stdout, result)
 	// Output:
 	// {6,6,6,6,6,6}
