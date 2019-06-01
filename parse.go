@@ -6,6 +6,7 @@ import (
 	"strings"
 )
 
+// Regexes for parsing basic dice notation strings.
 var (
 	// DiceNotationPattern is the base XdY notation pattern for matching dice
 	// strings.

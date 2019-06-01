@@ -10,15 +10,16 @@ import (
 	"strings"
 )
 
-// Source is the dice package's global PRNG source.
+// Source is the dice package's global PRNG source. Source uses the system's
+// native cryptographically secure pseudorandom number generator by default.
 //
 // Source must be safe for concurrent use: to use something akin to math/rand's
-// global reader (which is thread safe) try binding a Source64 with a Mutex. See
+// thread safe global reader try binding a Source64 with a Mutex. See
 // math/rand's globalRand variable source code for an example.
 var Source = rand.New(&csprngSource{})
 
 // csprngSource is a wrapper for crypto.Reader that implements
-// "math/rand".Source64.
+// rand.Source64.
 type csprngSource struct{}
 
 // Seed is a noop; a csprngSource does not need to be seeded.
