@@ -30,7 +30,7 @@ func BenchmarkSource_Intn(b *testing.B) {
 	}
 }
 
-func BenchmarkIntn(b *testing.B) {
+func BenchmarkCryptoIntn(b *testing.B) {
 	b.ReportAllocs()
 	for _, bmark := range benchmarks {
 		b.Run(fmt.Sprintf("%d", bmark.size), func(b *testing.B) {
