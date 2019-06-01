@@ -1,3 +1,6 @@
+/*
+Package dice defines a CLI for the package.
+*/
 package main
 
 import (
