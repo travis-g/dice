@@ -10,11 +10,15 @@ build: fmt test
 
 test:
 	@echo "==> Running tests..."
-	@go test -cover . ./math
+	@go test -cover ./...
+
+report:
+	@echo "==> Generating report card..."
+	@goreportcard-cli -v
 
 bench: test
 	@echo "==> Running benchmarks (may take a while)..."
-	@go test -run=XXX -bench=. -benchtime=3s . ./math
+	@go test -run=XXX -bench=. ./...
 
 cover:
 	@echo "==> Calculating coverage..."
