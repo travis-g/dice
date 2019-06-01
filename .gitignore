@@ -5,6 +5,7 @@ parser
 parser.exe
 !cmd/parser
 
+debug
 coverage.out
 .vscode
 

@@ -161,7 +161,6 @@ func main() {
 	core, err := dice.NewRoller(&dice.DieProperties{
 		Type:         dice.TypePolyhedron,
 		Size:         uint(test.Size),
-		Result:       0,
 		Dropped:      false,
 		DieModifiers: dice.ModifierList(test.Modifiers),
 	})
