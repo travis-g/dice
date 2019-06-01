@@ -339,8 +339,7 @@ func NewGroup(props GroupProperties) (Group, error) {
 	case TypeFudge:
 		for i := range group {
 			group[i] = &FudgeDie{
-				Type:     TypeFudge.String(),
-				Unrolled: true,
+				Type: TypeFudge.String(),
 			}
 		}
 	case TypePolyhedron:
