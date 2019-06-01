@@ -35,6 +35,15 @@ func main() {
 		},
 	}
 
+	httpFlags := []cli.Flag{
+		cli.StringFlag{
+			Name:   "http",
+			Value:  ":6436", // base64("d6")
+			Usage:  "HTTP service address",
+			EnvVar: "HTTP",
+		},
+	}
+
 	cmd.Commands = []cli.Command{
 		{
 			Name:    "eval",
@@ -60,6 +69,15 @@ func main() {
 			Flags:   globalFlags,
 			Action: func(c *cli.Context) error {
 				return command.RollCommand(c)
+			},
+		},
+		{
+			Name:    "server",
+			Aliases: []string{"s"},
+			Usage:   "start a DRAAS server",
+			Flags:   httpFlags,
+			Action: func(c *cli.Context) error {
+				return command.ServerCommand(c)
 			},
 		},
 	}
