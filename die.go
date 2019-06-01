@@ -19,11 +19,11 @@ type Die struct {
 // notation) that should be used to define a Die or group of like dice (a slice
 // of multiple Die).
 type DieProperties struct {
-	Type    DieType `json:"type,omitempty"`
-	Size    uint    `json:"size,omitempty"`
-	Result  float64 `json:"result,omitempty"`
-	Rolled  bool    `json:"rolled,omitempty"`
-	Dropped bool    `json:"dropped,omitempty"`
+	Type    DieType  `json:"type,omitempty"`
+	Size    uint     `json:"size,omitempty"`
+	Result  *float64 `json:"result,omitempty"`
+	Rolled  bool     `json:"rolled,omitempty"`
+	Dropped bool     `json:"dropped,omitempty"`
 
 	// Modifiers for the dice or parent set
 	DieModifiers   ModifierList `json:"die_modifiers,omitempty"`

@@ -76,7 +76,7 @@ func NewRoller(props *DieProperties) (Roller, error) {
 		die := &Die{
 			Type:      props.Type,
 			Size:      props.Size,
-			Result:    &props.Result,
+			Result:    props.Result,
 			Dropped:   props.Dropped,
 			Modifiers: props.DieModifiers,
 		}
