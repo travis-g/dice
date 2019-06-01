@@ -279,7 +279,7 @@ func (p *Parser) Parse() (*Props, error) {
 		}
 		props.Count = uint(icount)
 		// scan next, which should be a notation string
-		tok, lit = p.scanIgnoreWhitespace()
+		p.scanIgnoreWhitespace()
 	} else {
 		return nil, fmt.Errorf("found unexpected %q", lit)
 	}

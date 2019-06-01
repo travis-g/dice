@@ -2,6 +2,7 @@
 Package parser is an experimental expression parser to enable flexible callbacks
 on dice Groups.
 */
+// nolint
 package main
 
 import (
@@ -15,6 +16,7 @@ import (
 	"time"
 
 	"github.com/travis-g/dice"
+	"github.com/travis-g/dice/sync"
 )
 
 var (
@@ -156,13 +158,14 @@ func main() {
 	fmt.Printf("post funcs: %#v\n", postfuncs)
 	fmt.Printf("props: %#v\n", test)
 
-	die, err := dice.NewRoller(&dice.DieProperties{
+	core, err := dice.NewRoller(&dice.DieProperties{
 		Type:         dice.TypePolyhedron,
 		Size:         uint(test.Size),
 		Result:       0,
 		Dropped:      false,
 		DieModifiers: dice.ModifierList(test.Modifiers),
 	})
+	die := sync.Wrap(core)
 	if err != nil {
 		fmt.Println(err)
 	}

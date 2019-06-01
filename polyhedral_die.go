@@ -27,8 +27,6 @@ type PolyhedralDie struct {
 // String returns an expression-like representation of a rolled die or its
 // notation/type, if it has not been rolled.
 func (d *PolyhedralDie) String() string {
-	d.RLock()
-	defer d.RUnlock()
 	if d.rolled == 1 || d.Result != nil {
 		return fmt.Sprintf("%v", *d.Result)
 	}
@@ -37,15 +35,11 @@ func (d *PolyhedralDie) String() string {
 
 // GoString prints the Go syntax of a die.
 func (d *PolyhedralDie) GoString() string {
-	d.RLock()
-	defer d.RUnlock()
 	return fmt.Sprintf("%#v", d)
 }
 
 // Total implements the dice.Interface Total method.
 func (d *PolyhedralDie) Total(ctx context.Context) (float64, error) {
-	d.RLock()
-	defer d.RUnlock()
 	if d.rolled == 0 && d.Result == nil {
 		return 0.0, ErrUnrolled
 	}
@@ -58,9 +52,6 @@ func (d *PolyhedralDie) Total(ctx context.Context) (float64, error) {
 // Roll implements the dice.Interface Roll method. Results for polyhedral dice
 // are in the range [1, size].
 func (d *PolyhedralDie) Roll(ctx context.Context) error {
-	d.Lock()
-	defer d.Unlock()
-
 	// Return an error if the Die had been rolled
 	if d.rolled == 1 {
 		return ErrRolled
@@ -77,6 +68,18 @@ func (d *PolyhedralDie) Roll(ctx context.Context) error {
 	// 		return err
 	// 	}
 	// }
+	return nil
+}
+
+// Reroll implements the Roller interaface's Reroll method be recalculating the
+// die's result.
+func (d *PolyhedralDie) Reroll(ctx context.Context) error {
+	if atomic.LoadUint32(&d.rolled) == 0 {
+		return nil
+	}
+	i := Source.Intn(3) - 1
+	d.Result = &i
+	atomic.StoreUint32(&d.rolled, 1)
 	return nil
 }
 

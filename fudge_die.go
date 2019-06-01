@@ -42,6 +42,18 @@ func (f *FudgeDie) Roll(ctx context.Context) error {
 	return nil
 }
 
+// Reroll implements the Roller interaface's Reroll method be recalculating the
+// die's result.
+func (f *FudgeDie) Reroll(ctx context.Context) error {
+	if f.Unrolled {
+		return nil
+	}
+	i := Source.Intn(3) - 1
+	f.Result = &i
+	f.Unrolled = false
+	return nil
+}
+
 // Total implements the dice.Interface Total method. If dropped, 0 is returned.
 // Note that the Dropped bool itself should be checked to ensure the fate die
 // was indeed dropped, and did not simply roll a 0.

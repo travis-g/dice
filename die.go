@@ -57,10 +57,6 @@ type DieProperties struct {
 // should be what checks any context maximums, as this is the function that
 // gatekeeps entropy use (net new rolls, rerolls, etc.).
 func (d *Die) Roll(ctx context.Context) error {
-	// wait until we can safely roll the die, then re-lock the mutex
-	d.Lock()
-	defer d.Unlock()
-
 	// Return an error if the Die had been rolled
 	if d.rolled == 1 {
 		return ErrRolled
@@ -99,11 +95,8 @@ func (d *Die) roll(ctx context.Context) error {
 }
 
 // Reroll performs a thread-safe reroll after resetting a Die.
-func (d *Die) Reroll(ctx context.Context) (float64, error) {
-	d.Lock()
-	defer d.Unlock()
-	err := d.reroll(ctx)
-	return *d.Result, err
+func (d *Die) Reroll(ctx context.Context) error {
+	return d.reroll(ctx)
 }
 
 // reroll performs a thread unsafe reroll.
@@ -123,8 +116,6 @@ func (d *Die) reset() {
 // String returns an expression-like representation of a rolled die or its type,
 // if it has not been rolled.
 func (d *Die) String() string {
-	d.RLock()
-	defer d.RUnlock()
 	if d.rolled == 1 {
 		return fmt.Sprintf("%v", *d.Result)
 	}

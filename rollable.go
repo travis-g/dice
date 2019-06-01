@@ -45,6 +45,9 @@ type Roller interface {
 	// Roll rolls the object and records results appropriately.
 	Roll(context.Context) error
 
+	// Reroll resets the object and re-rolls it.
+	Reroll(context.Context) error
+
 	// Total returns the summed results.
 	Total(context.Context) (float64, error)
 
@@ -54,10 +57,10 @@ type Roller interface {
 	fmt.Stringer
 }
 
-// NewRoller creates a new Die to roll off of a supplied property set. The property
-// set is modified/linted to better suit defaults in the event a properties list
-// is reused. A concrete DieType must be used to create a new Die: see the
-// DieType documentation.
+// NewRoller creates a new Die to roll off of a supplied property set. The
+// property set is modified/linted to better suit defaults in the event a
+// properties list is reused. A concrete DieType must be used to create a new
+// Die: see the DieType documentation.
 func NewRoller(props *DieProperties) (Roller, error) {
 	if props.Size == 0 && props.Type != TypeFudge {
 		return nil, ErrSizeZero
@@ -208,11 +211,22 @@ func (g *Group) Copy() []Roller {
 	return self
 }
 
-// Roll implements the dice.Interface Roll method by rolling each
-// object/Interface within the group.
+// Roll implements the Roller interface's Roll method by rolling each
+// object/Roller within the group.
 func (g *Group) Roll(ctx context.Context) (err error) {
 	for _, dice := range *g {
 		err = dice.Roll(ctx)
+		if err != nil {
+			break
+		}
+	}
+	return err
+}
+
+// Reroll implements the dice.Reroll method by rerolling each object in it.
+func (g *Group) Reroll(ctx context.Context) (err error) {
+	for _, dice := range *g {
+		err = dice.Reroll(ctx)
 		if err != nil {
 			break
 		}
@@ -247,8 +261,7 @@ func (g *Group) Drop(drop int) {
 		tj, _ := (dice[j]).Total(context.Background())
 		return ti < tj
 	})
-	// fmt.Println(dice)
-	// drop lowest to highest
+	// fmt.Println(dice) drop lowest to highest
 	if drop > 0 {
 		for i := 0; i < drop; i++ {
 			switch t := (dice[i]).(type) {

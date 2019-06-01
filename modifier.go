@@ -76,7 +76,7 @@ func (c *CompareOp) UnmarshalJSON(data []byte) error {
 // A Modifier is a dice modifier that can apply to a set or a single die
 type Modifier interface {
 	// Apply executes a modifier against a Die.
-	Apply(context.Context, *Die) error
+	Apply(context.Context, Roller) error
 	fmt.Stringer
 }
 
@@ -114,37 +114,54 @@ func (m *RerollModifier) String() string {
 	return buf.String()
 }
 
-// Apply executes a RerollModifier against a Die. The modifier may be slightly
+// Apply executes a RerollModifier against a Roller. The modifier may be slightly
 // modified the first time it is applied to ensure property consistency.
-func (m *RerollModifier) Apply(ctx context.Context, d *Die) error {
+func (m *RerollModifier) Apply(ctx context.Context, r Roller) (err error) {
+	var result float64
 	if m.Compare == EMPTY {
 		m.Compare = EQL
 	}
-	result, err := d.Total(ctx)
+	result, err = r.Total(ctx)
 	if err != nil {
-		return err
+		return
 	}
-	recheck := func() {
-		err = d.reroll(ctx)
-		result, err = d.Total(ctx)
+	reroll := func() (err error) {
+		err = r.Reroll(ctx)
+		if err != nil {
+			return
+		}
+		result, err = r.Total(ctx)
+		if err != nil {
+			return
+		}
+		return
 	}
 	switch m.Compare {
 	case EQL:
 		for result == float64(m.Point) {
-			recheck()
+			err = reroll()
+			if err != nil {
+				return
+			}
 		}
 	case LSS:
 		for result <= float64(m.Point) {
-			recheck()
+			err = reroll()
+			if err != nil {
+				return
+			}
 		}
 	case GTR:
 		for result > float64(m.Point) {
-			recheck()
+			err = reroll()
+			if err != nil {
+				return
+			}
 		}
 	default:
 		err = &ErrNotImplemented{
 			fmt.Sprintf("uncaught case for reroll compare: %s", m.Compare),
 		}
 	}
-	return nil
+	return err
 }
