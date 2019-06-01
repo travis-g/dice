@@ -1,5 +1,6 @@
 /*
-Package sync implements a thread-safe wrapper for rollable dice.
+Package sync implements a thread-safe wrapper and synchronization methods for
+rollable dice.
 */
 package sync
 

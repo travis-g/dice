@@ -80,10 +80,6 @@ func NewRoller(props *DieProperties) (Roller, error) {
 			Dropped:   props.Dropped,
 			Modifiers: props.DieModifiers,
 		}
-		if props.Rolled {
-			die.rolled = 1
-			die.rolls = 1
-		}
 		return die, nil
 	default:
 		return nil, fmt.Errorf("cannot create Die of type %s", props.Type)

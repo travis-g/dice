@@ -3,32 +3,10 @@ package dice
 import (
 	"context"
 	"fmt"
-	"sync"
-	"sync/atomic"
 )
 
-// Die represents a typed die. A Die should use a mutex lock for thread safety
-// and call `Reroll()` manually to prevent unintended re-rolling/possible wastes
-// of system entropy.
-//
-// At its core, Die should be handled as an RWMutex: depending on state
-// (rolled/settled, mid-roll, etc.) it may or may not be safe to read the die's
-// properties at any specific time. When a Die is being read, RLock() it to
-// prevent writes. When it's being modified, Lock() it to prevent race condition
-// other writes as well as reads.
-//
-// The thread safety of any given Die should be left up to the implementer to
-// check, as oftentimes an individual die is rolled once, returned, and printed
-// synchronously. It is only when dice are cached, monitored, etc. that thread
-// safety is required.
+// Die represents an internally-typed die.
 type Die struct {
-	// embed an RWMutex's properties/methods
-	sync.RWMutex
-
-	// Rolled state and the count of total rolls. Handle changes atomically.
-	rolled uint32
-	rolls  uint32
-
 	// Generic properties
 	Type      DieType      `json:"type,omitempty"`
 	Size      uint         `json:"size"`
@@ -52,17 +30,14 @@ type DieProperties struct {
 	GroupModifiers ModifierList `json:"group_modifiers,omitempty"`
 }
 
-// Roll implements the Roller interface and is thread-safe. The error returned
-// will be an ErrRolled error if the die was already rolled. The Roll function
-// should be what checks any context maximums, as this is the function that
-// gatekeeps entropy use (net new rolls, rerolls, etc.).
+// Roll rolls the Die. The error returned will be an ErrRolled error if the die
+// was already rolled.
 func (d *Die) Roll(ctx context.Context) error {
 	// Return an error if the Die had been rolled
-	if d.rolled == 1 {
+	if d.Result != nil {
 		return ErrRolled
 	}
 
-	// Roll the Die using
 	err := d.roll(ctx)
 	if err != nil {
 		return err
@@ -75,14 +50,11 @@ func (d *Die) Roll(ctx context.Context) error {
 	return nil
 }
 
-// rolls a die based on the die's Size. This does not ensure thread-safety: the
-// die's mutex should be locked.
+// rolls a die based on the die's Size.
 func (d *Die) roll(ctx context.Context) error {
-	atomic.AddUint32(&d.rolls, 1)
-	if ok := atomic.CompareAndSwapUint32(&d.rolled, 0, 1); !ok {
+	if d.Result != nil {
 		return ErrRolled
 	}
-
 	switch d.Type {
 	case TypeFudge:
 		i := float64(Source.Intn(int(d.Size*2+1)) - int(d.Size))
@@ -94,21 +66,14 @@ func (d *Die) roll(ctx context.Context) error {
 	return nil
 }
 
-// Reroll performs a thread-safe reroll after resetting a Die.
+// Reroll performs a reroll after resetting a Die.
 func (d *Die) Reroll(ctx context.Context) error {
-	return d.reroll(ctx)
-}
-
-// reroll performs a thread unsafe reroll.
-func (d *Die) reroll(ctx context.Context) (err error) {
 	d.reset()
-	err = d.roll(ctx)
-	return
+	return d.roll(ctx)
 }
 
 // reset resets a Die's properties so that it can be re-rolled.
 func (d *Die) reset() {
-	d.rolled = 0
 	d.Result = nil
 	d.Dropped = false
 }
@@ -116,7 +81,7 @@ func (d *Die) reset() {
 // String returns an expression-like representation of a rolled die or its type,
 // if it has not been rolled.
 func (d *Die) String() string {
-	if d.rolled == 1 {
+	if d.Result != nil {
 		return fmt.Sprintf("%v", *d.Result)
 	}
 	switch d.Type {
@@ -135,7 +100,7 @@ func (d *Die) String() string {
 // Total implements the dice.Interface Total method. An ErrUnrolled error will
 // be returned if the die has not been rolled.
 func (d *Die) Total(_ context.Context) (float64, error) {
-	if d.rolled == 0 {
+	if d.Result == nil {
 		return 0.0, ErrUnrolled
 	}
 	if d.Dropped {
