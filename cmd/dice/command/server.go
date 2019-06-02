@@ -32,9 +32,12 @@ func rollHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	props = dice.Properties(ctx, &group)
 
-	x, err := toJSON(props)
+	res := map[string]interface{}{
+		"dice": group,
+	}
+
+	x, err := toJSON(res)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -44,8 +47,8 @@ func rollHandler(w http.ResponseWriter, r *http.Request) {
 
 func rollPostHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	decoder := json.NewDecoder(r.Body)
 
+	decoder := json.NewDecoder(r.Body)
 	var vars map[string]interface{}
 	err := decoder.Decode(&vars)
 	if err != nil {
@@ -68,9 +71,12 @@ func rollPostHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	props = dice.Properties(ctx, &group)
 
-	x, err := toJSON(props)
+	res := map[string]interface{}{
+		"dice": group,
+	}
+
+	x, err := toJSON(res)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
