@@ -5,6 +5,7 @@ import (
 )
 
 var _ = Modifier(&RerollModifier{})
+var _ = Modifier(&DropKeepModifier{})
 
 func TestCompareOp_UnmarshalJSON(t *testing.T) {
 	type args struct {

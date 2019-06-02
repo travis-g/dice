@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strconv"
 
 	"github.com/pkg/errors"
@@ -55,6 +56,7 @@ var compares = [...]string{
 }
 var compareStringMap map[string]CompareOp
 
+// Initialize the compareStringMap for LookupCompareOp
 func init() {
 	compareStringMap = make(map[string]CompareOp)
 	for i := compareOpStart + 1; i < compareOpEnd; i++ {
@@ -114,8 +116,9 @@ func (m *RerollModifier) String() string {
 	return buf.String()
 }
 
-// Apply executes a RerollModifier against a Roller. The modifier may be slightly
-// modified the first time it is applied to ensure property consistency.
+// Apply executes a RerollModifier against a Roller. The modifier may be
+// slightly modified the first time it is applied to ensure property
+// consistency.
 func (m *RerollModifier) Apply(ctx context.Context, r Roller) (err error) {
 	var result float64
 	if m.Compare == EMPTY {
@@ -164,4 +167,107 @@ func (m *RerollModifier) Apply(ctx context.Context, r Roller) (err error) {
 		}
 	}
 	return err
+}
+
+// A DropKeepMethod is a method to use when evaluating a drop/keep modifier
+// against a dice group.
+type DropKeepMethod int
+
+// Drop/keep methods.
+const (
+	UNKNOWN     DropKeepMethod = iota
+	DROP                       // "d"
+	DROPLOWEST                 // "dl"
+	DROPHIGHEST                // "dh"
+	KEEP                       // "k"
+	KEEPLOWEST                 // "kl"
+	KEEPHIGHEST                // "kh"
+)
+
+var dropkeeps = [...]string{
+	UNKNOWN:     "",
+	DROP:        "d",
+	DROPLOWEST:  "dl",
+	DROPHIGHEST: "dh",
+	KEEP:        "k",
+	KEEPLOWEST:  "kl",
+	KEEPHIGHEST: "kh",
+}
+var dropkeepStringMap map[string]DropKeepMethod
+
+func init() {
+	dropkeepStringMap = make(map[string]DropKeepMethod)
+	for i := UNKNOWN + 1; i < DropKeepMethod(len(dropkeeps)); i++ {
+		dropkeepStringMap[dropkeeps[i]] = i
+	}
+}
+
+// LookupDropKeepMethod returns the DropKeepMethod that is represented by a
+// given string.
+func LookupDropKeepMethod(s string) DropKeepMethod {
+	return dropkeepStringMap[s]
+}
+
+func (d DropKeepMethod) String() string {
+	s := ""
+	if 0 <= d && d < DropKeepMethod(len(dropkeeps)) {
+		s = dropkeeps[d]
+	}
+	return s
+}
+
+// MarshalJSON ensures the DropKeepMethod is encoded as its string
+// representation.
+func (d *DropKeepMethod) MarshalJSON() ([]byte, error) {
+	return json.Marshal(d.String())
+}
+
+// UnmarshalJSON enables JSON encoded string versions of DropKeepMethods to be
+// converted to their appropriate int counterparts.
+func (d *DropKeepMethod) UnmarshalJSON(data []byte) error {
+	var str string
+	if err := json.Unmarshal(data, &str); err != nil {
+		return errors.Wrap(err, "error unmarshaling json to DropKeepMethod")
+	}
+	*d = LookupDropKeepMethod(str)
+	return nil
+}
+
+// A DropKeepModifier is a modifier to drop the highest or lowest Num dice
+// within a group by marking them as Dropped. The Method used to apply the
+// modifier defines if the dice are dropped or kept (meaning the Num highest
+// dice are not dropped).
+type DropKeepModifier struct {
+	Method DropKeepMethod `json:"op"`
+	Num    int            `json:"num"`
+}
+
+func (d *DropKeepModifier) String() string {
+	return d.Method.String()
+}
+
+// Apply executes a DropKeepModifier against a Roller. If the Roller is not a
+// Group an error is returned.
+func (d *DropKeepModifier) Apply(ctx context.Context, r Roller) (err error) {
+	group, ok := r.(*RollerGroup)
+	if !ok {
+		return errors.New("target for modifier not a dice group")
+	}
+
+	// TODO(travis-g): copy without risking copying mutexes?
+	dice := make([]Roller, len(group.Group))
+	for i, die := range group.Group {
+		dice[i] = die
+	}
+
+	sort.Slice(dice, func(i, j int) bool {
+		ti, _ := (dice[i]).Total(context.TODO())
+		tj, _ := (dice[j]).Total(context.TODO())
+		return ti < tj
+	})
+
+	switch d.Method {
+	default:
+		return &ErrNotImplemented{"drop/keep not implemented"}
+	}
 }
