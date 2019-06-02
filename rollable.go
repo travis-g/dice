@@ -92,13 +92,24 @@ type Group []Roller
 // RollerGroup is a wrapper around a Group that implements Roller.
 type RollerGroup struct {
 	Group
+	Roller
 }
 
 // Roll rolls each die embedded in the DiceGroup.
 func (d *RollerGroup) Roll(ctx context.Context) error {
 	for _, die := range d.Group {
 		if err := die.Roll(ctx); err != nil {
-			return errors.Wrap(err, "error rolling Group")
+			return errors.Wrap(err, "error rolling dice group")
+		}
+	}
+	return nil
+}
+
+// Reroll re-rolls each die within the DiceGroup.
+func (d *RollerGroup) Reroll(ctx context.Context) error {
+	for _, die := range d.Group {
+		if err := die.Reroll(ctx); err != nil {
+			return errors.Wrap(err, "error rerolling dice group")
 		}
 	}
 	return nil
