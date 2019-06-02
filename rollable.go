@@ -264,8 +264,8 @@ func (g *Group) Drop(drop int) {
 	dice := g.Copy()
 
 	sort.Slice(dice, func(i, j int) bool {
-		ti, _ := (dice[i]).Total(context.Background())
-		tj, _ := (dice[j]).Total(context.Background())
+		ti, _ := (dice[i]).Total(context.TODO())
+		tj, _ := (dice[j]).Total(context.TODO())
 		return ti < tj
 	})
 	// fmt.Println(dice) drop lowest to highest
