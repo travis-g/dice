@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -41,17 +42,57 @@ func rollHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(x))
 }
 
+func rollPostHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	decoder := json.NewDecoder(r.Body)
+
+	var vars map[string]interface{}
+	err := decoder.Decode(&vars)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	props, err := dice.ParseNotation(vars["roll"].(string))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	group, err := dice.NewGroup(props)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	err = group.Roll(ctx)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	props = dice.Properties(ctx, &group)
+
+	x, err := toJSON(props)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Write([]byte(x))
+}
+
 // ServerCommand is a command that will initialize a DRAAS HTTP server.
+//
+// The server routines themselves should be split into a separate dice/server
+// package.
 func ServerCommand(c *cli.Context) error {
 	r := mux.NewRouter()
 
-	r.HandleFunc("/{roll}", rollHandler)
+	r.HandleFunc("/roll/{roll}", rollHandler).Methods("GET")
+	r.HandleFunc("/roll", rollPostHandler).Methods("POST")
 
 	srv := &http.Server{
 		Addr:         c.String("http"),
-		WriteTimeout: time.Second * 15,
-		ReadTimeout:  time.Second * 15,
-		IdleTimeout:  time.Second * 60,
+		WriteTimeout: time.Second * 10,
+		ReadTimeout:  time.Second * 10,
+		IdleTimeout:  time.Second * 10,
 		Handler:      r, // Pass our instance of gorilla/mux in.
 	}
 
