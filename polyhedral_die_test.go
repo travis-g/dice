@@ -1,5 +1,7 @@
 package dice
 
+var _ = Roller(&PolyhedralDie{})
+
 var dieSets = []struct {
 	size  int
 	count int

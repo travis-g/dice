@@ -7,8 +7,6 @@ import (
 	"sync/atomic"
 )
 
-var _ = Roller(&PolyhedralDie{})
-
 // A PolyhedralDie represents a variable-sided die in memory, including the result of
 // rolling it.
 type PolyhedralDie struct {

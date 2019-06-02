@@ -7,8 +7,6 @@ import (
 
 const fateDieNotation = "dF"
 
-var _ = Roller(&FudgeDie{})
-
 // A FudgeDie is a die with six sides, {-1, -1, 0, 0, 1, 1}. A FudgeDie can be
 // emulated with a traditional polyhedral die by evaluating "1d3-2".
 type FudgeDie struct {
