@@ -10,6 +10,24 @@ import (
 	"github.com/pkg/errors"
 )
 
+// A Modifier is a dice modifier that can apply to a set or a single die
+type Modifier interface {
+	// Apply executes a modifier against a Die.
+	Apply(context.Context, Roller) error
+	fmt.Stringer
+}
+
+// ModifierList is a slice of modifiers that implements Stringer.
+type ModifierList []Modifier
+
+func (m ModifierList) String() string {
+	var buf bytes.Buffer
+	for _, mod := range m {
+		buf.WriteString(mod.String())
+	}
+	return buf.String()
+}
+
 // CompareOp is an comparison operator usable in modifiers.
 type CompareOp int
 
@@ -71,24 +89,6 @@ func (c *CompareOp) UnmarshalJSON(data []byte) error {
 	}
 	*c = LookupCompareOp(str)
 	return nil
-}
-
-// A Modifier is a dice modifier that can apply to a set or a single die
-type Modifier interface {
-	// Apply executes a modifier against a Die.
-	Apply(context.Context, Roller) error
-	fmt.Stringer
-}
-
-// ModifierList is a slice of modifiers that implements Stringer.
-type ModifierList []Modifier
-
-func (m ModifierList) String() string {
-	var buf bytes.Buffer
-	for _, mod := range m {
-		buf.WriteString(mod.String())
-	}
-	return buf.String()
 }
 
 // ComparePoint is the base comparison
