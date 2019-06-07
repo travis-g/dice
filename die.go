@@ -108,3 +108,8 @@ func (d *Die) Total(_ context.Context) (float64, error) {
 	}
 	return *d.Result, nil
 }
+
+// Drop marks a Die as dropped.
+func (d *Die) Drop(_ context.Context, dropped bool) {
+	d.Dropped = dropped
+}

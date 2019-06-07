@@ -1,12 +1,15 @@
 package dice
 
 import (
+	"bytes"
 	crypto "crypto/rand"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"math"
 	"math/big"
 	"math/rand"
+	"regexp"
 	"strings"
 )
 
@@ -81,4 +84,29 @@ func quote(s string) string {
 func expression(i ...interface{}) string {
 	raw := strings.Trim(strings.Join(strings.Fields(fmt.Sprint(i...)), "+"), "[]")
 	return strings.Replace(raw, "+-", "-", -1)
+}
+
+// extract named capture groups to map by regexp
+func getNamedCaptures(exp *regexp.Regexp, in string) map[string]string {
+	modifierMatches := exp.FindStringSubmatch(in)
+
+	props := make(map[string]string)
+	for i, name := range exp.SubexpNames() {
+		if i != 0 && name != "" {
+			props[name] = modifierMatches[i]
+		}
+	}
+	return props
+}
+
+func jsonEncode(in interface{}) []byte {
+	if in == nil {
+		return nil
+	}
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	if err := enc.Encode(in); err != nil {
+		return nil
+	}
+	return buf.Bytes()
 }

@@ -93,15 +93,15 @@ func (c *CompareOp) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// ComparePoint is the base comparison
-type ComparePoint struct {
-	Compare CompareOp `json:"compare"`
-	Point   int       `json:"point"`
+// CompareTarget is the base comparison
+type CompareTarget struct {
+	Compare CompareOp `json:"compare,omitempty"`
+	Target  int       `json:"target"`
 }
 
 // RerollModifier is a modifier that rerolls a Die if a comparison is true.
 type RerollModifier struct {
-	ComparePoint
+	CompareTarget
 }
 
 func (m *RerollModifier) String() string {
@@ -112,7 +112,7 @@ func (m *RerollModifier) String() string {
 	if m.Compare != EQL {
 		write(m.Compare.String())
 	}
-	write(strconv.Itoa(m.Point))
+	write(strconv.Itoa(m.Target))
 	return buf.String()
 }
 
@@ -141,21 +141,21 @@ func (m *RerollModifier) Apply(ctx context.Context, r Roller) (err error) {
 	}
 	switch m.Compare {
 	case EQL:
-		for result == float64(m.Point) {
+		for result == float64(m.Target) {
 			err = reroll()
 			if err != nil {
 				return
 			}
 		}
 	case LSS:
-		for result <= float64(m.Point) {
+		for result <= float64(m.Target) {
 			err = reroll()
 			if err != nil {
 				return
 			}
 		}
 	case GTR:
-		for result > float64(m.Point) {
+		for result > float64(m.Target) {
 			err = reroll()
 			if err != nil {
 				return
@@ -171,67 +171,18 @@ func (m *RerollModifier) Apply(ctx context.Context, r Roller) (err error) {
 
 // A DropKeepMethod is a method to use when evaluating a drop/keep modifier
 // against a dice group.
-type DropKeepMethod int
+type DropKeepMethod string
 
 // Drop/keep methods.
 const (
-	UNKNOWN     DropKeepMethod = iota
-	DROP                       // "d"
-	DROPLOWEST                 // "dl"
-	DROPHIGHEST                // "dh"
-	KEEP                       // "k"
-	KEEPLOWEST                 // "kl"
-	KEEPHIGHEST                // "kh"
+	UNKNOWN     DropKeepMethod = ""
+	DROP        DropKeepMethod = "d"
+	DROPLOWEST  DropKeepMethod = "dl"
+	DROPHIGHEST DropKeepMethod = "dh"
+	KEEP        DropKeepMethod = "k"
+	KEEPLOWEST  DropKeepMethod = "kl"
+	KEEPHIGHEST DropKeepMethod = "kh"
 )
-
-var dropkeeps = [...]string{
-	UNKNOWN:     "",
-	DROP:        "d",
-	DROPLOWEST:  "dl",
-	DROPHIGHEST: "dh",
-	KEEP:        "k",
-	KEEPLOWEST:  "kl",
-	KEEPHIGHEST: "kh",
-}
-var dropkeepStringMap map[string]DropKeepMethod
-
-func init() {
-	dropkeepStringMap = make(map[string]DropKeepMethod)
-	for i := UNKNOWN + 1; i < DropKeepMethod(len(dropkeeps)); i++ {
-		dropkeepStringMap[dropkeeps[i]] = i
-	}
-}
-
-// LookupDropKeepMethod returns the DropKeepMethod that is represented by a
-// given string.
-func LookupDropKeepMethod(s string) DropKeepMethod {
-	return dropkeepStringMap[s]
-}
-
-func (d DropKeepMethod) String() string {
-	s := ""
-	if 0 <= d && d < DropKeepMethod(len(dropkeeps)) {
-		s = dropkeeps[d]
-	}
-	return s
-}
-
-// MarshalJSON ensures the DropKeepMethod is encoded as its string
-// representation.
-func (d *DropKeepMethod) MarshalJSON() ([]byte, error) {
-	return json.Marshal(d.String())
-}
-
-// UnmarshalJSON enables JSON encoded string versions of DropKeepMethods to be
-// converted to their appropriate int counterparts.
-func (d *DropKeepMethod) UnmarshalJSON(data []byte) error {
-	var str string
-	if err := json.Unmarshal(data, &str); err != nil {
-		return errors.Wrap(err, "error unmarshaling json to DropKeepMethod")
-	}
-	*d = LookupDropKeepMethod(str)
-	return nil
-}
 
 // A DropKeepModifier is a modifier to drop the highest or lowest Num dice
 // within a group by marking them as Dropped. The Method used to apply the
@@ -243,7 +194,7 @@ type DropKeepModifier struct {
 }
 
 func (d *DropKeepModifier) String() string {
-	return d.Method.String()
+	return string(d.Method)
 }
 
 // Apply executes a DropKeepModifier against a Roller. If the Roller is not a
@@ -254,20 +205,35 @@ func (d *DropKeepModifier) Apply(ctx context.Context, r Roller) (err error) {
 		return errors.New("target for modifier not a dice group")
 	}
 
-	// TODO(travis-g): copy without risking copying mutexes?
-	dice := make([]Roller, len(group.Group))
-	for i, die := range group.Group {
-		dice[i] = die
-	}
+	dice := group.Copy()
 
 	sort.Slice(dice, func(i, j int) bool {
-		ti, _ := (dice[i]).Total(context.TODO())
-		tj, _ := (dice[j]).Total(context.TODO())
+		ti, _ := (dice[i]).Total(ctx)
+		tj, _ := (dice[j]).Total(ctx)
 		return ti < tj
 	})
 
 	switch d.Method {
+	case DROP, DROPLOWEST:
+		// drop lowest Num
+		for i := 0; i < d.Num; i++ {
+			dice[i].Drop(ctx, true)
+		}
+	case KEEP, KEEPHIGHEST:
+		// drop all but highest Num
+		for i := 0; i < len(dice)-d.Num; i++ {
+			dice[i].Drop(ctx, true)
+		}
+	case DROPHIGHEST:
+		for i := len(dice) - d.Num; i < len(dice); i++ {
+			dice[i].Drop(ctx, true)
+		}
+	case KEEPLOWEST:
+		for i := d.Num; i < len(dice); i++ {
+			dice[i].Drop(ctx, true)
+		}
 	default:
-		return &ErrNotImplemented{"drop/keep not implemented"}
+		return &ErrNotImplemented{"unknown drop/keep method"}
 	}
+	return
 }

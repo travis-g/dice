@@ -102,7 +102,7 @@ func Evaluate(ctx context.Context, expression string) (*Expression, error) {
 		d.Roll(ctx)
 		drop := props.DropKeep
 		if drop != 0 {
-			d.Drop(drop)
+			d.DropDice(drop)
 		}
 		// record dice:
 		props = dice.Properties(ctx, &d)

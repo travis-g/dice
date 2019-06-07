@@ -2,12 +2,10 @@
 Package parser is an experimental expression parser to enable flexible callbacks
 on dice Groups.
 */
-// nolint
 package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"regexp"
@@ -28,8 +26,7 @@ var (
 	compoundingRegex    = regexp.MustCompile(`!!` + comparePointPattern + `?`)
 	penetratingRegex    = regexp.MustCompile(`!p` + comparePointPattern + `?`)
 	explodingRegex      = regexp.MustCompile(`!` + comparePointPattern + `?`)
-	rerollRegex         = regexp.MustCompile(
-		`r(?P<once>o?)` + comparePointPattern + `?`)
+	rerollRegex         = regexp.MustCompile(`r` + comparePointPattern + `?`)
 
 	sortRegex     = regexp.MustCompile(`(?P<sort>s[ad]?)`)
 	dropKeepRegex = regexp.MustCompile(`(?P<op>[dk][lh]?)(?P<num>\d+)`)
@@ -93,9 +90,9 @@ func main() {
 				rollfuncs = append(rollfuncs, fmt.Sprintf("%v", props))
 				point, _ := strconv.Atoi(props["point"])
 				test.Modifiers = append(test.Modifiers, &dice.RerollModifier{
-					ComparePoint: dice.ComparePoint{
+					CompareTarget: dice.CompareTarget{
 						Compare: dice.LookupCompareOp(props["compare"]),
-						Point:   point,
+						Target:  point,
 					},
 				})
 				// remove the reroll modifier from the string
@@ -168,23 +165,6 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println(die)
 	err = die.Roll(ctx)
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println(die)
-	_ = json.NewEncoder(os.Stdout).Encode(
-		die,
-	)
-	var die2 dice.Die
-	err = json.Unmarshal([]byte(`{"size":6}`), &die2)
-	if err != nil {
-		fmt.Println(err)
-	}
-	err = die2.Roll(ctx)
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println(&die2)
+	fmt.Println(die, err)
 }

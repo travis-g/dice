@@ -58,6 +58,13 @@ func (r *RWMutexRoller) Total(ctx context.Context) (float64, error) {
 	return r.die.Total(ctx)
 }
 
+// Drop marks the RWMutexRoller as dropped.
+func (r *RWMutexRoller) Drop(ctx context.Context, dropped bool) {
+	r.l.RLock()
+	defer r.l.RUnlock()
+	r.die.Drop(ctx, dropped)
+}
+
 // String read-locks the embedded Roller and returns the Roller's string
 // representation.
 func (r *RWMutexRoller) String() string {

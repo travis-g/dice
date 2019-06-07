@@ -60,3 +60,8 @@ func (f *FudgeDie) Total(ctx context.Context) (float64, error) {
 	}
 	return float64(*f.Result), err
 }
+
+// Drop marks a FudgeDie as dropped.
+func (f *FudgeDie) Drop(_ context.Context, dropped bool) {
+	f.Dropped = dropped
+}

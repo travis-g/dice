@@ -21,7 +21,7 @@ func TestCompareOp_UnmarshalJSON(t *testing.T) {
 		{"encoded", &c, args{
 			[]byte(`"\u003c"`),
 		}, false},
-		{"improper", &c, args{
+		{"unencoded", &c, args{
 			[]byte(`"<"`),
 		}, false},
 	}

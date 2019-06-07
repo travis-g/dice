@@ -12,34 +12,6 @@ import (
 
 var _ Roller = (*Group)(nil)
 
-// DieType is the enum of types that a die or dice can be
-type DieType string
-
-// Types of dice/dice groups.
-const (
-	// Concrete dice types: these can be used to instantiate a new rollable.
-	TypePolyhedron DieType = ""
-	TypeFudge      DieType = "fudge"
-
-	// Meta dice types: these are used to classify rollable groups and unknown
-	// dice.
-	TypeMultiple DieType = "multiple"
-	TypeUnknown  DieType = "unknown"
-)
-
-func (t DieType) String() string {
-	switch t {
-	case TypePolyhedron:
-		return "polyhedron"
-	case TypeFudge:
-		return "fudge"
-	case TypeMultiple:
-		return "multiple"
-	default:
-		return "unknown"
-	}
-}
-
 // Roller must be implemented for an object to be considered rollable.
 type Roller interface {
 	// Roll rolls the object and records results appropriately.
@@ -50,6 +22,8 @@ type Roller interface {
 
 	// Total returns the summed results.
 	Total(context.Context) (float64, error)
+
+	Drop(context.Context, bool)
 
 	// Must implement a String method; if the object has not been rolled String
 	// should return a stringified representation of that can be re-parsed to
@@ -86,13 +60,31 @@ func NewRoller(props *DieProperties) (Roller, error) {
 	}
 }
 
+// NewRollerGroup creates a new RollerGroup with count dice.
+func NewRollerGroup(props *DieProperties, count int) (*RollerGroup, error) {
+	dice := make([]Roller, count)
+	for i := range dice {
+		die, err := NewRoller(props)
+		if err != nil {
+			return nil, err
+		}
+		dice[i] = die
+	}
+
+	return &RollerGroup{
+		Group:     dice,
+		Modifiers: props.GroupModifiers,
+	}, nil
+}
+
 // A Group is a slice of rollable dice.
 type Group []Roller
 
-// RollerGroup is a wrapper around a Group that implements Roller.
+// RollerGroup is a wrapper around a Group that implements Roller. The Modifiers
+// supplied at this level should be group-level modifiers,
 type RollerGroup struct {
-	Group
-	Roller
+	Group     `json:"group" mapstructure:"group"`
+	Modifiers ModifierList `json:"modifiers,omitempty" mapstructure:"modifiers"`
 }
 
 // Roll rolls each die embedded in the DiceGroup.
@@ -100,6 +92,12 @@ func (d *RollerGroup) Roll(ctx context.Context) error {
 	for _, die := range d.Group {
 		if err := die.Roll(ctx); err != nil {
 			return errors.Wrap(err, "error rolling dice group")
+		}
+	}
+	for _, mod := range d.Modifiers {
+		err := mod.Apply(ctx, d)
+		if err != nil {
+			return err
 		}
 	}
 	return nil
@@ -112,7 +110,18 @@ func (d *RollerGroup) Reroll(ctx context.Context) error {
 			return errors.Wrap(err, "error rerolling dice group")
 		}
 	}
+	for _, mod := range d.Modifiers {
+		err := mod.Apply(ctx, d)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
+}
+
+// Drop on a RollerGroup is a noop.
+func (d *RollerGroup) Drop(_ context.Context, _ bool) {
+	// noop
 }
 
 // Total combines the results of all dice within the group.
@@ -135,6 +144,15 @@ func (d *RollerGroup) String() string {
 	}
 	total, _ := d.Total(context.TODO())
 	return fmt.Sprintf("%s => %v", strings.Join(strs, "+"), total)
+}
+
+// Copy returns a slice with indices that point to the Rollers.
+func (d *RollerGroup) Copy() []Roller {
+	self := make([]Roller, len(d.Group))
+	for i, k := range d.Group {
+		self[i] = k
+	}
+	return self
 }
 
 // GroupProperties describes a die.
@@ -168,11 +186,6 @@ func (g *GroupProperties) String() string {
 	return g.Dice.String()
 }
 
-// GoString returns the Go syntax for the object.
-func (g *GroupProperties) GoString() string {
-	return fmt.Sprintf("%#v", *g)
-}
-
 // Total implements the Total method and sums a group of Rollables' totals.
 func (g *Group) Total(ctx context.Context) (total float64, err error) {
 	total = 0.0
@@ -198,6 +211,11 @@ func (g *Group) String() string {
 // GoString returns the Go syntax for a group.
 func (g Group) GoString() string {
 	return fmt.Sprintf("%#v", g.Copy())
+}
+
+// Drop is a noop on the Group.
+func (g *Group) Drop(_ context.Context, _ bool) {
+	// noop
 }
 
 // Pointers returns the group as a slice of pointers to its dice.
@@ -252,10 +270,10 @@ func (g *Group) Expression() string {
 	return strings.Replace(strings.Join(dice, "+"), "+-", "-", -1)
 }
 
-// Drop marks a die/dice within a group as dropped based on an input integer. If
+// DropDice marks a die/dice within a group as dropped based on an input integer. If
 // n is positive it will drop the n objects with the lowest Totals; if n is
 // negative, it will drop the n objects with the highest Totals.
-func (g *Group) Drop(drop int) {
+func (g *Group) DropDice(drop int) {
 	if drop == 0 {
 		return
 	}
@@ -351,12 +369,14 @@ func NewGroup(props GroupProperties) (Group, error) {
 		for i := range group {
 			group[i] = &FudgeDie{
 				Type: TypeFudge.String(),
+				// Modifiers: props.Modifiers,
 			}
 		}
 	case TypePolyhedron:
 		for i := range group {
 			group[i] = &PolyhedralDie{
-				Size: props.Size,
+				Size:      props.Size,
+				Modifiers: props.Modifiers,
 			}
 		}
 	default:
