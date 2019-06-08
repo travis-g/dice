@@ -82,7 +82,8 @@ func (d *Die) reset() {
 // if it has not been rolled.
 func (d *Die) String() string {
 	if d.Result != nil {
-		return fmt.Sprintf("%v", *d.Result)
+		total, _ := d.Total()
+		return fmt.Sprintf("%v", total)
 	}
 	switch d.Type {
 	case TypePolyhedron:
@@ -99,7 +100,7 @@ func (d *Die) String() string {
 
 // Total implements the dice.Interface Total method. An ErrUnrolled error will
 // be returned if the die has not been rolled.
-func (d *Die) Total(_ context.Context) (float64, error) {
+func (d *Die) Total() (float64, error) {
 	if d.Result == nil {
 		return 0.0, ErrUnrolled
 	}

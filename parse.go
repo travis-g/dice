@@ -34,9 +34,11 @@ var (
 	ComparePointRegex = regexp.MustCompile(ComparePointPattern)
 )
 
+// DiceWithModifiersExpressionRegex is the compiled RegEx for parsing a dice
+// notation with modifier strings appended.
+var DiceWithModifiersExpressionRegex = regexp.MustCompile(
+	DiceNotationPattern + `(?P<modifiers>[^-+ \(\)]*)`)
 var (
-	diceWithModifiersExpressionRegex = regexp.MustCompile(
-		DiceNotationPattern + `(?P<modifiers>[^-+ \(\)]*)`)
 	rerollRegex   = regexp.MustCompile(`r` + ComparePointPattern + `?`)
 	sortRegex     = regexp.MustCompile(`(?P<sort>s[ad]?)`)
 	dropKeepRegex = regexp.MustCompile(`(?P<op>[dk][lh]?)(?P<num>\d+)`)
@@ -58,7 +60,7 @@ func ParseNotationWithModifier(ctx context.Context, notation string) (DiePropert
 		GroupModifiers: ModifierList{},
 	}
 
-	components := getNamedCaptures(diceWithModifiersExpressionRegex, notation)
+	components := getNamedCaptures(DiceWithModifiersExpressionRegex, notation)
 
 	// Parse and cast dice properties from regex capture values
 	count64, err := strconv.ParseInt(components["count"], 10, 0)
@@ -241,4 +243,34 @@ func ParseExpression(notation string) (GroupProperties, error) {
 	}
 
 	return props, nil
+}
+
+func ParseExpressionWithModifiers(ctx context.Context, expression string) (DieProperties, int, error) {
+	matches := DiceWithModifiersExpressionRegex.FindStringSubmatch(expression)
+	if len(matches) < 3 {
+		return DieProperties{}, 0, &ErrParseError{expression, expression, "", ": failed to identify dice components"}
+	}
+
+	// extract named capture groups to map
+	components := make(map[string]string)
+	for i, name := range DiceWithModifiersExpressionRegex.SubexpNames() {
+		if i != 0 && name != "" {
+			components[name] = matches[i]
+		}
+	}
+
+	// if group is found the core notation was not specified.
+	group := components["group"]
+	if group != "" {
+		return DieProperties{}, 0, &ErrNotImplemented{"arbitrary group rolls not implemented"}
+	}
+
+	// Call ParseNotation with the core dice count and size.
+	props, count, err := ParseNotationWithModifier(context.TODO(), expression)
+	if err != nil {
+		return DieProperties{}, 0, err
+	}
+
+	return props, count, nil
+
 }

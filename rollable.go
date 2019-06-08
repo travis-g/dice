@@ -21,7 +21,7 @@ type Roller interface {
 	Reroll(context.Context) error
 
 	// Total returns the summed results.
-	Total(context.Context) (float64, error)
+	Total() (float64, error)
 
 	Drop(context.Context, bool)
 
@@ -125,10 +125,10 @@ func (d *RollerGroup) Drop(_ context.Context, _ bool) {
 }
 
 // Total combines the results of all dice within the group.
-func (d *RollerGroup) Total(ctx context.Context) (float64, error) {
+func (d *RollerGroup) Total() (float64, error) {
 	total := 0.0
 	for _, die := range d.Group {
-		result, err := die.Total(ctx)
+		result, err := die.Total()
 		if err != nil {
 			return total, errors.Wrap(err, "error totaling Group")
 		}
@@ -142,17 +142,8 @@ func (d *RollerGroup) String() string {
 	for i, die := range d.Group {
 		strs[i] = die.String()
 	}
-	total, _ := d.Total(context.TODO())
-	return fmt.Sprintf("%s => %v", strings.Join(strs, "+"), total)
-}
-
-// Copy returns a slice with indices that point to the Rollers.
-func (d *RollerGroup) Copy() []Roller {
-	self := make([]Roller, len(d.Group))
-	for i, k := range d.Group {
-		self[i] = k
-	}
-	return self
+	total, _ := d.Total()
+	return fmt.Sprintf("%s => %v", expression(strings.Join(strs, "+")), total)
 }
 
 // GroupProperties describes a die.
@@ -187,10 +178,10 @@ func (g *GroupProperties) String() string {
 }
 
 // Total implements the Total method and sums a group of Rollables' totals.
-func (g *Group) Total(ctx context.Context) (total float64, err error) {
+func (g *Group) Total() (total float64, err error) {
 	total = 0.0
 	for _, dice := range *g {
-		result, err := dice.Total(ctx)
+		result, err := dice.Total()
 		if err != nil {
 			return total, err
 		}
@@ -204,7 +195,7 @@ func (g *Group) String() string {
 	for i, dice := range *g {
 		temp[i] = fmt.Sprintf("%v", dice.String())
 	}
-	t, _ := g.Total(context.Background())
+	t, _ := g.Total()
 	return fmt.Sprintf("%s => %v", strings.Join(temp, "+"), t)
 }
 
@@ -262,9 +253,9 @@ func (g *Group) Reroll(ctx context.Context) (err error) {
 // Expression returns an expression to represent the group's total. Dice in the
 // group that are unrolled are replaced with their roll notations
 func (g *Group) Expression() string {
-	dice := make([]string, len(*g))
-	for i, die := range *g {
-		dice[i] = die.String()
+	dice := make([]string, 0)
+	for _, die := range *g {
+		dice = append(dice, die.String())
 	}
 	// simplify the expression
 	return strings.Replace(strings.Join(dice, "+"), "+-", "-", -1)
@@ -282,8 +273,8 @@ func (g *Group) DropDice(drop int) {
 	dice := g.Copy()
 
 	sort.Slice(dice, func(i, j int) bool {
-		ti, _ := (dice[i]).Total(context.TODO())
-		tj, _ := (dice[j]).Total(context.TODO())
+		ti, _ := (dice[i]).Total()
+		tj, _ := (dice[j]).Total()
 		return ti < tj
 	})
 	// fmt.Println(dice) drop lowest to highest
@@ -339,7 +330,7 @@ func Properties(ctx context.Context, g *Group) GroupProperties {
 
 GROUP_CONSISTENT:
 	props.Expression = g.Expression()
-	props.Result, _ = g.Total(ctx)
+	props.Result, _ = g.Total()
 	switch t := (*dice[0]).(type) {
 	case *PolyhedralDie:
 		props.Size = t.Size
@@ -348,7 +339,7 @@ GROUP_CONSISTENT:
 
 GROUP_INCONSISTENT:
 	props.Expression = g.Expression()
-	props.Result, _ = g.Total(ctx)
+	props.Result, _ = g.Total()
 	return props
 }
 

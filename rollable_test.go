@@ -88,7 +88,7 @@ func TestGroup_Total(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			total, err := tt.g.Total(ctx)
+			total, err := tt.g.Total()
 			if err != nil {
 				t.Errorf("Got error on %v: %v", tt, err)
 			}

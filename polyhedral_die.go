@@ -19,7 +19,8 @@ type PolyhedralDie struct {
 // notation/type, if it has not been rolled.
 func (d *PolyhedralDie) String() string {
 	if d.Result != nil {
-		return fmt.Sprintf("%v", *d.Result)
+		total, _ := d.Total()
+		return fmt.Sprintf("%v", total)
 	}
 	return fmt.Sprintf("d%d%s", d.Size, d.Modifiers)
 }
@@ -30,7 +31,7 @@ func (d *PolyhedralDie) GoString() string {
 }
 
 // Total implements the dice.Interface Total method.
-func (d *PolyhedralDie) Total(ctx context.Context) (float64, error) {
+func (d *PolyhedralDie) Total() (float64, error) {
 	if d.Result == nil {
 		return 0.0, ErrUnrolled
 	}

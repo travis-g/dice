@@ -17,7 +17,8 @@ type FudgeDie struct {
 
 func (f *FudgeDie) String() string {
 	if f.Result != nil {
-		return fmt.Sprintf("%v", *f.Result)
+		total, _ := f.Total()
+		return fmt.Sprintf("%v", total)
 	}
 	return fateDieNotation
 }
@@ -50,10 +51,10 @@ func (f *FudgeDie) Reroll(ctx context.Context) error {
 }
 
 // Total implements the dice.Interface Total method. If dropped, 0 is returned.
-func (f *FudgeDie) Total(ctx context.Context) (float64, error) {
+func (f *FudgeDie) Total() (float64, error) {
 	var err error
 	if f.Result == nil {
-		err = f.Roll(ctx)
+		return 0.0, ErrUnrolled
 	}
 	if f.Dropped {
 		return 0.0, nil

@@ -124,7 +124,7 @@ func (m *RerollModifier) Apply(ctx context.Context, r Roller) (err error) {
 	if m.Compare == EMPTY {
 		m.Compare = EQL
 	}
-	result, err = r.Total(ctx)
+	result, err = r.Total()
 	if err != nil {
 		return
 	}
@@ -133,7 +133,7 @@ func (m *RerollModifier) Apply(ctx context.Context, r Roller) (err error) {
 		if err != nil {
 			return
 		}
-		result, err = r.Total(ctx)
+		result, err = r.Total()
 		if err != nil {
 			return
 		}
@@ -208,8 +208,8 @@ func (d *DropKeepModifier) Apply(ctx context.Context, r Roller) (err error) {
 	dice := group.Copy()
 
 	sort.Slice(dice, func(i, j int) bool {
-		ti, _ := (dice[i]).Total(ctx)
-		tj, _ := (dice[j]).Total(ctx)
+		ti, _ := (dice[i]).Total()
+		tj, _ := (dice[j]).Total()
 		return ti < tj
 	})
 

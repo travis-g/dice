@@ -54,7 +54,7 @@ type Expression struct {
 
 	// Dice is the list of dice groups rolled as part of the expression. As dice
 	// are rolled, their GroupProperties are retrieved.
-	Dice []dice.GroupProperties `json:"dice,omitempty"`
+	Dice []*dice.RollerGroup `json:"dice,omitempty"`
 }
 
 // String implements fmt.Stringer.
@@ -87,27 +87,21 @@ implementation along with more fine-grained unit tests/benchmarks.
 func Evaluate(ctx context.Context, expression string) (*Expression, error) {
 	de := &Expression{
 		Original: expression,
-		Dice:     make([]dice.GroupProperties, 0),
+		Dice:     make([]*dice.RollerGroup, 0),
 	}
 	// systematically parse the DiceExpression for dice notation substrings,
 	// evaluate and expand the rolls, replace the notation strings with their
 	// fully-rolled and expanded counterparts, and save the expanded expression
 	// to the object.
-	rolledBytes := dice.DiceExpressionRegex.ReplaceAllFunc([]byte(de.Original), func(matchBytes []byte) []byte {
-		props, _ := dice.ParseExpression(string(matchBytes))
-		d, err := dice.NewGroup(props)
+	rolledBytes := dice.DiceWithModifiersExpressionRegex.ReplaceAllFunc([]byte(de.Original), func(matchBytes []byte) []byte {
+		props, count, _ := dice.ParseExpressionWithModifiers(ctx, string(matchBytes))
+		d, err := dice.NewRollerGroup(&props, count)
 		if err != nil {
 			return []byte{}
 		}
 		d.Roll(ctx)
-		drop := props.DropKeep
-		if drop != 0 {
-			d.DropDice(drop)
-		}
 		// record dice:
-		props = dice.Properties(ctx, &d)
-		props.DropKeep = drop
-		de.Dice = append(de.Dice, props)
+		de.Dice = append(de.Dice, d)
 
 		// write expanded result back as bytes
 		var buf bytes.Buffer
