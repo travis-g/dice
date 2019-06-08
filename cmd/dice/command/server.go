@@ -14,6 +14,17 @@ import (
 	"github.com/urfave/cli"
 )
 
+// handleRequest handles a POST request that supplies a properties list by
+// creating a new die, rolling it, and returning the rolled die and any errors.
+func handleRequest(ctx context.Context, props dice.DieProperties) (roll dice.Roller, err error) {
+	roll, err = dice.NewRoller(&props)
+	if err != nil {
+		return
+	}
+	err = roll.Roll(ctx)
+	return
+}
+
 func rollHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	ctx := r.Context()
