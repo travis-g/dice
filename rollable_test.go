@@ -46,12 +46,12 @@ func BenchmarkNewGroup(b *testing.B) {
 func TestGroup_Total(t *testing.T) {
 	tests := []struct {
 		name string
-		g    Dice
+		g    Group
 		want float64
 	}{
 		{
 			name: "basic",
-			g: Dice{
+			g: Group{
 				&PolyhedralDie{Result: newInt(2)},
 				&PolyhedralDie{Result: newInt(3)},
 				&PolyhedralDie{Result: newInt(4)},
@@ -60,9 +60,9 @@ func TestGroup_Total(t *testing.T) {
 		},
 		{
 			name: "nested",
-			g: Dice{
+			g: Group{
 				&PolyhedralDie{Result: newInt(2)},
-				&Dice{
+				&Group{
 					&PolyhedralDie{Result: newInt(3)},
 				},
 				&PolyhedralDie{Result: newInt(4)},
@@ -71,7 +71,7 @@ func TestGroup_Total(t *testing.T) {
 		},
 		{
 			name: "dropped",
-			g: Dice{
+			g: Group{
 				&PolyhedralDie{Result: newInt(2), Dropped: true},
 				&PolyhedralDie{Result: newInt(4)},
 			},
@@ -79,7 +79,7 @@ func TestGroup_Total(t *testing.T) {
 		},
 		{
 			name: "mixed",
-			g: Dice{
+			g: Group{
 				&PolyhedralDie{Result: newInt(2), Dropped: true},
 				&FudgeDie{Result: newInt(-1)},
 			},
@@ -102,12 +102,12 @@ func TestGroup_Total(t *testing.T) {
 func TestGroup_Expression(t *testing.T) {
 	tests := []struct {
 		name string
-		g    Dice
+		g    Group
 		want string
 	}{
 		{
 			name: "basic",
-			g: Dice{
+			g: Group{
 				&PolyhedralDie{Result: newInt(2)},
 				&PolyhedralDie{Result: newInt(3)},
 				&PolyhedralDie{Result: newInt(4)},
@@ -116,7 +116,7 @@ func TestGroup_Expression(t *testing.T) {
 		},
 		{
 			name: "unrolled",
-			g: Dice{
+			g: Group{
 				&PolyhedralDie{Size: 3},
 				&PolyhedralDie{Result: newInt(3)},
 				&PolyhedralDie{Result: newInt(4)},

@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var _ Roller = (*Dice)(nil)
+var _ Roller = (*Group)(nil)
 
 // Roller must be implemented for an object to be considered rollable.
 type Roller interface {
@@ -74,24 +74,24 @@ func NewRollerGroup(props *DieProperties) (*RollerGroup, error) {
 	}
 
 	return &RollerGroup{
-		Dice:      dice,
+		Group:     dice,
 		Modifiers: props.GroupModifiers,
 	}, nil
 }
 
-// A Dice is a slice of rollable dice.
-type Dice []Roller
+// A Group is a slice of rollable dice.
+type Group []Roller
 
 // RollerGroup is a wrapper around a Group that implements Roller. The Modifiers
 // supplied at this level should be group-level modifiers,
 type RollerGroup struct {
-	Dice      `json:"dice" mapstructure:"dice"`
+	Group     `json:"dice" mapstructure:"dice"`
 	Modifiers ModifierList `json:"modifiers,omitempty" mapstructure:"modifiers"`
 }
 
 // Roll rolls each die embedded in the DiceGroup.
 func (d *RollerGroup) Roll(ctx context.Context) error {
-	for _, die := range d.Dice {
+	for _, die := range d.Group {
 		if err := die.Roll(ctx); err != nil {
 			return errors.Wrap(err, "error rolling dice group")
 		}
@@ -107,7 +107,7 @@ func (d *RollerGroup) Roll(ctx context.Context) error {
 
 // Reroll re-rolls each die within the DiceGroup.
 func (d *RollerGroup) Reroll(ctx context.Context) error {
-	for _, die := range d.Dice {
+	for _, die := range d.Group {
 		if err := die.Reroll(ctx); err != nil {
 			return errors.Wrap(err, "error rerolling dice group")
 		}
@@ -124,7 +124,7 @@ func (d *RollerGroup) Reroll(ctx context.Context) error {
 // Total combines the results of all dice within the group.
 func (d *RollerGroup) Total() (float64, error) {
 	total := 0.0
-	for _, die := range d.Dice {
+	for _, die := range d.Group {
 		result, err := die.Total()
 		if err != nil {
 			return total, errors.Wrap(err, "error totaling Group")
@@ -135,8 +135,8 @@ func (d *RollerGroup) Total() (float64, error) {
 }
 
 func (d *RollerGroup) String() string {
-	strs := make([]string, len(d.Dice))
-	for i, die := range d.Dice {
+	strs := make([]string, len(d.Group))
+	for i, die := range d.Group {
 		strs[i] = die.String()
 	}
 	total, _ := d.Total()
@@ -153,7 +153,7 @@ type GroupProperties struct {
 	Original   string  `json:"original,omitempty"`
 
 	// Dice is any dice rolled as part of the group.
-	Dice Dice `json:"dice,omitempty"`
+	Dice Group `json:"dice,omitempty"`
 
 	// Unrolled indicates the die has not been rolled. If the die has been
 	// rolled Unrolled will be false and omitted from marshaled JSON.
@@ -175,7 +175,7 @@ func (g *GroupProperties) String() string {
 }
 
 // Total implements the Total method and sums a group of dice's totals.
-func (g *Dice) Total() (total float64, err error) {
+func (g *Group) Total() (total float64, err error) {
 	total = 0.0
 	for _, dice := range *g {
 		result, err := dice.Total()
@@ -187,7 +187,7 @@ func (g *Dice) Total() (total float64, err error) {
 	return
 }
 
-func (g *Dice) String() string {
+func (g *Group) String() string {
 	temp := make([]string, len(*g))
 	for i, dice := range *g {
 		temp[i] = fmt.Sprintf("%v", dice.String())
@@ -197,17 +197,17 @@ func (g *Dice) String() string {
 }
 
 // GoString returns the Go syntax for a group.
-func (g Dice) GoString() string {
+func (g Group) GoString() string {
 	return fmt.Sprintf("%#v", g.Copy())
 }
 
 // Drop is a noop on the Group.
-func (g *Dice) Drop(_ context.Context, _ bool) {
+func (g *Group) Drop(_ context.Context, _ bool) {
 	// noop
 }
 
 // Pointers returns the group as a slice of pointers to its dice.
-func (g *Dice) Pointers() []*Roller {
+func (g *Group) Pointers() []*Roller {
 	self := make([]*Roller, len(*g))
 	for i, k := range *g {
 		self[i] = &k
@@ -216,7 +216,7 @@ func (g *Dice) Pointers() []*Roller {
 }
 
 // Copy returns a copy of the dice within the group
-func (g *Dice) Copy() []Roller {
+func (g *Group) Copy() []Roller {
 	self := make([]Roller, len(*g))
 	for i, k := range *g {
 		self[i] = k
@@ -226,7 +226,7 @@ func (g *Dice) Copy() []Roller {
 
 // Roll implements the Roller interface's Roll method by rolling each
 // object/Roller within the group.
-func (g *Dice) Roll(ctx context.Context) (err error) {
+func (g *Group) Roll(ctx context.Context) (err error) {
 	for _, dice := range *g {
 		err = dice.Roll(ctx)
 		if err != nil {
@@ -237,7 +237,7 @@ func (g *Dice) Roll(ctx context.Context) (err error) {
 }
 
 // Reroll implements the dice.Reroll method by rerolling each object in it.
-func (g *Dice) Reroll(ctx context.Context) (err error) {
+func (g *Group) Reroll(ctx context.Context) (err error) {
 	for _, dice := range *g {
 		err = dice.Reroll(ctx)
 		if err != nil {
@@ -249,7 +249,7 @@ func (g *Dice) Reroll(ctx context.Context) (err error) {
 
 // Expression returns an expression to represent the group's total. Dice in the
 // group that are unrolled are replaced with their roll notations
-func (g *Dice) Expression() string {
+func (g *Group) Expression() string {
 	dice := make([]string, 0)
 	for _, die := range *g {
 		dice = append(dice, die.String())
@@ -259,7 +259,7 @@ func (g *Dice) Expression() string {
 }
 
 // Properties calculates properties from a given group.
-func Properties(ctx context.Context, g *Dice) GroupProperties {
+func Properties(ctx context.Context, g *Group) GroupProperties {
 	props := GroupProperties{
 		Count: len(*g),
 		Dice:  *g,
@@ -303,11 +303,11 @@ GROUP_INCONSISTENT:
 }
 
 // NewGroup creates a new group based on provided seed of properties.
-func NewGroup(props GroupProperties) (Dice, error) {
+func NewGroup(props GroupProperties) (Group, error) {
 	if props.Count == 0 {
-		return Dice{}, nil
+		return Group{}, nil
 	}
-	group := make(Dice, props.Count)
+	group := make(Group, props.Count)
 
 	switch props.Type {
 	case TypeFudge:
@@ -325,7 +325,7 @@ func NewGroup(props GroupProperties) (Dice, error) {
 			}
 		}
 	default:
-		return Dice{}, fmt.Errorf("type %s not a valid dice.Type", props.Type)
+		return Group{}, fmt.Errorf("type %s not a valid dice.Type", props.Type)
 	}
 	return group, nil
 }
