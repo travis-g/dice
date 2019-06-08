@@ -245,6 +245,8 @@ func ParseExpression(notation string) (GroupProperties, error) {
 	return props, nil
 }
 
+// ParseExpressionWithModifiers parses a given expression into a properties
+// object with support for modifiers.
 func ParseExpressionWithModifiers(ctx context.Context, expression string) (DieProperties, int, error) {
 	matches := DiceWithModifiersExpressionRegex.FindStringSubmatch(expression)
 	if len(matches) < 3 {

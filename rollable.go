@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"sort"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -119,11 +118,6 @@ func (d *RollerGroup) Reroll(ctx context.Context) error {
 	return nil
 }
 
-// Drop on a RollerGroup is a noop.
-func (d *RollerGroup) Drop(_ context.Context, _ bool) {
-	// noop
-}
-
 // Total combines the results of all dice within the group.
 func (d *RollerGroup) Total() (float64, error) {
 	total := 0.0
@@ -177,7 +171,7 @@ func (g *GroupProperties) String() string {
 	return g.Dice.String()
 }
 
-// Total implements the Total method and sums a group of Rollables' totals.
+// Total implements the Total method and sums a group of dice's totals.
 func (g *Group) Total() (total float64, err error) {
 	total = 0.0
 	for _, dice := range *g {
@@ -261,44 +255,6 @@ func (g *Group) Expression() string {
 	return strings.Replace(strings.Join(dice, "+"), "+-", "-", -1)
 }
 
-// DropDice marks a die/dice within a group as dropped based on an input integer. If
-// n is positive it will drop the n objects with the lowest Totals; if n is
-// negative, it will drop the n objects with the highest Totals.
-func (g *Group) DropDice(drop int) {
-	if drop == 0 {
-		return
-	}
-	// create a copy of the array to sort and forward dice updates rather than
-	// modifying the original order of the dice
-	dice := g.Copy()
-
-	sort.Slice(dice, func(i, j int) bool {
-		ti, _ := (dice[i]).Total()
-		tj, _ := (dice[j]).Total()
-		return ti < tj
-	})
-	// fmt.Println(dice) drop lowest to highest
-	if drop > 0 {
-		for i := 0; i < drop; i++ {
-			switch t := (dice[i]).(type) {
-			case *PolyhedralDie:
-				t.Dropped = true
-			case *FudgeDie:
-				t.Dropped = true
-			}
-		}
-	} else if drop < 0 {
-		for i := len(dice) - 1; i >= len(dice)+drop; i-- {
-			switch t := (dice[i]).(type) {
-			case *PolyhedralDie:
-				t.Dropped = true
-			case *FudgeDie:
-				t.Dropped = true
-			}
-		}
-	}
-}
-
 // Properties calculates properties from a given group.
 func Properties(ctx context.Context, g *Group) GroupProperties {
 	props := GroupProperties{
@@ -341,11 +297,6 @@ GROUP_INCONSISTENT:
 	props.Expression = g.Expression()
 	props.Result, _ = g.Total()
 	return props
-}
-
-// Roll rolls an arbitrary group of dice and returns the total.
-func Roll(ctx context.Context, g *Group) error {
-	return g.Roll(ctx)
 }
 
 // NewGroup creates a new group based on provided seed of properties.
