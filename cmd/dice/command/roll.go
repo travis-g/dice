@@ -14,11 +14,11 @@ func RollCommand(c *cli.Context) error {
 	ctx := context.Background()
 
 	roll := c.Args().Get(0)
-	props, count, err := dice.ParseNotationWithModifier(ctx, roll)
+	props, err := dice.ParseNotationWithModifier(ctx, roll)
 	if err != nil {
 		return err
 	}
-	group, _ := dice.NewRollerGroup(&props, count)
+	group, _ := dice.NewRollerGroup(&props)
 	err = group.Roll(ctx)
 	if err != nil {
 		return err

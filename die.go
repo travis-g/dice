@@ -24,6 +24,7 @@ type DieProperties struct {
 	Result  *float64 `json:"result,omitempty"`
 	Rolled  bool     `json:"rolled,omitempty"`
 	Dropped bool     `json:"dropped,omitempty"`
+	Count   int      `json:"count,omitempty"`
 
 	// Modifiers for the dice or parent set
 	DieModifiers   ModifierList `json:"die_modifiers,omitempty"`

@@ -54,7 +54,7 @@ const (
 
 // ParseNotationWithModifier parses the provided notation with updated regular
 // expressions that also extract dice group modifiers.
-func ParseNotationWithModifier(ctx context.Context, notation string) (DieProperties, int, error) {
+func ParseNotationWithModifier(ctx context.Context, notation string) (DieProperties, error) {
 	props := DieProperties{
 		DieModifiers:   ModifierList{},
 		GroupModifiers: ModifierList{},
@@ -69,12 +69,13 @@ func ParseNotationWithModifier(ctx context.Context, notation string) (DiePropert
 		// either there was an implied count, ex 'd20', or count was invalid
 		count = 1
 	}
+	props.Count = count
 
 	if components["size"] == "F" {
 		props.Type = TypeFudge
 		props.Size = 1
 	} else if size, err := strconv.ParseUint(components["size"], 10, 0); err != nil {
-		return props, count, &ErrParseError{notation, components["size"], "size", ": invalid size"}
+		return props, &ErrParseError{notation, components["size"], "size", ": invalid size"}
 	} else {
 		props.Size = uint(size)
 	}
@@ -143,7 +144,7 @@ func ParseNotationWithModifier(ctx context.Context, notation string) (DiePropert
 			break
 		}
 	}
-	return props, count, nil
+	return props, nil
 }
 
 // ParseNotation parses a notation into a group of dice. It returns the group
@@ -247,10 +248,10 @@ func ParseExpression(notation string) (GroupProperties, error) {
 
 // ParseExpressionWithModifiers parses a given expression into a properties
 // object with support for modifiers.
-func ParseExpressionWithModifiers(ctx context.Context, expression string) (DieProperties, int, error) {
+func ParseExpressionWithModifiers(ctx context.Context, expression string) (DieProperties, error) {
 	matches := DiceWithModifiersExpressionRegex.FindStringSubmatch(expression)
 	if len(matches) < 3 {
-		return DieProperties{}, 0, &ErrParseError{expression, expression, "", ": failed to identify dice components"}
+		return DieProperties{}, &ErrParseError{expression, expression, "", ": failed to identify dice components"}
 	}
 
 	// extract named capture groups to map
@@ -264,15 +265,15 @@ func ParseExpressionWithModifiers(ctx context.Context, expression string) (DiePr
 	// if group is found the core notation was not specified.
 	group := components["group"]
 	if group != "" {
-		return DieProperties{}, 0, &ErrNotImplemented{"arbitrary group rolls not implemented"}
+		return DieProperties{}, &ErrNotImplemented{"arbitrary group rolls not implemented"}
 	}
 
 	// Call ParseNotation with the core dice count and size.
-	props, count, err := ParseNotationWithModifier(context.TODO(), expression)
+	props, err := ParseNotationWithModifier(context.TODO(), expression)
 	if err != nil {
-		return DieProperties{}, 0, err
+		return DieProperties{}, err
 	}
 
-	return props, count, nil
+	return props, nil
 
 }
