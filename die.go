@@ -72,7 +72,7 @@ func (d *Die) Reroll(ctx context.Context) error {
 		return ErrUnrolled
 	}
 	d.reset()
-	return d.roll(ctx)
+	return d.Roll(ctx)
 }
 
 // String returns an expression-like representation of a rolled die or its type,

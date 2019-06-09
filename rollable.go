@@ -59,8 +59,8 @@ type RollerFactory func(*RollerProperties) (Roller, error)
 // use to create a new die of that type. This map can be modified to create dice
 // using different functions or to implement new die types.
 var RollerFactoryMap = map[DieType]RollerFactory{
-	TypePolyhedron: NewDie,
-	TypeFudge:      NewDie,
+	TypePolyhedron: NewPolyhedralDie,
+	TypeFudge:      NewFudgeDie,
 }
 
 // A Group is a slice of rollable dice.
@@ -333,8 +333,7 @@ func NewGroup(props GroupProperties) (Group, error) {
 	case TypeFudge:
 		for i := range group {
 			group[i] = &FudgeDie{
-				Type: TypeFudge.String(),
-				// Modifiers: props.Modifiers,
+				Modifiers: props.Modifiers,
 			}
 		}
 	case TypePolyhedron:

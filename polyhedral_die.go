@@ -15,6 +15,21 @@ type PolyhedralDie struct {
 	Modifiers ModifierList `json:"modifiers,omitempty" mapstructure:"modifiers"`
 }
 
+// NewPolyhedralDie creates a new standard polyhedral die and returns it.
+func NewPolyhedralDie(props *RollerProperties) (new Roller, err error) {
+	var result *int
+	if props.Result != nil {
+		*result = int(*props.Result)
+	}
+	new = &PolyhedralDie{
+		Result:    result,
+		Size:      int(props.Size),
+		Dropped:   props.Dropped,
+		Modifiers: props.DieModifiers,
+	}
+	return
+}
+
 // String returns an expression-like representation of a rolled die or its
 // notation/type, if it has not been rolled.
 func (d *PolyhedralDie) String() string {
@@ -54,8 +69,7 @@ func (d *PolyhedralDie) Roll(ctx context.Context) error {
 	}
 
 	for _, mod := range d.Modifiers {
-		err := mod.Apply(ctx, d)
-		if err != nil {
+		if err := mod.Apply(ctx, d); err != nil {
 			return err
 		}
 	}
@@ -70,11 +84,11 @@ func (d *PolyhedralDie) Reroll(ctx context.Context) error {
 	}
 	d.Result = nil
 	d.Dropped = false
-	return d.roll()
+	return d.Roll(ctx)
 }
 
 func (d *PolyhedralDie) roll() error {
-	i := 1 + Source.Intn(int(d.Size))
+	i := 1 + Source.Intn(d.Size)
 	d.Result = &i
 	return nil
 }
