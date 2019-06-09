@@ -175,13 +175,13 @@ type DropKeepMethod string
 
 // Drop/keep methods.
 const (
-	UNKNOWN     DropKeepMethod = ""
-	DROP        DropKeepMethod = "d"
-	DROPLOWEST  DropKeepMethod = "dl"
-	DROPHIGHEST DropKeepMethod = "dh"
-	KEEP        DropKeepMethod = "k"
-	KEEPLOWEST  DropKeepMethod = "kl"
-	KEEPHIGHEST DropKeepMethod = "kh"
+	DropKeepMethodUnknown     DropKeepMethod = ""
+	DropKeepMethodDrop        DropKeepMethod = "d"
+	DropKeepMethodDropLowest  DropKeepMethod = "dl"
+	DropKeepMethodDropHighest DropKeepMethod = "dh"
+	DropKeepMethodKeep        DropKeepMethod = "k"
+	DropKeepMethodKeepLowest  DropKeepMethod = "kl"
+	DropKeepMethodKeepHighest DropKeepMethod = "kh"
 )
 
 // A DropKeepModifier is a modifier to drop the highest or lowest Num dice
@@ -199,7 +199,7 @@ func (d *DropKeepModifier) String() string {
 
 // Apply executes a DropKeepModifier against a Roller. If the Roller is not a
 // Group an error is returned.
-func (d *DropKeepModifier) Apply(ctx context.Context, r Roller) (err error) {
+func (d *DropKeepModifier) Apply(ctx context.Context, r Roller) error {
 	group, ok := r.(*RollerGroup)
 	if !ok {
 		return errors.New("target for modifier not a dice group")
@@ -214,26 +214,26 @@ func (d *DropKeepModifier) Apply(ctx context.Context, r Roller) (err error) {
 	})
 
 	switch d.Method {
-	case DROP, DROPLOWEST:
+	case DropKeepMethodDrop, DropKeepMethodDropLowest:
 		// drop lowest Num
 		for i := 0; i < d.Num; i++ {
 			dice[i].Drop(ctx, true)
 		}
-	case KEEP, KEEPHIGHEST:
+	case DropKeepMethodKeep, DropKeepMethodKeepHighest:
 		// drop all but highest Num
 		for i := 0; i < len(dice)-d.Num; i++ {
 			dice[i].Drop(ctx, true)
 		}
-	case DROPHIGHEST:
+	case DropKeepMethodDropHighest:
 		for i := len(dice) - d.Num; i < len(dice); i++ {
 			dice[i].Drop(ctx, true)
 		}
-	case KEEPLOWEST:
+	case DropKeepMethodKeepLowest:
 		for i := d.Num; i < len(dice); i++ {
 			dice[i].Drop(ctx, true)
 		}
 	default:
 		return &ErrNotImplemented{"unknown drop/keep method"}
 	}
-	return
+	return nil
 }

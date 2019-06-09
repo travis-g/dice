@@ -22,6 +22,7 @@ type Roller interface {
 	// Total returns the summed results.
 	Total() (float64, error)
 
+	// Drop marks the object dropped based on a provided boolean.
 	Drop(context.Context, bool)
 
 	// Must implement a String method; if the object has not been rolled String
@@ -30,11 +31,56 @@ type Roller interface {
 	fmt.Stringer
 }
 
+// A RollerProperties object is the set of properties (usually extracted from a
+// notation) that should be used to define a Die or group of like dice (a slice
+// of multiple Die).
+//
+// This may be best broken into two properties types, a RollerProperties and a
+// RollerGroupProperties.
+type RollerProperties struct {
+	Type    DieType  `json:"type,omitempty" mapstructure:"type"`
+	Size    uint     `json:"size,omitempty" mapstructure:"size"`
+	Result  *float64 `json:"result,omitempty" mapstructure:"result"`
+	Rolled  bool     `json:"rolled,omitempty" mapstructure:"rolled"`
+	Dropped bool     `json:"dropped,omitempty" mapstructure:"dropped"`
+	Count   int      `json:"count,omitempty" mapstructure:"count"`
+
+	// Modifiers for the dice or parent set
+	DieModifiers   ModifierList `json:"die_modifiers,omitempty" mapstructure:"die_modifiers"`
+	GroupModifiers ModifierList `json:"group_modifiers,omitempty" mapstructure:"group_modifiers"`
+}
+
+// A RollerFactory is a function that takes a properties object and returns a
+// valid rollable die based off of the properties list. If there is an error
+// creating a die off of the properties list an error should be returned.
+type RollerFactory func(*RollerProperties) (Roller, error)
+
+// RollerFactoryMap is the package-wide mapping of die types and the function to
+// use to create a new die of that type. This map can be modified to create dice
+// using different functions or to implement new die types.
+var RollerFactoryMap = map[DieType]RollerFactory{
+	TypePolyhedron: NewDie,
+	TypeFudge:      NewDie,
+}
+
+// A Group is a slice of rollable dice.
+type Group []Roller
+
+// RollerGroup is a wrapper around a Group that implements Roller. The Modifiers
+// supplied at this level should be group-level modifiers, like drop/keep
+// modifiers.
+type RollerGroup struct {
+	Group     `json:"dice" mapstructure:"dice"`
+	Modifiers ModifierList `json:"modifiers,omitempty" mapstructure:"modifiers"`
+}
+
 // NewRoller creates a new Die to roll off of a supplied property set. The
 // property set is modified/linted to better suit defaults in the event a
-// properties list is reused. A concrete DieType must be used to create a new
-// Die: see the DieType documentation.
-func NewRoller(props *DieProperties) (Roller, error) {
+// properties list is reused.
+//
+// New dice created with this function are created by the per-DieType factories
+// declared within the package-level RollerFactoryMap.
+func NewRoller(props *RollerProperties) (Roller, error) {
 	if props.Size == 0 && props.Type != TypeFudge {
 		return nil, ErrSizeZero
 	}
@@ -43,24 +89,21 @@ func NewRoller(props *DieProperties) (Roller, error) {
 	if props.Type == TypeFudge && props.Size == 0 {
 		props.Size = 1
 	}
-	switch props.Type {
-	case TypePolyhedron, TypeFudge:
-		// return a new unrolled Die if the type is valid
-		die := &Die{
-			Type:      props.Type,
-			Size:      props.Size,
-			Result:    props.Result,
-			Dropped:   props.Dropped,
-			Modifiers: props.DieModifiers,
-		}
-		return die, nil
-	default:
+
+	// Retrieve the factory function out of the package-wide map and use it to
+	// create the new die.
+	f, ok := RollerFactoryMap[props.Type]
+	if !ok {
 		return nil, fmt.Errorf("cannot create Die of type %s", props.Type)
 	}
+	return f(props)
 }
 
-// NewRollerGroup creates a new RollerGroup with count dice.
-func NewRollerGroup(props *DieProperties) (*RollerGroup, error) {
+// NewRollerGroup creates a new dice group with the count provided by the
+// properties list. If a count of dice was not specified within the properties
+// list it will default to a count of 1 and tweak the provided properties object
+// accordingly.
+func NewRollerGroup(props *RollerProperties) (*RollerGroup, error) {
 	if props.Count <= 0 {
 		props.Count = 1
 	}
@@ -79,17 +122,7 @@ func NewRollerGroup(props *DieProperties) (*RollerGroup, error) {
 	}, nil
 }
 
-// A Group is a slice of rollable dice.
-type Group []Roller
-
-// RollerGroup is a wrapper around a Group that implements Roller. The Modifiers
-// supplied at this level should be group-level modifiers,
-type RollerGroup struct {
-	Group     `json:"dice" mapstructure:"dice"`
-	Modifiers ModifierList `json:"modifiers,omitempty" mapstructure:"modifiers"`
-}
-
-// Roll rolls each die embedded in the DiceGroup.
+// Roll rolls each die embedded in the dice group.
 func (d *RollerGroup) Roll(ctx context.Context) error {
 	for _, die := range d.Group {
 		if err := die.Roll(ctx); err != nil {
@@ -105,7 +138,7 @@ func (d *RollerGroup) Roll(ctx context.Context) error {
 	return nil
 }
 
-// Reroll re-rolls each die within the DiceGroup.
+// Reroll re-rolls each die within the dice group.
 func (d *RollerGroup) Reroll(ctx context.Context) error {
 	for _, die := range d.Group {
 		if err := die.Reroll(ctx); err != nil {
@@ -119,19 +152,6 @@ func (d *RollerGroup) Reroll(ctx context.Context) error {
 		}
 	}
 	return nil
-}
-
-// Total combines the results of all dice within the group.
-func (d *RollerGroup) Total() (float64, error) {
-	total := 0.0
-	for _, die := range d.Group {
-		result, err := die.Total()
-		if err != nil {
-			return total, errors.Wrap(err, "error totaling Group")
-		}
-		total += result
-	}
-	return total, nil
 }
 
 func (d *RollerGroup) String() string {

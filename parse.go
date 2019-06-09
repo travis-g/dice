@@ -40,7 +40,7 @@ var DiceWithModifiersExpressionRegex = regexp.MustCompile(
 	DiceNotationPattern + `(?P<modifiers>[^-+ \(\)]*)`)
 var (
 	rerollRegex   = regexp.MustCompile(`r` + ComparePointPattern + `?`)
-	sortRegex     = regexp.MustCompile(`(?P<sort>s[ad]?)`)
+	sortRegex     = regexp.MustCompile(`s(?P<sort>[ad]?)`)
 	dropKeepRegex = regexp.MustCompile(`(?P<op>[dk][lh]?)(?P<num>\d+)`)
 )
 
@@ -54,8 +54,8 @@ const (
 
 // ParseNotationWithModifier parses the provided notation with updated regular
 // expressions that also extract dice group modifiers.
-func ParseNotationWithModifier(ctx context.Context, notation string) (DieProperties, error) {
-	props := DieProperties{
+func ParseNotationWithModifier(ctx context.Context, notation string) (RollerProperties, error) {
+	props := RollerProperties{
 		DieModifiers:   ModifierList{},
 		GroupModifiers: ModifierList{},
 	}
@@ -150,18 +150,7 @@ func ParseNotationWithModifier(ctx context.Context, notation string) (DiePropert
 // ParseNotation parses a notation into a group of dice. It returns the group
 // unrolled.
 func ParseNotation(notation string) (GroupProperties, error) {
-	matches := DiceNotationRegex.FindStringSubmatch(notation)
-	if len(matches) < 3 {
-		return GroupProperties{}, &ErrParseError{notation, notation, "", ": failed to identify dice components"}
-	}
-
-	// extract named capture groups to map
-	components := make(map[string]string)
-	for i, name := range DiceNotationRegex.SubexpNames() {
-		if i != 0 && name != "" {
-			components[name] = matches[i]
-		}
-	}
+	components := getNamedCaptures(DiceNotationRegex, notation)
 
 	// Parse and cast dice properties from regex capture values
 	count, err := strconv.ParseInt(components["count"], 10, 0)
@@ -200,18 +189,7 @@ func ParseNotation(notation string) (GroupProperties, error) {
 // ParseExpression parses a notation based on the DiceExpressionRegex, allowing
 // for drop/keep sets, reroll expressions, exploding dice, etc.
 func ParseExpression(notation string) (GroupProperties, error) {
-	matches := DiceExpressionRegex.FindStringSubmatch(notation)
-	if len(matches) < 3 {
-		return GroupProperties{}, &ErrParseError{notation, notation, "", ": failed to identify dice components"}
-	}
-
-	// extract named capture groups to map
-	components := make(map[string]string)
-	for i, name := range DiceExpressionRegex.SubexpNames() {
-		if i != 0 && name != "" {
-			components[name] = matches[i]
-		}
-	}
+	components := getNamedCaptures(DiceExpressionRegex, notation)
 
 	// if group is found the core notation was not specified.
 	group := components["group"]
@@ -248,30 +226,19 @@ func ParseExpression(notation string) (GroupProperties, error) {
 
 // ParseExpressionWithModifiers parses a given expression into a properties
 // object with support for modifiers.
-func ParseExpressionWithModifiers(ctx context.Context, expression string) (DieProperties, error) {
-	matches := DiceWithModifiersExpressionRegex.FindStringSubmatch(expression)
-	if len(matches) < 3 {
-		return DieProperties{}, &ErrParseError{expression, expression, "", ": failed to identify dice components"}
-	}
-
-	// extract named capture groups to map
-	components := make(map[string]string)
-	for i, name := range DiceWithModifiersExpressionRegex.SubexpNames() {
-		if i != 0 && name != "" {
-			components[name] = matches[i]
-		}
-	}
+func ParseExpressionWithModifiers(ctx context.Context, expression string) (RollerProperties, error) {
+	components := getNamedCaptures(DiceWithModifiersExpressionRegex, expression)
 
 	// if group is found the core notation was not specified.
 	group := components["group"]
 	if group != "" {
-		return DieProperties{}, &ErrNotImplemented{"arbitrary group rolls not implemented"}
+		return RollerProperties{}, &ErrNotImplemented{"arbitrary group rolls not implemented"}
 	}
 
 	// Call ParseNotation with the core dice count and size.
 	props, err := ParseNotationWithModifier(context.TODO(), expression)
 	if err != nil {
-		return DieProperties{}, err
+		return RollerProperties{}, err
 	}
 
 	return props, nil

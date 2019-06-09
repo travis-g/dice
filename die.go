@@ -8,27 +8,42 @@ import (
 // Die represents an internally-typed die.
 type Die struct {
 	// Generic properties
-	Type      DieType      `json:"type,omitempty"`
-	Size      uint         `json:"size"`
-	Result    *float64     `json:"result,omitempty"`
-	Dropped   bool         `json:"dropped,omitempty"`
-	Modifiers ModifierList `json:"modifiers,omitempty"`
+	Type      DieType      `json:"type,omitempty" mapstructure:"type"`
+	Size      uint         `json:"size" mapstructure:"size"`
+	Result    *float64     `json:"result,omitempty" mapstructure:"result"`
+	Dropped   bool         `json:"dropped,omitempty" mapstructure:"dropped"`
+	Modifiers ModifierList `json:"modifiers,omitempty" mapstructure:"modifiers"`
 }
 
-// A DieProperties object is the set of properties (usually extracted from a
-// notation) that should be used to define a Die or group of like dice (a slice
-// of multiple Die).
-type DieProperties struct {
-	Type    DieType  `json:"type,omitempty"`
-	Size    uint     `json:"size,omitempty"`
-	Result  *float64 `json:"result,omitempty"`
-	Rolled  bool     `json:"rolled,omitempty"`
-	Dropped bool     `json:"dropped,omitempty"`
-	Count   int      `json:"count,omitempty"`
+// NewDie TODO
+func NewDie(props *RollerProperties) (Roller, error) {
+	die := &Die{
+		Type:      props.Type,
+		Size:      props.Size,
+		Result:    props.Result,
+		Dropped:   props.Dropped,
+		Modifiers: props.DieModifiers,
+	}
+	return die, nil
+}
 
-	// Modifiers for the dice or parent set
-	DieModifiers   ModifierList `json:"die_modifiers,omitempty"`
-	GroupModifiers ModifierList `json:"group_modifiers,omitempty"`
+// rolls a die based on the die's size and type.
+func (d *Die) roll(ctx context.Context) error {
+	switch d.Type {
+	case TypeFudge:
+		i := float64(Source.Intn(int(d.Size*2+1)) - int(d.Size))
+		d.Result = &i
+	default:
+		i := float64(1 + Source.Intn(int(d.Size)))
+		d.Result = &i
+	}
+	return nil
+}
+
+// reset resets a Die's properties so that it can be re-rolled.
+func (d *Die) reset() {
+	d.Result = nil
+	d.Dropped = false
 }
 
 // Roll rolls the Die. The error returned will be an ErrRolled error if the die
@@ -51,32 +66,13 @@ func (d *Die) Roll(ctx context.Context) error {
 	return nil
 }
 
-// rolls a die based on the die's Size.
-func (d *Die) roll(ctx context.Context) error {
-	if d.Result != nil {
-		return ErrRolled
-	}
-	switch d.Type {
-	case TypeFudge:
-		i := float64(Source.Intn(int(d.Size*2+1)) - int(d.Size))
-		d.Result = &i
-	default:
-		i := float64(1 + Source.Intn(int(d.Size)))
-		d.Result = &i
-	}
-	return nil
-}
-
 // Reroll performs a reroll after resetting a Die.
 func (d *Die) Reroll(ctx context.Context) error {
+	if d.Result == nil {
+		return ErrUnrolled
+	}
 	d.reset()
 	return d.roll(ctx)
-}
-
-// reset resets a Die's properties so that it can be re-rolled.
-func (d *Die) reset() {
-	d.Result = nil
-	d.Dropped = false
 }
 
 // String returns an expression-like representation of a rolled die or its type,

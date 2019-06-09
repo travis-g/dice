@@ -68,15 +68,12 @@ func (d *PolyhedralDie) Reroll(ctx context.Context) error {
 	if d.Result == nil {
 		return ErrUnrolled
 	}
-	i := 1 + Source.Intn(int(d.Size))
-	d.Result = &i
-	return nil
+	d.Result = nil
+	d.Dropped = false
+	return d.roll()
 }
 
 func (d *PolyhedralDie) roll() error {
-	if d.Result != nil {
-		return ErrRolled
-	}
 	i := 1 + Source.Intn(int(d.Size))
 	d.Result = &i
 	return nil

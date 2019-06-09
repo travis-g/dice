@@ -16,7 +16,7 @@ import (
 
 // handleRequest handles a POST request that supplies a properties list by
 // creating a new die, rolling it, and returning the rolled die and any errors.
-func handleRequest(ctx context.Context, props dice.DieProperties) (roll dice.Roller, err error) {
+func handleRequest(ctx context.Context, props dice.RollerProperties) (roll dice.Roller, err error) {
 	roll, err = dice.NewRoller(&props)
 	if err != nil {
 		return

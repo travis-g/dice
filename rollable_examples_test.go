@@ -7,7 +7,7 @@ import (
 
 func ExampleNewRoller() {
 	ctx := context.Background()
-	roll, _ := NewRoller(&DieProperties{
+	roll, _ := NewRoller(&RollerProperties{
 		Type: TypePolyhedron,
 		Size: 6,
 	})
