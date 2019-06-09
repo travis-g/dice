@@ -86,17 +86,19 @@ func expression(i ...interface{}) string {
 	return strings.Replace(raw, "+-", "-", -1)
 }
 
-// extract named capture groups to map by regexp
-func getNamedCaptures(exp *regexp.Regexp, in string) map[string]string {
-	modifierMatches := exp.FindStringSubmatch(in)
+// FindNamedCaptureGroups finds string submatches within an input string based
+// on a compiled Regexp and returns a map of the named capture groups with their
+// captured submatches.
+func FindNamedCaptureGroups(exp *regexp.Regexp, in string) map[string]string {
+	submatches := exp.FindStringSubmatch(in)
 
-	props := make(map[string]string)
+	captures := make(map[string]string)
 	for i, name := range exp.SubexpNames() {
 		if i != 0 && name != "" {
-			props[name] = modifierMatches[i]
+			captures[name] = submatches[i]
 		}
 	}
-	return props
+	return captures
 }
 
 func jsonEncode(in interface{}) []byte {

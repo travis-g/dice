@@ -60,7 +60,7 @@ func ParseNotationWithModifier(ctx context.Context, notation string) (RollerProp
 		GroupModifiers: ModifierList{},
 	}
 
-	components := getNamedCaptures(DiceWithModifiersExpressionRegex, notation)
+	components := FindNamedCaptureGroups(DiceWithModifiersExpressionRegex, notation)
 
 	// Parse and cast dice properties from regex capture values
 	count64, err := strconv.ParseInt(components["count"], 10, 0)
@@ -94,7 +94,7 @@ func ParseNotationWithModifier(ctx context.Context, notation string) (RollerProp
 		// rerolls
 		case strings.HasPrefix(modifiers, rerollPrefix):
 			remainingBytes := rerollRegex.ReplaceAllFunc([]byte(modifiers), func(matchBytes []byte) []byte {
-				captures := getNamedCaptures(rerollRegex, string(matchBytes))
+				captures := FindNamedCaptureGroups(rerollRegex, string(matchBytes))
 
 				point, _ := strconv.Atoi(captures["point"])
 				props.DieModifiers = append(props.DieModifiers, &RerollModifier{
@@ -120,7 +120,7 @@ func ParseNotationWithModifier(ctx context.Context, notation string) (RollerProp
 		// drop/keep
 		case strings.HasPrefix(modifiers, dropPrefix), strings.HasPrefix(modifiers, keepPrefix):
 			remainingBytes := dropKeepRegex.ReplaceAllFunc([]byte(modifiers), func(matchBytes []byte) []byte {
-				captures := getNamedCaptures(dropKeepRegex, string(matchBytes))
+				captures := FindNamedCaptureGroups(dropKeepRegex, string(matchBytes))
 
 				if captures["num"] == "" {
 					return []byte(nil)
@@ -150,7 +150,7 @@ func ParseNotationWithModifier(ctx context.Context, notation string) (RollerProp
 // ParseNotation parses a notation into a group of dice. It returns the group
 // unrolled.
 func ParseNotation(notation string) (GroupProperties, error) {
-	components := getNamedCaptures(DiceNotationRegex, notation)
+	components := FindNamedCaptureGroups(DiceNotationRegex, notation)
 
 	// Parse and cast dice properties from regex capture values
 	count, err := strconv.ParseInt(components["count"], 10, 0)
@@ -189,7 +189,7 @@ func ParseNotation(notation string) (GroupProperties, error) {
 // ParseExpression parses a notation based on the DiceExpressionRegex, allowing
 // for drop/keep sets, reroll expressions, exploding dice, etc.
 func ParseExpression(notation string) (GroupProperties, error) {
-	components := getNamedCaptures(DiceExpressionRegex, notation)
+	components := FindNamedCaptureGroups(DiceExpressionRegex, notation)
 
 	// if group is found the core notation was not specified.
 	group := components["group"]
@@ -227,7 +227,7 @@ func ParseExpression(notation string) (GroupProperties, error) {
 // ParseExpressionWithModifiers parses a given expression into a properties
 // object with support for modifiers.
 func ParseExpressionWithModifiers(ctx context.Context, expression string) (RollerProperties, error) {
-	components := getNamedCaptures(DiceWithModifiersExpressionRegex, expression)
+	components := FindNamedCaptureGroups(DiceWithModifiersExpressionRegex, expression)
 
 	// if group is found the core notation was not specified.
 	group := components["group"]
