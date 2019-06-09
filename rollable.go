@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 var _ Roller = (*Group)(nil)
@@ -59,8 +57,8 @@ type RollerFactory func(*RollerProperties) (Roller, error)
 // use to create a new die of that type. This map can be modified to create dice
 // using different functions or to implement new die types.
 var RollerFactoryMap = map[DieType]RollerFactory{
-	TypePolyhedron: NewPolyhedralDie,
-	TypeFudge:      NewFudgeDie,
+	TypePolyhedron: NewDie,
+	TypeFudge:      NewDie,
 }
 
 // A Group is a slice of rollable dice.
@@ -124,10 +122,8 @@ func NewRollerGroup(props *RollerProperties) (*RollerGroup, error) {
 
 // Roll rolls each die embedded in the dice group.
 func (d *RollerGroup) Roll(ctx context.Context) error {
-	for _, die := range d.Group {
-		if err := die.Roll(ctx); err != nil {
-			return errors.Wrap(err, "error rolling dice group")
-		}
+	if err := d.Group.Roll(ctx); err != nil {
+		return err
 	}
 	for _, mod := range d.Modifiers {
 		err := mod.Apply(ctx, d)
@@ -140,10 +136,8 @@ func (d *RollerGroup) Roll(ctx context.Context) error {
 
 // Reroll re-rolls each die within the dice group.
 func (d *RollerGroup) Reroll(ctx context.Context) error {
-	for _, die := range d.Group {
-		if err := die.Reroll(ctx); err != nil {
-			return errors.Wrap(err, "error rerolling dice group")
-		}
+	if err := d.Group.Reroll(ctx); err != nil {
+		return err
 	}
 	for _, mod := range d.Modifiers {
 		err := mod.Apply(ctx, d)
@@ -152,15 +146,6 @@ func (d *RollerGroup) Reroll(ctx context.Context) error {
 		}
 	}
 	return nil
-}
-
-func (d *RollerGroup) String() string {
-	strs := make([]string, len(d.Group))
-	for i, die := range d.Group {
-		strs[i] = die.String()
-	}
-	total, _ := d.Total()
-	return fmt.Sprintf("%s => %v", expression(strings.Join(strs, "+")), total)
 }
 
 // GroupProperties describes a die.
@@ -196,7 +181,6 @@ func (g *GroupProperties) String() string {
 
 // Total implements the Total method and sums a group of dice's totals.
 func (g *Group) Total() (total float64, err error) {
-	total = 0.0
 	for _, dice := range *g {
 		result, err := dice.Total()
 		if err != nil {
@@ -213,7 +197,7 @@ func (g *Group) String() string {
 		temp[i] = fmt.Sprintf("%v", dice.String())
 	}
 	t, _ := g.Total()
-	return fmt.Sprintf("%s => %v", strings.Join(temp, "+"), t)
+	return fmt.Sprintf("%s => %v", expression(strings.Join(temp, "+")), t)
 }
 
 // GoString returns the Go syntax for a group.
@@ -221,7 +205,7 @@ func (g Group) GoString() string {
 	return fmt.Sprintf("%#v", g.Copy())
 }
 
-// Drop is a noop on the Group.
+// Drop is (presently) a noop on the group.
 func (g *Group) Drop(_ context.Context, _ bool) {
 	// noop
 }

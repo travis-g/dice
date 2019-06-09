@@ -14,6 +14,13 @@ var (
 	// ErrRolled is returned when an attempt is made to roll a die that had been
 	// rolled already
 	ErrRolled = errors.New("die already rolled")
+
+	// ErrImpossibleRoll is returned when a given dice roll is deemed
+	// impossible, illogical, or will never be able to yield a result. As an
+	// example, a roll of "3d6r<6" should return this error at some stage in its
+	// evaluation, as no die in the set will ever be able to settle with the
+	// given reroll modifier.
+	ErrImpossibleRoll = errors.New("dice roll impossible")
 )
 
 // ErrNotImplemented is an error returned when a feature is not yet implemented.

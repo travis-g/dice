@@ -199,6 +199,8 @@ func (d *DropKeepModifier) String() string {
 
 // Apply executes a DropKeepModifier against a Roller. If the Roller is not a
 // Group an error is returned.
+//
+// TODO: avoid an index out of range error if d.Num > len(group.Group)
 func (d *DropKeepModifier) Apply(ctx context.Context, r Roller) error {
 	group, ok := r.(*RollerGroup)
 	if !ok {
