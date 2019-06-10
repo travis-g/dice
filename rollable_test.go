@@ -12,32 +12,34 @@ func newInt(i int) *int {
 	return &i
 }
 
+func newFloat(f float64) *float64 {
+	return &f
+}
+
 var groupProperties = []struct {
 	name  string
-	props GroupProperties
+	props RollerProperties
 }{{"3d6",
-	GroupProperties{
-		Type:     TypePolyhedron,
-		Size:     6,
-		Count:    3,
-		Unrolled: true,
+	RollerProperties{
+		Type:  TypePolyhedron,
+		Size:  6,
+		Count: 3,
 	},
 }, {"3dF",
-	GroupProperties{
-		Type:     TypeFudge,
-		Count:    3,
-		Unrolled: true,
+	RollerProperties{
+		Type:  TypeFudge,
+		Count: 3,
 	},
 },
 }
 
 var ctx = context.Background()
 
-func BenchmarkNewGroup(b *testing.B) {
+func BenchmarkNewRollerGroup(b *testing.B) {
 	for _, bench := range groupProperties {
 		b.Run(fmt.Sprintf("%s", bench.name), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				NewGroup(bench.props)
+				NewRollerGroup(&bench.props)
 			}
 		})
 	}
@@ -52,36 +54,36 @@ func TestGroup_Total(t *testing.T) {
 		{
 			name: "basic",
 			g: Group{
-				&PolyhedralDie{Result: newInt(2)},
-				&PolyhedralDie{Result: newInt(3)},
-				&PolyhedralDie{Result: newInt(4)},
+				&Die{Result: newFloat(2.0)},
+				&Die{Result: newFloat(3.0)},
+				&Die{Result: newFloat(4.0)},
 			},
 			want: 9,
 		},
 		{
 			name: "nested",
 			g: Group{
-				&PolyhedralDie{Result: newInt(2)},
+				&Die{Result: newFloat(2.0)},
 				&Group{
-					&PolyhedralDie{Result: newInt(3)},
+					&Die{Result: newFloat(3.0)},
 				},
-				&PolyhedralDie{Result: newInt(4)},
+				&Die{Result: newFloat(4.0)},
 			},
 			want: 9,
 		},
 		{
 			name: "dropped",
 			g: Group{
-				&PolyhedralDie{Result: newInt(2), Dropped: true},
-				&PolyhedralDie{Result: newInt(4)},
+				&Die{Result: newFloat(2.0), Dropped: true},
+				&Die{Result: newFloat(4.0)},
 			},
 			want: 4,
 		},
 		{
 			name: "mixed",
 			g: Group{
-				&PolyhedralDie{Result: newInt(2), Dropped: true},
-				&FudgeDie{Result: newInt(-1)},
+				&Die{Result: newFloat(2.0), Dropped: true},
+				&Die{Type: TypeFudge, Result: newFloat(-1)},
 			},
 			want: -1,
 		},
@@ -108,18 +110,18 @@ func TestGroup_Expression(t *testing.T) {
 		{
 			name: "basic",
 			g: Group{
-				&PolyhedralDie{Result: newInt(2)},
-				&PolyhedralDie{Result: newInt(3)},
-				&PolyhedralDie{Result: newInt(4)},
+				&Die{Result: newFloat(2)},
+				&Die{Result: newFloat(3)},
+				&Die{Result: newFloat(4)},
 			},
 			want: "2+3+4",
 		},
 		{
 			name: "unrolled",
 			g: Group{
-				&PolyhedralDie{Size: 3},
-				&PolyhedralDie{Result: newInt(3)},
-				&PolyhedralDie{Result: newInt(4)},
+				&Die{Size: 3},
+				&Die{Result: newFloat(3)},
+				&Die{Result: newFloat(4)},
 			},
 			want: "d3+3+4",
 		},

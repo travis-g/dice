@@ -28,12 +28,12 @@ func handleRequest(ctx context.Context, props dice.RollerProperties) (roll dice.
 func rollHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	ctx := r.Context()
-	props, err := dice.ParseNotation(vars["roll"])
+	props, err := dice.ParseNotationWithModifier(ctx, vars["roll"])
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	group, err := dice.NewGroup(props)
+	group, err := dice.NewRollerGroup(&props)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -67,12 +67,12 @@ func rollPostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	props, err := dice.ParseNotation(vars["roll"].(string))
+	props, err := dice.ParseNotationWithModifier(ctx, vars["roll"].(string))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	group, err := dice.NewGroup(props)
+	group, err := dice.NewRollerGroup(&props)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

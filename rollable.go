@@ -68,7 +68,7 @@ type Group []Roller
 // supplied at this level should be group-level modifiers, like drop/keep
 // modifiers.
 type RollerGroup struct {
-	Group     `json:"dice" mapstructure:"dice"`
+	Group     `json:"group" mapstructure:"group"`
 	Modifiers ModifierList `json:"modifiers,omitempty" mapstructure:"modifiers"`
 }
 
@@ -295,8 +295,8 @@ GROUP_CONSISTENT:
 	props.Expression = g.Expression()
 	props.Result, _ = g.Total()
 	switch t := (*dice[0]).(type) {
-	case *PolyhedralDie:
-		props.Size = t.Size
+	case *Die:
+		props.Size = int(t.Size)
 	}
 	return props
 
@@ -304,33 +304,6 @@ GROUP_INCONSISTENT:
 	props.Expression = g.Expression()
 	props.Result, _ = g.Total()
 	return props
-}
-
-// NewGroup creates a new group based on provided seed of properties.
-func NewGroup(props GroupProperties) (Group, error) {
-	if props.Count == 0 {
-		return Group{}, nil
-	}
-	group := make(Group, props.Count)
-
-	switch props.Type {
-	case TypeFudge:
-		for i := range group {
-			group[i] = &FudgeDie{
-				Modifiers: props.Modifiers,
-			}
-		}
-	case TypePolyhedron:
-		for i := range group {
-			group[i] = &PolyhedralDie{
-				Size:      props.Size,
-				Modifiers: props.Modifiers,
-			}
-		}
-	default:
-		return Group{}, fmt.Errorf("type %s not a valid dice.Type", props.Type)
-	}
-	return group, nil
 }
 
 // All is a helper function that returns true if all dice.Interfaces of a slice
