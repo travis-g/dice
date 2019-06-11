@@ -79,7 +79,7 @@ func (d *Die) Reroll(ctx context.Context) error {
 // if it has not been rolled.
 func (d *Die) String() string {
 	if d.Result != nil {
-		total, _ := d.Total()
+		total, _ := d.Total(context.TODO())
 		return fmt.Sprintf("%v", total)
 	}
 	switch d.Type {
@@ -97,7 +97,7 @@ func (d *Die) String() string {
 
 // Total implements the dice.Interface Total method. An ErrUnrolled error will
 // be returned if the die has not been rolled.
-func (d *Die) Total() (float64, error) {
+func (d *Die) Total(_ context.Context) (float64, error) {
 	if d.Result == nil {
 		return 0.0, ErrUnrolled
 	}

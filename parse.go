@@ -159,7 +159,7 @@ func ParseExpression(ctx context.Context, expression string) (RollerProperties, 
 	}
 
 	// Call ParseNotation with the core dice count and size.
-	props, err := ParseNotation(context.TODO(), expression)
+	props, err := ParseNotation(ctx, expression)
 	if err != nil {
 		return RollerProperties{}, err
 	}

@@ -52,10 +52,10 @@ func (r *RWMutexRoller) Reroll(ctx context.Context) error {
 }
 
 // Total read-locks the embedded Roller and returns its total.
-func (r *RWMutexRoller) Total() (float64, error) {
+func (r *RWMutexRoller) Total(ctx context.Context) (float64, error) {
 	r.l.RLock()
 	defer r.l.RUnlock()
-	return r.die.Total()
+	return r.die.Total(ctx)
 }
 
 // Drop marks the RWMutexRoller as dropped.

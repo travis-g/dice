@@ -17,7 +17,7 @@ type Roller interface {
 	Reroll(context.Context) error
 
 	// Total returns the summed results.
-	Total() (float64, error)
+	Total(context.Context) (float64, error)
 
 	// Drop marks the object dropped based on a provided boolean.
 	Drop(context.Context, bool)
@@ -38,7 +38,6 @@ type RollerProperties struct {
 	Type    DieType  `json:"type,omitempty" mapstructure:"type"`
 	Size    uint     `json:"size,omitempty" mapstructure:"size"`
 	Result  *float64 `json:"result,omitempty" mapstructure:"result"`
-	Rolled  bool     `json:"rolled,omitempty" mapstructure:"rolled"`
 	Dropped bool     `json:"dropped,omitempty" mapstructure:"dropped"`
 	Count   int      `json:"count,omitempty" mapstructure:"count"`
 
@@ -148,9 +147,9 @@ func (d *RollerGroup) Reroll(ctx context.Context) error {
 }
 
 // Total implements the Total method and sums a group of dice's totals.
-func (g *Group) Total() (total float64, err error) {
+func (g *Group) Total(ctx context.Context) (total float64, err error) {
 	for _, dice := range *g {
-		result, err := dice.Total()
+		result, err := dice.Total(ctx)
 		if err != nil {
 			return total, err
 		}
@@ -164,13 +163,8 @@ func (g *Group) String() string {
 	for i, dice := range *g {
 		temp[i] = fmt.Sprintf("%v", dice.String())
 	}
-	t, _ := g.Total()
+	t, _ := g.Total(context.TODO())
 	return fmt.Sprintf("%s => %v", expression(strings.Join(temp, "+")), t)
-}
-
-// GoString returns the Go syntax for a group.
-func (g Group) GoString() string {
-	return fmt.Sprintf("%#v", g.Copy())
 }
 
 // Drop is (presently) a noop on the group.
