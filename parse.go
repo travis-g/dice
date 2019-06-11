@@ -39,7 +39,7 @@ var (
 var DiceWithModifiersExpressionRegex = regexp.MustCompile(
 	DiceNotationPattern + `(?P<modifiers>[^-+ \(\)]*)`)
 var (
-	rerollRegex   = regexp.MustCompile(`r` + ComparePointPattern + `?`)
+	rerollRegex   = regexp.MustCompile(`r(?P<once>o)?` + ComparePointPattern + `?`)
 	sortRegex     = regexp.MustCompile(`s(?P<sort>[ad]?)`)
 	dropKeepRegex = regexp.MustCompile(`(?P<op>[dk][lh]?)(?P<num>\d+)`)
 )
@@ -97,11 +97,13 @@ func ParseNotation(ctx context.Context, notation string) (RollerProperties, erro
 				captures := FindNamedCaptureGroups(rerollRegex, string(matchBytes))
 
 				point, _ := strconv.Atoi(captures["point"])
+				once := captures["once"] == "o"
 				props.DieModifiers = append(props.DieModifiers, &RerollModifier{
 					CompareTarget: &CompareTarget{
 						Compare: LookupCompareOp(captures["compare"]),
 						Target:  point,
 					},
+					Once: once,
 				})
 				return []byte{}
 			})

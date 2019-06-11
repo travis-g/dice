@@ -13,7 +13,7 @@ import (
 
 // MaxRerolls is the maximum number of rerolls allowed due to a single
 // modifier's application.
-var MaxRerolls uint32 = 5
+var MaxRerolls uint32 = 255
 
 // A Modifier is a dice modifier that can apply to a set or a single die
 type Modifier interface {
@@ -108,7 +108,6 @@ type CompareTarget struct {
 type RerollModifier struct {
 	*CompareTarget
 	Once bool `json:"once"`
-	max  uint32
 }
 
 func (m *RerollModifier) String() string {
@@ -127,7 +126,10 @@ func (m *RerollModifier) String() string {
 // slightly modified the first time it is applied to ensure property
 // consistency.
 func (m *RerollModifier) Apply(ctx context.Context, r Roller) (err error) {
-	var result float64
+	var (
+		result  float64
+		rerolls uint32
+	)
 	if m.Compare == EMPTY {
 		m.Compare = EQL
 	}
@@ -138,6 +140,7 @@ func (m *RerollModifier) Apply(ctx context.Context, r Roller) (err error) {
 		if err = r.Reroll(ctx); err != nil {
 			return
 		}
+		rerolls++
 		if result, err = r.Total(ctx); err != nil {
 			return
 		}
@@ -145,19 +148,19 @@ func (m *RerollModifier) Apply(ctx context.Context, r Roller) (err error) {
 	}
 	switch m.Compare {
 	case EQL:
-		for result == float64(m.Target) {
+		for result == float64(m.Target) && (!m.Once || rerolls < 1) {
 			if err = reroll(); err != nil {
 				return
 			}
 		}
 	case LSS:
-		for result <= float64(m.Target) {
+		for result <= float64(m.Target) && (!m.Once || rerolls < 1) {
 			if err = reroll(); err != nil {
 				return
 			}
 		}
 	case GTR:
-		for result > float64(m.Target) {
+		for result > float64(m.Target) && (!m.Once || rerolls < 1) {
 			if err = reroll(); err != nil {
 				return
 			}
