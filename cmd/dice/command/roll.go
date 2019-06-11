@@ -14,7 +14,7 @@ func RollCommand(c *cli.Context) error {
 	ctx := context.Background()
 
 	roll := c.Args().Get(0)
-	props, err := dice.ParseNotationWithModifier(ctx, roll)
+	props, err := dice.ParseNotation(ctx, roll)
 	if err != nil {
 		return err
 	}

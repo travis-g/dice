@@ -52,9 +52,9 @@ const (
 	keepPrefix   = "k"
 )
 
-// ParseNotationWithModifier parses the provided notation with updated regular
+// ParseNotation parses the provided notation with updated regular
 // expressions that also extract dice group modifiers.
-func ParseNotationWithModifier(ctx context.Context, notation string) (RollerProperties, error) {
+func ParseNotation(ctx context.Context, notation string) (RollerProperties, error) {
 	props := RollerProperties{
 		DieModifiers:   ModifierList{},
 		GroupModifiers: ModifierList{},
@@ -147,9 +147,9 @@ func ParseNotationWithModifier(ctx context.Context, notation string) (RollerProp
 	return props, nil
 }
 
-// ParseExpressionWithModifiers parses a given expression into a properties
+// ParseExpression parses a given expression into a properties
 // object with support for modifiers.
-func ParseExpressionWithModifiers(ctx context.Context, expression string) (RollerProperties, error) {
+func ParseExpression(ctx context.Context, expression string) (RollerProperties, error) {
 	components := FindNamedCaptureGroups(DiceWithModifiersExpressionRegex, expression)
 
 	// if group is found the core notation was not specified.
@@ -159,7 +159,7 @@ func ParseExpressionWithModifiers(ctx context.Context, expression string) (Rolle
 	}
 
 	// Call ParseNotation with the core dice count and size.
-	props, err := ParseNotationWithModifier(context.TODO(), expression)
+	props, err := ParseNotation(context.TODO(), expression)
 	if err != nil {
 		return RollerProperties{}, err
 	}
