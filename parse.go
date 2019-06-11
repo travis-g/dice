@@ -98,7 +98,7 @@ func ParseNotation(ctx context.Context, notation string) (RollerProperties, erro
 
 				point, _ := strconv.Atoi(captures["point"])
 				props.DieModifiers = append(props.DieModifiers, &RerollModifier{
-					CompareTarget: CompareTarget{
+					CompareTarget: &CompareTarget{
 						Compare: LookupCompareOp(captures["compare"]),
 						Target:  point,
 					},

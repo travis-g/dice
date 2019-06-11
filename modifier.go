@@ -11,6 +11,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+// MaxRerolls is the maximum number of rerolls allowed due to a single
+// modifier's application.
+var MaxRerolls uint32 = 5
+
 // A Modifier is a dice modifier that can apply to a set or a single die
 type Modifier interface {
 	// Apply executes a modifier against a Die.
@@ -99,9 +103,12 @@ type CompareTarget struct {
 	Target  int       `json:"target"`
 }
 
-// RerollModifier is a modifier that rerolls a Die if a comparison is true.
+// RerollModifier is a modifier that rerolls a Die if a comparison against the
+// compare target is true.
 type RerollModifier struct {
-	CompareTarget
+	*CompareTarget
+	Once bool `json:"once"`
+	max  uint32
 }
 
 func (m *RerollModifier) String() string {
@@ -193,8 +200,6 @@ func (d *DropKeepModifier) String() string {
 
 // Apply executes a DropKeepModifier against a Roller. If the Roller is not a
 // Group an error is returned.
-//
-// TODO: avoid an index out of range error if d.Num > len(group.Group)
 func (d *DropKeepModifier) Apply(ctx context.Context, r Roller) error {
 	group, ok := r.(*RollerGroup)
 	if !ok {
@@ -212,20 +217,20 @@ func (d *DropKeepModifier) Apply(ctx context.Context, r Roller) error {
 	switch d.Method {
 	case DropKeepMethodDrop, DropKeepMethodDropLowest:
 		// drop lowest Num
-		for i := 0; i < d.Num; i++ {
+		for i := 0; i < d.Num && i < len(dice); i++ {
 			dice[i].Drop(ctx, true)
 		}
 	case DropKeepMethodKeep, DropKeepMethodKeepHighest:
 		// drop all but highest Num
-		for i := 0; i < len(dice)-d.Num; i++ {
+		for i := 0; i < len(dice)-d.Num && i < len(dice); i++ {
 			dice[i].Drop(ctx, true)
 		}
 	case DropKeepMethodDropHighest:
-		for i := len(dice) - d.Num; i < len(dice); i++ {
+		for i := len(dice) - d.Num; i < len(dice) && i < len(dice); i++ {
 			dice[i].Drop(ctx, true)
 		}
 	case DropKeepMethodKeepLowest:
-		for i := d.Num; i < len(dice); i++ {
+		for i := d.Num; i < len(dice) && i < len(dice); i++ {
 			dice[i].Drop(ctx, true)
 		}
 	default:
