@@ -124,17 +124,14 @@ func (m *RerollModifier) Apply(ctx context.Context, r Roller) (err error) {
 	if m.Compare == EMPTY {
 		m.Compare = EQL
 	}
-	result, err = r.Total()
-	if err != nil {
+	if result, err = r.Total(); err != nil {
 		return
 	}
 	reroll := func() (err error) {
-		err = r.Reroll(ctx)
-		if err != nil {
+		if err = r.Reroll(ctx); err != nil {
 			return
 		}
-		result, err = r.Total()
-		if err != nil {
+		if result, err = r.Total(); err != nil {
 			return
 		}
 		return
@@ -142,22 +139,19 @@ func (m *RerollModifier) Apply(ctx context.Context, r Roller) (err error) {
 	switch m.Compare {
 	case EQL:
 		for result == float64(m.Target) {
-			err = reroll()
-			if err != nil {
+			if err = reroll(); err != nil {
 				return
 			}
 		}
 	case LSS:
 		for result <= float64(m.Target) {
-			err = reroll()
-			if err != nil {
+			if err = reroll(); err != nil {
 				return
 			}
 		}
 	case GTR:
 		for result > float64(m.Target) {
-			err = reroll()
-			if err != nil {
+			if err = reroll(); err != nil {
 				return
 			}
 		}

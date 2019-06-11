@@ -3,7 +3,6 @@ package dice
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"strings"
 )
 
@@ -148,37 +147,6 @@ func (d *RollerGroup) Reroll(ctx context.Context) error {
 	return nil
 }
 
-// GroupProperties describes a die.
-type GroupProperties struct {
-	Type       DieType `json:"type,omitempty"`
-	Count      int     `json:"count"`
-	Size       int     `json:"size,omitempty"`
-	Result     float64 `json:"result"`
-	Expression string  `json:"expression,omitempty"`
-	Original   string  `json:"original,omitempty"`
-
-	// Dice is any dice rolled as part of the group.
-	Dice Group `json:"dice,omitempty"`
-
-	// Unrolled indicates the die has not been rolled. If the die has been
-	// rolled Unrolled will be false and omitted from marshaled JSON.
-	Unrolled bool `json:"unrolled,omitempty"`
-
-	// Dropped indicates the die should be excluded from totals.
-	Dropped bool `json:"dropped,omitempty"`
-
-	// DropKeep indicates how many child dice should be dropped (and from which
-	// direction) if describing a set.
-	DropKeep int `json:"drop,omitempty"`
-
-	// Modifiers is the string of modifiers added to a given Group
-	Modifiers ModifierList `json:"modifiers,omitempty"`
-}
-
-func (g *GroupProperties) String() string {
-	return g.Dice.String()
-}
-
 // Total implements the Total method and sums a group of dice's totals.
 func (g *Group) Total() (total float64, err error) {
 	for _, dice := range *g {
@@ -208,15 +176,6 @@ func (g Group) GoString() string {
 // Drop is (presently) a noop on the group.
 func (g *Group) Drop(_ context.Context, _ bool) {
 	// noop
-}
-
-// Pointers returns the group as a slice of pointers to its dice.
-func (g *Group) Pointers() []*Roller {
-	self := make([]*Roller, len(*g))
-	for i, k := range *g {
-		self[i] = &k
-	}
-	return self
 }
 
 // Copy returns a copy of the dice within the group
@@ -260,50 +219,6 @@ func (g *Group) Expression() string {
 	}
 	// simplify the expression
 	return strings.Replace(strings.Join(dice, "+"), "+-", "-", -1)
-}
-
-// Properties calculates properties from a given group.
-func Properties(ctx context.Context, g *Group) GroupProperties {
-	props := GroupProperties{
-		Count: len(*g),
-		Dice:  *g,
-	}
-	dice := g.Pointers()
-
-	switch len(*g) {
-	// No dice: set unrolled by default and return
-	case 0:
-		props.Unrolled = true
-		return props
-	// Only one die: use its properties
-	case 1:
-		goto GROUP_CONSISTENT
-	// There are multiple dice, so check that they're all of the same type
-	default:
-		kind := reflect.TypeOf(dice[0]).String()
-		consistent := All(dice[1:], func(die *Roller) bool {
-			this := reflect.TypeOf(die).String()
-			return this == kind
-		})
-		if !consistent {
-			goto GROUP_INCONSISTENT
-		}
-		goto GROUP_CONSISTENT
-	}
-
-GROUP_CONSISTENT:
-	props.Expression = g.Expression()
-	props.Result, _ = g.Total()
-	switch t := (*dice[0]).(type) {
-	case *Die:
-		props.Size = int(t.Size)
-	}
-	return props
-
-GROUP_INCONSISTENT:
-	props.Expression = g.Expression()
-	props.Result, _ = g.Total()
-	return props
 }
 
 // All is a helper function that returns true if all dice.Interfaces of a slice
