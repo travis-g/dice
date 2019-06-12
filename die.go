@@ -60,8 +60,9 @@ func (d *Die) Roll(ctx context.Context) error {
 	}
 
 	// Apply modifiers
-	for _, mod := range d.Modifiers {
-		if err = mod.Apply(ctx, d); err != nil {
+	for i := 0; i < len(d.Modifiers); i++ {
+		// TODO: handle a non-nil, "reroll and begin modifiers again" error
+		if err = d.Modifiers[i].Apply(ctx, d); err != nil {
 			return err
 		}
 	}
@@ -74,7 +75,7 @@ func (d *Die) Reroll(ctx context.Context) error {
 		return ErrUnrolled
 	}
 	d.reset()
-	return d.roll(ctx)
+	return d.Roll(ctx)
 }
 
 // String returns an expression-like representation of a rolled die or its type,

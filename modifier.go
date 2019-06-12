@@ -138,17 +138,27 @@ func (m *RerollModifier) String() string {
 // Apply executes a RerollModifier against a Roller. The modifier may be
 // slightly modified the first time it is applied to ensure property
 // consistency.
-func (m *RerollModifier) Apply(ctx context.Context, r Roller) (err error) {
+//
+// The full roll needs to be recalculated in the event that one result may be
+// acceptable for one reroll criteria, but not for one that was already
+// evaluated. Impossible rerolls and impossible combinations of rerolls may
+// cause a stack overflow from recursion.
+func (m *RerollModifier) Apply(ctx context.Context, r Roller) error {
+	if m == nil {
+		return errors.New("nil modifier")
+	}
 	var (
 		result  float64
 		rerolls uint32
+		err     error
 	)
 	if m.Compare == EMPTY {
 		m.Compare = EQL
 	}
 	if result, err = r.Total(ctx); err != nil {
-		return
+		return err
 	}
+	// define the reroll function.
 	reroll := func() (err error) {
 		if err = r.Reroll(ctx); err != nil {
 			return
@@ -160,22 +170,24 @@ func (m *RerollModifier) Apply(ctx context.Context, r Roller) (err error) {
 		return
 	}
 	switch m.Compare {
+	// until the comparison operation succeeds and the reroll passes, keep
+	// rerolling.
 	case EQL:
 		for result == float64(m.Target) && (!m.Once || rerolls < 1) {
 			if err = reroll(); err != nil {
-				return
+				return err
 			}
 		}
 	case LSS:
 		for result <= float64(m.Target) && (!m.Once || rerolls < 1) {
 			if err = reroll(); err != nil {
-				return
+				return err
 			}
 		}
 	case GTR:
 		for result > float64(m.Target) && (!m.Once || rerolls < 1) {
 			if err = reroll(); err != nil {
-				return
+				return err
 			}
 		}
 	default:
@@ -206,7 +218,7 @@ const (
 // modifier defines if the dice are dropped or kept (meaning the Num highest
 // dice are not dropped).
 type DropKeepModifier struct {
-	Method DropKeepMethod `json:"op"`
+	Method DropKeepMethod `json:"op,omitempty"`
 	Num    int            `json:"num"`
 }
 
@@ -222,6 +234,7 @@ func (d *DropKeepModifier) Apply(ctx context.Context, r Roller) error {
 		return errors.New("target for modifier not a dice group")
 	}
 
+	// create a duplicate of the slice to sort
 	dice := group.Copy()
 
 	sort.Slice(dice, func(i, j int) bool {
