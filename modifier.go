@@ -110,6 +110,19 @@ type RerollModifier struct {
 	Once bool `json:"once"`
 }
 
+// MarshalJSON marshals the modifier into JSON and includes an internal type
+// property.
+func (m *RerollModifier) MarshalJSON() ([]byte, error) {
+	type Faux RerollModifier
+	return json.Marshal(&struct {
+		Type string `json:"type"`
+		*Faux
+	}{
+		Type: "reroll",
+		Faux: (*Faux)(m),
+	})
+}
+
 func (m *RerollModifier) String() string {
 	var buf bytes.Buffer
 	write := buf.WriteString
