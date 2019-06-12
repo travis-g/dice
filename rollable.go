@@ -59,17 +59,6 @@ var RollerFactoryMap = map[DieType]RollerFactory{
 	TypeFudge:      NewDie,
 }
 
-// A Group is a slice of rollable dice.
-type Group []Roller
-
-// RollerGroup is a wrapper around a Group that implements Roller. The Modifiers
-// supplied at this level should be group-level modifiers, like drop/keep
-// modifiers.
-type RollerGroup struct {
-	Group     `json:"group" mapstructure:"group"`
-	Modifiers ModifierList `json:"modifiers,omitempty" mapstructure:"modifiers"`
-}
-
 // NewRoller creates a new Die to roll off of a supplied property set. The
 // property set is modified/linted to better suit defaults in the event a
 // properties list is reused.
@@ -93,6 +82,86 @@ func NewRoller(props *RollerProperties) (Roller, error) {
 		return nil, fmt.Errorf("cannot create Die of type %s", props.Type)
 	}
 	return f(props)
+}
+
+// A Group is a slice of rollable dice.
+type Group []Roller
+
+// Total implements the Total method and sums a group of dice's totals.
+func (g Group) Total(ctx context.Context) (total float64, err error) {
+	for _, dice := range g {
+		result, err := dice.Total(ctx)
+		if err != nil {
+			return total, err
+		}
+		total += result
+	}
+	return
+}
+
+func (g Group) String() string {
+	temp := make([]string, len(g))
+	for i, dice := range g {
+		temp[i] = fmt.Sprintf("%v", dice.String())
+	}
+	t, _ := g.Total(context.TODO())
+	return fmt.Sprintf("%s => %v", expression(strings.Join(temp, "+")), t)
+}
+
+// Drop is (presently) a noop on the group.
+func (g Group) Drop(_ context.Context, _ bool) {
+	// noop
+}
+
+// Copy returns a copy of the dice within the group
+func (g Group) Copy() []Roller {
+	self := make([]Roller, len(g))
+	for i, k := range g {
+		self[i] = k
+	}
+	return self
+}
+
+// Roll implements the Roller interface's Roll method by rolling each
+// object/Roller within the group.
+func (g Group) Roll(ctx context.Context) (err error) {
+	for _, dice := range g {
+		err = dice.Roll(ctx)
+		if err != nil {
+			break
+		}
+	}
+	return err
+}
+
+// Reroll implements the dice.Reroll method by rerolling each object in it.
+func (g Group) Reroll(ctx context.Context) (err error) {
+	for _, dice := range g {
+		err = dice.Reroll(ctx)
+		if err != nil {
+			break
+		}
+	}
+	return err
+}
+
+// Expression returns an expression to represent the group's total. Dice in the
+// group that are unrolled are replaced with their roll notations
+func (g Group) Expression() string {
+	dice := make([]string, 0)
+	for _, die := range g {
+		dice = append(dice, die.String())
+	}
+	// simplify the expression
+	return strings.Replace(strings.Join(dice, "+"), "+-", "-", -1)
+}
+
+// RollerGroup is a wrapper around a Group that implements Roller. The Modifiers
+// supplied at this level should be group-level modifiers, like drop/keep
+// modifiers.
+type RollerGroup struct {
+	Group     `json:"group" mapstructure:"group"`
+	Modifiers ModifierList `json:"modifiers,omitempty" mapstructure:"modifiers"`
 }
 
 // NewRollerGroup creates a new dice group with the count provided by the
@@ -144,75 +213,6 @@ func (d *RollerGroup) Reroll(ctx context.Context) error {
 		}
 	}
 	return nil
-}
-
-// Total implements the Total method and sums a group of dice's totals.
-func (g *Group) Total(ctx context.Context) (total float64, err error) {
-	for _, dice := range *g {
-		result, err := dice.Total(ctx)
-		if err != nil {
-			return total, err
-		}
-		total += result
-	}
-	return
-}
-
-func (g *Group) String() string {
-	temp := make([]string, len(*g))
-	for i, dice := range *g {
-		temp[i] = fmt.Sprintf("%v", dice.String())
-	}
-	t, _ := g.Total(context.TODO())
-	return fmt.Sprintf("%s => %v", expression(strings.Join(temp, "+")), t)
-}
-
-// Drop is (presently) a noop on the group.
-func (g *Group) Drop(_ context.Context, _ bool) {
-	// noop
-}
-
-// Copy returns a copy of the dice within the group
-func (g *Group) Copy() []Roller {
-	self := make([]Roller, len(*g))
-	for i, k := range *g {
-		self[i] = k
-	}
-	return self
-}
-
-// Roll implements the Roller interface's Roll method by rolling each
-// object/Roller within the group.
-func (g *Group) Roll(ctx context.Context) (err error) {
-	for _, dice := range *g {
-		err = dice.Roll(ctx)
-		if err != nil {
-			break
-		}
-	}
-	return err
-}
-
-// Reroll implements the dice.Reroll method by rerolling each object in it.
-func (g *Group) Reroll(ctx context.Context) (err error) {
-	for _, dice := range *g {
-		err = dice.Reroll(ctx)
-		if err != nil {
-			break
-		}
-	}
-	return err
-}
-
-// Expression returns an expression to represent the group's total. Dice in the
-// group that are unrolled are replaced with their roll notations
-func (g *Group) Expression() string {
-	dice := make([]string, 0)
-	for _, die := range *g {
-		dice = append(dice, die.String())
-	}
-	// simplify the expression
-	return strings.Replace(strings.Join(dice, "+"), "+-", "-", -1)
 }
 
 // All is a helper function that returns true if all dice.Interfaces of a slice
