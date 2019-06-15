@@ -11,9 +11,9 @@ import (
 	"github.com/travis-g/dice"
 )
 
-// RWLockerRoller is implemented by any value that implements dice.Roller,
+// LockRLockRoller is implemented by any value that implements dice.Roller,
 // sync.Locker, and has an RLock and RUnlock method.
-type RWLockerRoller interface {
+type LockRLockRoller interface {
 	dice.Roller
 	sync.Locker
 	RLock()
