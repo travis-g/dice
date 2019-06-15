@@ -74,7 +74,7 @@ func main() {
 		{
 			Name:    "server",
 			Aliases: []string{"s"},
-			Usage:   "start a DRAAS server",
+			Usage:   "start an HTTP server",
 			Flags:   httpFlags,
 			Action: func(c *cli.Context) error {
 				return command.ServerCommand(c)
