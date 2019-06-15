@@ -164,7 +164,6 @@ func (m *RerollModifier) Apply(ctx context.Context, r Roller) error {
 // rerollApplyTail is a tail-recursive function to reroll a die based on a
 // modifier.
 func rerollApplyTail(ctx context.Context, m *RerollModifier, r Roller, rerolls int) error {
-	fmt.Println("rerollApplyTail", rerolls, r)
 	if err := r.Reroll(ctx); err != nil {
 		return err
 	}
