@@ -5,17 +5,18 @@ import (
 	"fmt"
 )
 
-// Die represents an internally-typed die.
+// Die represents an internally-typed die. If Result is a non-nil pointer, it
+// is considered rolled.
 type Die struct {
 	// Generic properties
 	Type      DieType      `json:"type,omitempty" mapstructure:"type"`
-	Size      uint         `json:"size" mapstructure:"size"`
+	Size      int          `json:"size" mapstructure:"size"`
 	Result    *float64     `json:"result,omitempty" mapstructure:"result"`
 	Dropped   bool         `json:"dropped,omitempty" mapstructure:"dropped"`
 	Modifiers ModifierList `json:"modifiers,omitempty" mapstructure:"modifiers"`
 }
 
-// NewDie TODO
+// NewDie creates a new die off of a properties list.
 func NewDie(props *RollerProperties) (Roller, error) {
 	die := &Die{
 		Type:      props.Type,
@@ -75,6 +76,7 @@ func (d *Die) Reroll(ctx context.Context) error {
 		return ErrUnrolled
 	}
 	d.reset()
+	// may need to call unexported roll(ctx) to avoid recursion
 	return d.Roll(ctx)
 }
 

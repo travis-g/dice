@@ -71,14 +71,16 @@ func ParseNotation(ctx context.Context, notation string) (RollerProperties, erro
 	}
 	props.Count = count
 
+	var size64 int64
 	if components["size"] == "F" {
 		props.Type = TypeFudge
 		props.Size = 1
-	} else if size, err := strconv.ParseUint(components["size"], 10, 0); err != nil {
+	} else if size64, err = strconv.ParseInt(components["size"], 10, 0); err != nil {
 		return props, &ErrParseError{notation, components["size"], "size", ": invalid size"}
-	} else {
-		props.Size = uint(size)
+	} else if size64 <= 0 {
+		return props, ErrSizeZero
 	}
+	props.Size = int(size64)
 
 	// continuously loop through modifier string until we can't discern any more
 	// types. Once a modifier type is seen all modifiers of that type are
@@ -97,13 +99,14 @@ func ParseNotation(ctx context.Context, notation string) (RollerProperties, erro
 				captures := FindNamedCaptureGroups(rerollRegex, string(matchBytes))
 
 				point, _ := strconv.Atoi(captures["point"])
-				once := captures["once"] == "o"
+				// TODO: fix Once after recursion issue is solved
+				// once := captures["once"] == "o"
 				props.DieModifiers = append(props.DieModifiers, &RerollModifier{
 					CompareTarget: &CompareTarget{
 						Compare: LookupCompareOp(captures["compare"]),
 						Target:  point,
 					},
-					Once: once,
+					// Once: once,
 				})
 				return []byte{}
 			})

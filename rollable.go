@@ -36,7 +36,7 @@ type Roller interface {
 // RollerGroupProperties.
 type RollerProperties struct {
 	Type    DieType  `json:"type,omitempty" mapstructure:"type"`
-	Size    uint     `json:"size,omitempty" mapstructure:"size"`
+	Size    int      `json:"size,omitempty" mapstructure:"size"`
 	Result  *float64 `json:"result,omitempty" mapstructure:"result"`
 	Dropped bool     `json:"dropped,omitempty" mapstructure:"dropped"`
 	Count   int      `json:"count,omitempty" mapstructure:"count"`
@@ -84,7 +84,7 @@ func NewRoller(props *RollerProperties) (Roller, error) {
 	return f(props)
 }
 
-// A Group is a slice of rollable dice.
+// A Group is a slice of rollables.
 type Group []Roller
 
 // Total implements the Total method and sums a group of dice's totals.

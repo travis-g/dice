@@ -13,7 +13,7 @@ import (
 
 // MaxRerolls is the maximum number of rerolls allowed due to a single
 // modifier's application.
-var MaxRerolls uint32 = 255
+var MaxRerolls = 1000
 
 // A Modifier is a dice modifier that can apply to a set or a single die
 type Modifier interface {
@@ -107,7 +107,8 @@ type CompareTarget struct {
 // compare target is true.
 type RerollModifier struct {
 	*CompareTarget
-	Once bool `json:"once"`
+	// TODO: fix Once after recursion tracking is solved
+	// Once bool `json:"once"`
 }
 
 // MarshalJSON marshals the modifier into JSON and includes an internal type
@@ -147,55 +148,72 @@ func (m *RerollModifier) Apply(ctx context.Context, r Roller) error {
 	if m == nil {
 		return errors.New("nil modifier")
 	}
+	if m.Compare == EMPTY {
+		m.Compare = EQL
+	}
+	ok, err := m.Valid(ctx, r)
+	if err != nil {
+		return err
+	}
+	if ok {
+		return nil
+	}
+	return rerollApplyTail(ctx, m, r, 0)
+}
+
+// rerollApplyTail is a tail-recursive function to reroll a die based on a
+// modifier.
+func rerollApplyTail(ctx context.Context, m *RerollModifier, r Roller, rerolls int) error {
+	fmt.Println("rerollApplyTail", rerolls, r)
+	if err := r.Reroll(ctx); err != nil {
+		return err
+	}
+	rerolls++
+	ok, err := m.Valid(ctx, r)
+	if err != nil {
+		return err
+	}
+	if ok {
+		return nil
+	}
+	// if m.Once && rerolls >= 1 {
+	// 	return nil
+	// }
+	return rerollApplyTail(ctx, m, r, rerolls)
+}
+
+// Valid checks if the supplied die is valid against the modifier. If not valid
+// the reroll modifier should be applied, unless there is an error.
+func (m *RerollModifier) Valid(ctx context.Context, r Roller) (bool, error) {
+	if m == nil {
+		return false, errors.New("nil modifier")
+	}
 	var (
-		result  float64
-		rerolls uint32
-		err     error
+		result float64
+		err    error
 	)
 	if m.Compare == EMPTY {
 		m.Compare = EQL
 	}
 	if result, err = r.Total(ctx); err != nil {
-		return err
-	}
-	// define the reroll function.
-	reroll := func() (err error) {
-		if err = r.Reroll(ctx); err != nil {
-			return
-		}
-		rerolls++
-		if result, err = r.Total(ctx); err != nil {
-			return
-		}
-		return
+		// return invalid if error
+		return false, err
 	}
 	switch m.Compare {
 	// until the comparison operation succeeds and the reroll passes, keep
 	// rerolling.
 	case EQL:
-		for result == float64(m.Target) && (!m.Once || rerolls < 1) {
-			if err = reroll(); err != nil {
-				return err
-			}
-		}
-	case LSS:
-		for result <= float64(m.Target) && (!m.Once || rerolls < 1) {
-			if err = reroll(); err != nil {
-				return err
-			}
-		}
-	case GTR:
-		for result > float64(m.Target) && (!m.Once || rerolls < 1) {
-			if err = reroll(); err != nil {
-				return err
-			}
-		}
+		return result != float64(m.Target), nil
+	case LSS, LEQ:
+		return !(result <= float64(m.Target)), nil
+	case GTR, GEQ:
+		return !(result >= float64(m.Target)), nil
 	default:
 		err = &ErrNotImplemented{
 			fmt.Sprintf("uncaught case for reroll compare: %s", m.Compare),
 		}
+		return false, err
 	}
-	return err
 }
 
 // A DropKeepMethod is a method to use when evaluating a drop/keep modifier
