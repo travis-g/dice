@@ -50,6 +50,9 @@ func NewDie(props *RollerProperties) (Roller, error) {
 
 // rolls a die based on the die's size and type.
 func (d *Die) roll(ctx context.Context) error {
+	if d == nil {
+		return ErrNilDie
+	}
 	switch d.Type {
 	case TypeFudge:
 		r := NewResult(float64(Source.Intn(int(d.Size*2+1)) - int(d.Size)))
@@ -96,6 +99,9 @@ func (d *Die) Roll(ctx context.Context) error {
 
 // Reroll performs a reroll after resetting a Die.
 func (d *Die) Reroll(ctx context.Context) error {
+	if d == nil {
+		return ErrNilDie
+	}
 	if d.Result == nil {
 		return ErrUnrolled
 	}
@@ -107,6 +113,9 @@ func (d *Die) Reroll(ctx context.Context) error {
 // String returns an expression-like representation of a rolled die or its type,
 // if it has not been rolled.
 func (d *Die) String() string {
+	if d == nil {
+		return ""
+	}
 	if d.Result != nil {
 		total, _ := d.Total(context.Background())
 		return fmt.Sprintf("%v", total)
@@ -127,6 +136,9 @@ func (d *Die) String() string {
 // Total implements the dice.Interface Total method. An ErrUnrolled error will
 // be returned if the die has not been rolled.
 func (d *Die) Total(ctx context.Context) (float64, error) {
+	if d == nil {
+		return 0.0, ErrNilDie
+	}
 	if d.Result == nil {
 		return 0.0, ErrUnrolled
 	}
@@ -138,5 +150,8 @@ func (d *Die) Total(ctx context.Context) (float64, error) {
 
 // Drop marks a Die as dropped.
 func (d *Die) Drop(ctx context.Context, dropped bool) {
+	if d == nil {
+		return
+	}
 	d.Dropped = dropped
 }
