@@ -9,19 +9,39 @@ import (
 // is considered rolled.
 type Die struct {
 	// Generic properties
-	Type      DieType      `json:"type,omitempty" mapstructure:"type"`
-	Size      int          `json:"size" mapstructure:"size"`
-	Result    *float64     `json:"result,omitempty" mapstructure:"result"`
+	Type DieType `json:"type,omitempty" mapstructure:"type"`
+	Size int     `json:"size" mapstructure:"size"`
+
+	rolls   []*Result
+	*Result `json:"result,omitempty" mapstructure:"result"`
+
 	Dropped   bool         `json:"dropped,omitempty" mapstructure:"dropped"`
 	Modifiers ModifierList `json:"modifiers,omitempty" mapstructure:"modifiers"`
 }
 
-// NewDie creates a new die off of a properties list.
+// NewDie creates a new die off of a properties list. It will tweak the
+// properties list to better suit reuse.
 func NewDie(props *RollerProperties) (Roller, error) {
+	// If the property set was for a default fudge die set, set a default size
+	// of 1.
+	if props.Type == TypeFudge && props.Size == 0 {
+		props.Size = 1
+	}
+
+	// Check if size was zero and it's not a fudge die
+	if props.Size == 0 {
+		return nil, ErrSizeZero
+	}
+
+	var rolls []*Result
+	if props.Result != nil {
+		rolls = []*Result{props.Result}
+	}
 	die := &Die{
 		Type:      props.Type,
 		Size:      props.Size,
 		Result:    props.Result,
+		rolls:     rolls,
 		Dropped:   props.Dropped,
 		Modifiers: props.DieModifiers,
 	}
@@ -32,11 +52,13 @@ func NewDie(props *RollerProperties) (Roller, error) {
 func (d *Die) roll(ctx context.Context) error {
 	switch d.Type {
 	case TypeFudge:
-		i := float64(Source.Intn(int(d.Size*2+1)) - int(d.Size))
-		d.Result = &i
+		r := NewResult(float64(Source.Intn(int(d.Size*2+1)) - int(d.Size)))
+		d.rolls = append(d.rolls, r)
+		d.Result = r
 	default:
-		i := float64(1 + Source.Intn(int(d.Size)))
-		d.Result = &i
+		r := NewResult(float64(1 + Source.Intn(int(d.Size))))
+		d.rolls = append(d.rolls, r)
+		d.Result = r
 	}
 	return nil
 }
@@ -45,16 +67,18 @@ func (d *Die) roll(ctx context.Context) error {
 func (d *Die) reset() {
 	d.Result = nil
 	d.Dropped = false
+	d.rolls = []*Result{}
 }
 
-// Roll rolls the Die. The error returned will be an ErrRolled error if the die
-// was already rolled.
+// Roll rolls the Die. The die will be reset if it had been rolled previously.
 func (d *Die) Roll(ctx context.Context) error {
-	// Return an error if the Die had been rolled
-	if d.Result != nil {
-		return ErrRolled
+	if d == nil {
+		return ErrNilDie
 	}
-
+	// Check if rolled too many times already
+	if len(d.rolls) >= MaxRerolls {
+		return ErrMaxRolls
+	}
 	err := d.roll(ctx)
 	if err != nil {
 		return err
@@ -75,8 +99,8 @@ func (d *Die) Reroll(ctx context.Context) error {
 	if d.Result == nil {
 		return ErrUnrolled
 	}
-	d.reset()
-	// may need to call unexported roll(ctx) to avoid recursion
+	// mark the current result as dropped
+	d.Result.Drop(ctx, true)
 	return d.Roll(ctx)
 }
 
@@ -84,7 +108,7 @@ func (d *Die) Reroll(ctx context.Context) error {
 // if it has not been rolled.
 func (d *Die) String() string {
 	if d.Result != nil {
-		total, _ := d.Total(context.TODO())
+		total, _ := d.Total(context.Background())
 		return fmt.Sprintf("%v", total)
 	}
 	switch d.Type {
@@ -102,17 +126,17 @@ func (d *Die) String() string {
 
 // Total implements the dice.Interface Total method. An ErrUnrolled error will
 // be returned if the die has not been rolled.
-func (d *Die) Total(_ context.Context) (float64, error) {
+func (d *Die) Total(ctx context.Context) (float64, error) {
 	if d.Result == nil {
 		return 0.0, ErrUnrolled
 	}
 	if d.Dropped {
 		return 0.0, nil
 	}
-	return *d.Result, nil
+	return d.Result.Value, nil
 }
 
 // Drop marks a Die as dropped.
-func (d *Die) Drop(_ context.Context, dropped bool) {
+func (d *Die) Drop(ctx context.Context, dropped bool) {
 	d.Dropped = dropped
 }

@@ -7,6 +7,13 @@ var (
 	// is made.
 	ErrSizeZero = errors.New("die cannot have 0 sides")
 
+	// ErrNilDie is returned when a die's passed reference is nil.
+	ErrNilDie = errors.New("nil die passed")
+
+	// ErrMaxRolls is returned when a maximum number of rolls/rerolls has been
+	// met or surpassed.
+	ErrMaxRolls = errors.New("max rolls reached")
+
 	// ErrUnrolled is returned when an operation that requires a rolled die is
 	// preformed on an unrolled die
 	ErrUnrolled = errors.New("die is unrolled")

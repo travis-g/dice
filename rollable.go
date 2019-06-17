@@ -35,11 +35,11 @@ type Roller interface {
 // This may be best broken into two properties types, a RollerProperties and a
 // RollerGroupProperties.
 type RollerProperties struct {
-	Type    DieType  `json:"type,omitempty" mapstructure:"type"`
-	Size    int      `json:"size,omitempty" mapstructure:"size"`
-	Result  *float64 `json:"result,omitempty" mapstructure:"result"`
-	Dropped bool     `json:"dropped,omitempty" mapstructure:"dropped"`
-	Count   int      `json:"count,omitempty" mapstructure:"count"`
+	Type    DieType `json:"type,omitempty" mapstructure:"type"`
+	Size    int     `json:"size,omitempty" mapstructure:"size"`
+	Result  *Result `json:"result,omitempty" mapstructure:"result"`
+	Dropped bool    `json:"dropped,omitempty" mapstructure:"dropped"`
+	Count   int     `json:"count,omitempty" mapstructure:"count"`
 
 	// Modifiers for the dice or parent set
 	DieModifiers   ModifierList `json:"die_modifiers,omitempty" mapstructure:"die_modifiers"`
@@ -66,15 +66,6 @@ var RollerFactoryMap = map[DieType]RollerFactory{
 // New dice created with this function are created by the per-DieType factories
 // declared within the package-level RollerFactoryMap.
 func NewRoller(props *RollerProperties) (Roller, error) {
-	if props.Size == 0 && props.Type != TypeFudge {
-		return nil, ErrSizeZero
-	}
-	// If the property set was for a default fudge die set, make sure that the
-	// size is non-zero.
-	if props.Type == TypeFudge && props.Size == 0 {
-		props.Size = 1
-	}
-
 	// Retrieve the factory function out of the package-wide map and use it to
 	// create the new die.
 	f, ok := RollerFactoryMap[props.Type]
