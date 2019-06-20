@@ -33,15 +33,10 @@ func NewDie(props *RollerProperties) (Roller, error) {
 		return nil, ErrSizeZero
 	}
 
-	var rolls []*Result
-	if props.Result != nil {
-		rolls = []*Result{props.Result}
-	}
 	die := &Die{
 		Type:      props.Type,
 		Size:      props.Size,
 		Result:    props.Result,
-		rolls:     rolls,
 		Dropped:   props.Dropped,
 		Modifiers: props.DieModifiers,
 	}
@@ -55,13 +50,19 @@ func (d *Die) roll(ctx context.Context) error {
 	}
 	switch d.Type {
 	case TypeFudge:
-		r := NewResult(float64(Source.Intn(int(d.Size*2+1)) - int(d.Size)))
-		d.rolls = append(d.rolls, r)
-		d.Result = r
+		d.Result = NewResult(float64(Source.Intn(int(d.Size*2+1)) - int(d.Size)))
+		if d.Result.Value == -float64(d.Size) {
+			d.CritFailure = true
+		}
 	default:
-		r := NewResult(float64(1 + Source.Intn(int(d.Size))))
-		d.rolls = append(d.rolls, r)
-		d.Result = r
+		d.Result = NewResult(float64(1 + Source.Intn(int(d.Size))))
+		if d.Result.Value == 1 {
+			d.CritFailure = true
+		}
+	}
+	// default critical success on max roll; override via modifiers
+	if d.Result.Value == float64(d.Size) {
+		d.CritSuccess = true
 	}
 	return nil
 }
@@ -107,6 +108,8 @@ func (d *Die) Reroll(ctx context.Context) error {
 	}
 	// mark the current result as dropped
 	d.Result.Drop(ctx, true)
+	d.rolls = append(d.rolls, d.Result)
+	d.Result = nil
 	return d.Roll(ctx)
 }
 

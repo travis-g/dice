@@ -9,11 +9,13 @@ import (
 var _ Roller = (*Group)(nil)
 
 // Roller must be implemented for an object to be considered rollable.
+// Internally, a valid Roller and should maintain a "total rolls" count.s
 type Roller interface {
-	// Roll rolls the object and records results appropriately.
+	// Roll rolls the object and records results appropriately. The Roll method
+	// should compare the "totall rolls" count against MaxRolls.
 	Roll(context.Context) error
 
-	// Reroll resets the object and re-rolls it.
+	// Reroll resets the object and should re-roll the die by calling Roll.
 	Reroll(context.Context) error
 
 	// Total returns the summed results.
@@ -70,7 +72,7 @@ func NewRoller(props *RollerProperties) (Roller, error) {
 	// create the new die.
 	f, ok := RollerFactoryMap[props.Type]
 	if !ok {
-		return nil, fmt.Errorf("cannot create Die of type %s", props.Type)
+		return nil, fmt.Errorf("no factory for type %s", props.Type)
 	}
 	return f(props)
 }

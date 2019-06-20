@@ -99,14 +99,13 @@ func ParseNotation(ctx context.Context, notation string) (RollerProperties, erro
 				captures := FindNamedCaptureGroups(rerollRegex, string(matchBytes))
 
 				point, _ := strconv.Atoi(captures["point"])
-				// TODO: fix Once after recursion issue is solved
-				// once := captures["once"] == "o"
+				once := captures["once"] == "o"
 				props.DieModifiers = append(props.DieModifiers, &RerollModifier{
 					CompareTarget: &CompareTarget{
 						Compare: LookupCompareOp(captures["compare"]),
 						Target:  point,
 					},
-					// Once: once,
+					Once: once,
 				})
 				return []byte{}
 			})

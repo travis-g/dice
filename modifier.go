@@ -107,8 +107,7 @@ type CompareTarget struct {
 // compare target is true.
 type RerollModifier struct {
 	*CompareTarget
-	// TODO: fix Once after recursion tracking is solved
-	// Once bool `json:"once"`
+	Once bool `json:"once"`
 }
 
 // MarshalJSON marshals the modifier into JSON and includes an internal type
@@ -158,16 +157,20 @@ func (m *RerollModifier) Apply(ctx context.Context, r Roller) error {
 	if ok {
 		return nil
 	}
-	return rerollApplyTail(ctx, m, r, 0)
+	// if once, do only once
+	if m.Once {
+		return r.Reroll(ctx)
+	}
+	// reroll until valid
+	return rerollApplyTail(ctx, m, r)
 }
 
 // rerollApplyTail is a tail-recursive function to reroll a die based on a
 // modifier.
-func rerollApplyTail(ctx context.Context, m *RerollModifier, r Roller, rerolls int) error {
+func rerollApplyTail(ctx context.Context, m *RerollModifier, r Roller) error {
 	if err := r.Reroll(ctx); err != nil {
 		return err
 	}
-	rerolls++
 	ok, err := m.Valid(ctx, r)
 	if err != nil {
 		return err
@@ -175,10 +178,7 @@ func rerollApplyTail(ctx context.Context, m *RerollModifier, r Roller, rerolls i
 	if ok {
 		return nil
 	}
-	// if m.Once && rerolls >= 1 {
-	// 	return nil
-	// }
-	return rerollApplyTail(ctx, m, r, rerolls)
+	return rerollApplyTail(ctx, m, r)
 }
 
 // Valid checks if the supplied die is valid against the modifier. If not valid
@@ -283,4 +283,40 @@ func (d *DropKeepModifier) Apply(ctx context.Context, r Roller) error {
 		return &ErrNotImplemented{"unknown drop/keep method"}
 	}
 	return nil
+}
+
+// A CriticalSuccessModifier shifts or sets the compare point/range used to
+// classify a die's result as a critical success.
+type CriticalSuccessModifier struct {
+	*CompareTarget
+}
+
+func (m *CriticalSuccessModifier) String() string {
+	var buf bytes.Buffer
+	write := buf.WriteString
+	write("cs")
+	// inferred equals if not specified
+	if m.Compare != EQL {
+		write(m.Compare.String())
+	}
+	write(strconv.Itoa(m.Target))
+	return buf.String()
+}
+
+// A CriticalFailureModifier shifts or sets the compare point/range used to
+// classify a die's result as a critical failure.
+type CriticalFailureModifier struct {
+	*CompareTarget
+}
+
+func (m *CriticalFailureModifier) String() string {
+	var buf bytes.Buffer
+	write := buf.WriteString
+	write("cf")
+	// inferred equals if not specified
+	if m.Compare != EQL {
+		write(m.Compare.String())
+	}
+	write(strconv.Itoa(m.Target))
+	return buf.String()
 }
