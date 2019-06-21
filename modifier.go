@@ -106,7 +106,7 @@ type CompareTarget struct {
 // compare target is true.
 type RerollModifier struct {
 	*CompareTarget
-	Once bool `json:"once"`
+	Once bool `json:"once,omitempty"`
 }
 
 // MarshalJSON marshals the modifier into JSON and includes an internal type
