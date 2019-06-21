@@ -9,7 +9,7 @@ import (
 var _ Roller = (*Group)(nil)
 
 // Roller must be implemented for an object to be considered rollable.
-// Internally, a valid Roller and should maintain a "total rolls" count.s
+// Internally, a Roller and should maintain a "total rolls" count.
 type Roller interface {
 	// FullRoll rolls the object at the macro level, inclusive of testing and
 	// applying modifiers.
@@ -143,7 +143,7 @@ func (g Group) Roll(ctx context.Context) (err error) {
 	return err
 }
 
-// Reroll implements the dice.Reroll method by rerolling each object in it.
+// Reroll implements the Reroll method by rerolling each object in the group.
 func (g Group) Reroll(ctx context.Context) (err error) {
 	for _, dice := range g {
 		err = dice.Reroll(ctx)
@@ -226,7 +226,7 @@ func (d *RollerGroup) Reroll(ctx context.Context) error {
 
 // All is a helper function that returns true if all dice.Interfaces of a slice
 // match a predicate. All will return false on the first failure.
-func All(vs []*Roller, f func(*Roller) bool) bool {
+func All(vs []Roller, f func(Roller) bool) bool {
 	for _, v := range vs {
 		if !f(v) {
 			return false

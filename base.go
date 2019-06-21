@@ -57,7 +57,7 @@ func CryptoInt64() (int64, error) {
 	return i.Int64(), nil
 }
 
-// CryptoIntn is a convenience wrapper for emulating rand.CryptoIntn using crypto/rand.
+// CryptoIntn is a convenience wrapper for emulating rand.Intn using crypto/rand.
 // Rather than panicking if max <= 0, if max <= 0 an ErrSizeZero error is
 // returned and n will be 0. Any other errors encountered when generating the
 // integer are passed through by err.
