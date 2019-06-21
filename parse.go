@@ -42,18 +42,20 @@ var (
 	rerollRegex   = regexp.MustCompile(`r(?P<once>o)?` + ComparePointPattern + `?`)
 	sortRegex     = regexp.MustCompile(`s(?P<sort>[ad]?)`)
 	dropKeepRegex = regexp.MustCompile(`(?P<op>[dk][lh]?)(?P<num>\d+)`)
+	criticalRegex = regexp.MustCompile(`c(?P<kind>[sf])` + ComparePointPattern)
 )
 
-// Prefixes that indicate a modifier start in a string
+// Prefixes that indicate a modifier's start in a string
 const (
-	rerollPrefix = "r"
-	sortPrefix   = "s"
-	dropPrefix   = "d"
-	keepPrefix   = "k"
+	rerollPrefix   = "r"
+	sortPrefix     = "s"
+	dropPrefix     = "d"
+	keepPrefix     = "k"
+	criticalPrefix = "c"
 )
 
-// ParseNotation parses the provided notation with updated regular
-// expressions that also extract dice group modifiers.
+// ParseNotation parses the provided notation with updated regular expressions
+// that also extract dice group modifiers.
 func ParseNotation(ctx context.Context, notation string) (RollerProperties, error) {
 	props := RollerProperties{
 		DieModifiers:   ModifierList{},
@@ -142,6 +144,16 @@ func ParseNotation(ctx context.Context, notation string) (RollerProperties, erro
 				break
 			}
 			modifiers = string(remainingBytes)
+
+		// critical success/failure
+		case strings.HasPrefix(modifiers, criticalPrefix):
+			remainingBytes := criticalRegex.ReplaceAllFunc([]byte(modifiers), func(matchBytes []byte) []byte {
+				// TODO
+				// captures := getNamedCaptures(criticalRegex, string(matchBytes))
+
+				return []byte(nil)
+			})
+			modifiers = string(remainingBytes)
 		default:
 			fmt.Printf("invalid modifiers: %s\n", modifiers)
 			modifiers = ""
@@ -151,8 +163,8 @@ func ParseNotation(ctx context.Context, notation string) (RollerProperties, erro
 	return props, nil
 }
 
-// ParseExpression parses a given expression into a properties
-// object with support for modifiers.
+// ParseExpression parses a given expression into a properties object with
+// support for modifiers.
 func ParseExpression(ctx context.Context, expression string) (RollerProperties, error) {
 	components := FindNamedCaptureGroups(DiceWithModifiersExpressionRegex, expression)
 
@@ -169,5 +181,4 @@ func ParseExpression(ctx context.Context, expression string) (RollerProperties, 
 	}
 
 	return props, nil
-
 }
