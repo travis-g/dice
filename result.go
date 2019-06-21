@@ -3,7 +3,7 @@ package dice
 import "context"
 
 // A Result is a value a die has rolled. By default, CritSuccess and CritFailure
-// should be set to true if the maximum or minumum value of a die is rolled
+// should be set to true if the maximum or minimum value of a die is rolled
 // respectively, but the range in which a critical success/failure must be
 // overridable through modifiers.
 type Result struct {
