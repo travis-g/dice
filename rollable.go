@@ -234,3 +234,15 @@ func All(vs []Roller, f func(Roller) bool) bool {
 	}
 	return true
 }
+
+// Filter is a helper function that returns a slice of Rollers that match a
+// predicate out of an input slice.
+func Filter(vs []Roller, f func(Roller) bool) []Roller {
+	var rolls = []Roller{}
+	for _, v := range vs {
+		if f(v) {
+			rolls = append(rolls, v)
+		}
+	}
+	return rolls
+}
