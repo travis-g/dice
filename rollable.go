@@ -43,11 +43,10 @@ type Roller interface {
 // This may be best broken into two properties types, a RollerProperties and a
 // RollerGroupProperties.
 type RollerProperties struct {
-	Type    DieType `json:"type,omitempty" mapstructure:"type"`
-	Size    int     `json:"size,omitempty" mapstructure:"size"`
-	Result  *Result `json:"result,omitempty" mapstructure:"result"`
-	Dropped bool    `json:"dropped,omitempty" mapstructure:"dropped"`
-	Count   int     `json:"count,omitempty" mapstructure:"count"`
+	Type   DieType `json:"type,omitempty" mapstructure:"type"`
+	Size   int     `json:"size,omitempty" mapstructure:"size"`
+	Result *Result `json:"result,omitempty" mapstructure:"result"`
+	Count  int     `json:"count,omitempty" mapstructure:"count"`
 
 	// Modifiers for the dice or parent set
 	DieModifiers   ModifierList `json:"die_modifiers,omitempty" mapstructure:"die_modifiers"`

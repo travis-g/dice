@@ -15,7 +15,6 @@ type Die struct {
 	rolls   []*Result
 	*Result `json:"result,omitempty" mapstructure:"result"`
 
-	Dropped   bool         `json:"dropped,omitempty" mapstructure:"dropped"`
 	Modifiers ModifierList `json:"modifiers,omitempty" mapstructure:"modifiers"`
 }
 
@@ -37,7 +36,6 @@ func NewDie(props *RollerProperties) (Roller, error) {
 		Type:      props.Type,
 		Size:      props.Size,
 		Result:    props.Result,
-		Dropped:   props.Dropped,
 		Modifiers: props.DieModifiers,
 	}
 	return die, nil
@@ -147,8 +145,8 @@ func (d *Die) String() string {
 	}
 }
 
-// Total implements the dice.Interface Total method. An ErrUnrolled error will
-// be returned if the die has not been rolled.
+// Total implements the Total method. An ErrUnrolled error will be returned if
+// the die has not been rolled.
 func (d *Die) Total(ctx context.Context) (float64, error) {
 	if d == nil {
 		return 0.0, ErrNilDie
@@ -156,16 +154,5 @@ func (d *Die) Total(ctx context.Context) (float64, error) {
 	if d.Result == nil {
 		return 0.0, ErrUnrolled
 	}
-	if d.Dropped {
-		return 0.0, nil
-	}
-	return d.Result.Value, nil
-}
-
-// Drop marks a Die as dropped.
-func (d *Die) Drop(ctx context.Context, dropped bool) {
-	if d == nil {
-		return
-	}
-	d.Dropped = dropped
+	return d.Result.Total(ctx)
 }

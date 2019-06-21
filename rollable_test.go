@@ -16,11 +16,6 @@ func newFloat(f float64) *float64 {
 	return &f
 }
 
-func newResult(f float64) *Result {
-	r := NewResult(f)
-	return r
-}
-
 var groupProperties = []struct {
 	name  string
 	props RollerProperties
@@ -59,38 +54,39 @@ func TestGroup_Total(t *testing.T) {
 		{
 			name: "basic",
 			g: Group{
-				&Die{Result: newResult(2.0)},
-				&Die{Result: newResult(3.0)},
-				&Die{Result: newResult(4.0)},
+				&Die{Result: &Result{Value: 2.0}},
+				&Die{Result: &Result{Value: 3.0}},
+				&Die{Result: &Result{Value: 4.0}},
 			},
 			want: 9,
 		},
 		{
 			name: "nested",
 			g: Group{
-				&Die{Result: newResult(2.0)},
+				&Die{Result: &Result{Value: 2.0}},
 				&Group{
-					&Die{Result: newResult(3.0)},
+					&Die{Result: &Result{Value: 3.0}},
 				},
-				&Die{Result: newResult(4.0)},
+				&Die{Result: &Result{Value: 4.0}},
 			},
 			want: 9,
 		},
 		{
 			name: "dropped",
 			g: Group{
-				&Die{Result: newResult(2.0), Dropped: true},
-				&Die{Result: newResult(4.0)},
+				&Die{Result: &Result{Value: 2.0, Dropped: true}},
+				&Die{Result: &Result{Value: 4.0}},
 			},
 			want: 4,
 		},
 		{
 			name: "mixed",
 			g: Group{
-				&Die{Result: newResult(2.0), Dropped: true},
-				&Die{Type: TypeFudge, Result: newResult(-1)},
+				&Die{Result: &Result{Value: 2.0, Dropped: true}},
+				&Die{Result: &Result{Value: 1}},
+				&Die{Type: TypeFudge, Result: &Result{Value: -1}},
 			},
-			want: -1,
+			want: 0,
 		},
 	}
 	for _, tt := range tests {
@@ -115,9 +111,9 @@ func TestGroup_Expression(t *testing.T) {
 		{
 			name: "basic",
 			g: Group{
-				&Die{Result: newResult(2)},
-				&Die{Result: newResult(3)},
-				&Die{Result: newResult(4)},
+				&Die{Result: &Result{Value: 2}},
+				&Die{Result: &Result{Value: 3}},
+				&Die{Result: &Result{Value: 4}},
 			},
 			want: "2+3+4",
 		},
@@ -125,8 +121,8 @@ func TestGroup_Expression(t *testing.T) {
 			name: "unrolled",
 			g: Group{
 				&Die{Size: 3},
-				&Die{Result: newResult(3)},
-				&Die{Result: newResult(4)},
+				&Die{Result: &Result{Value: 3}},
+				&Die{Result: &Result{Value: 4}},
 			},
 			want: "d3+3+4",
 		},

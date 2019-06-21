@@ -1,6 +1,10 @@
 package dice
 
-import "context"
+import (
+	"context"
+
+	"github.com/pkg/errors"
+)
 
 // A Result is a value a die has rolled. By default, CritSuccess and CritFailure
 // should be set to true if the maximum or minimum value of a die is rolled
@@ -23,4 +27,15 @@ func NewResult(result float64) *Result {
 // Drop marks a Result as dropped.
 func (r *Result) Drop(ctx context.Context, drop bool) {
 	r.Dropped = drop
+}
+
+// Total returns the Result's value or 0 if the result was dropped.
+func (r *Result) Total(ctx context.Context) (float64, error) {
+	if r == nil {
+		return 0.0, errors.New("nil result")
+	}
+	if r.Dropped {
+		return 0.0, nil
+	}
+	return r.Value, nil
 }
