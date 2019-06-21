@@ -11,11 +11,17 @@ var _ Roller = (*Group)(nil)
 // Roller must be implemented for an object to be considered rollable.
 // Internally, a valid Roller and should maintain a "total rolls" count.s
 type Roller interface {
-	// Roll rolls the object and records results appropriately. The Roll method
-	// should compare the "totall rolls" count against MaxRolls.
+	// FullRoll rolls the object at the macro level, inclusive of testing and
+	// applying modifiers.
+	FullRoll(context.Context) error
+
+	// Roll rolls and records the object's Result. Roll should not apply
+	// modifiers.
 	Roll(context.Context) error
 
-	// Reroll resets the object and should re-roll the die by calling Roll.
+	// Reroll resets the object and should re-roll the core die by calling Roll.
+	// Methods used by Reroll should not call FullRoll without safeguards to
+	// prevent a stack overflow.
 	Reroll(context.Context) error
 
 	// Total returns the summed results.
@@ -115,8 +121,19 @@ func (g Group) Copy() []Roller {
 	return self
 }
 
-// Roll implements the Roller interface's Roll method by rolling each
+// FullRoll implements the Roller interface's FullRoll method by rolling each
 // object/Roller within the group.
+func (g Group) FullRoll(ctx context.Context) (err error) {
+	for _, dice := range g {
+		err = dice.FullRoll(ctx)
+		if err != nil {
+			break
+		}
+	}
+	return err
+}
+
+// Roll rolls each of the dice in the group without applying their modifiers.
 func (g Group) Roll(ctx context.Context) (err error) {
 	for _, dice := range g {
 		err = dice.Roll(ctx)
@@ -180,9 +197,9 @@ func NewRollerGroup(props *RollerProperties) (*RollerGroup, error) {
 	}, nil
 }
 
-// Roll rolls each die embedded in the dice group.
-func (d *RollerGroup) Roll(ctx context.Context) error {
-	if err := d.Group.Roll(ctx); err != nil {
+// FullRoll rolls each die embedded in the dice group.
+func (d *RollerGroup) FullRoll(ctx context.Context) error {
+	if err := d.Group.FullRoll(ctx); err != nil {
 		return err
 	}
 	for _, mod := range d.Modifiers {

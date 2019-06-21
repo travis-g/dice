@@ -36,6 +36,14 @@ func Wrap(die dice.Roller) *RWMutexRoller {
 	}
 }
 
+// FullRoll rolls the embedded Roller with thread safety. It calls the embedded
+// Roller's FullRoll() method to calculate its result.
+func (r *RWMutexRoller) FullRoll(ctx context.Context) error {
+	r.l.Lock()
+	defer r.l.Unlock()
+	return r.die.FullRoll(ctx)
+}
+
 // Roll rolls the embedded Roller with thread safety. It calls the embedded
 // Roller's Roll() method to calculate its result.
 func (r *RWMutexRoller) Roll(ctx context.Context) error {

@@ -13,6 +13,6 @@ func ExampleNewRoller() {
 	})
 	die := roll.(*Die)
 	fmt.Println(die)
-	_ = roll.Roll(ctx)
+	_ = roll.FullRoll(ctx)
 	fmt.Println(die)
 }

@@ -22,6 +22,10 @@ var (
 	// rolled already
 	ErrRolled = errors.New("die already rolled")
 
+	// ErrRerolled is returned when it must be noted that a die's value has
+	// changed due to being rerolled.
+	ErrRerolled = errors.New("die rerolled")
+
 	// ErrImpossibleRoll is returned when a given dice roll is deemed
 	// impossible, illogical, or will never be able to yield a result. As an
 	// example, a roll of "3d6r<6" should return this error at some stage in its

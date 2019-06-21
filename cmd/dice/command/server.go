@@ -21,7 +21,7 @@ func handleRequest(ctx context.Context, props dice.RollerProperties) (roll dice.
 	if err != nil {
 		return
 	}
-	err = roll.Roll(ctx)
+	err = roll.FullRoll(ctx)
 	return
 }
 
@@ -38,7 +38,7 @@ func rollHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = group.Roll(ctx)
+	err = group.FullRoll(ctx)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -77,7 +77,7 @@ func rollPostHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = group.Roll(ctx)
+	err = group.FullRoll(ctx)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

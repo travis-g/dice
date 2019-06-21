@@ -99,7 +99,7 @@ func Evaluate(ctx context.Context, expression string) (*Expression, error) {
 		if err != nil {
 			return []byte{}
 		}
-		d.Roll(ctx)
+		d.FullRoll(ctx)
 		// record dice:
 		de.Dice = append(de.Dice, d)
 

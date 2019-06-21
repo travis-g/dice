@@ -11,8 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// MaxRerolls is the maximum number of rerolls allowed due to a single
-// modifier's application.
+// MaxRerolls is the maximum number of rerolls allowed on a given die.
 var MaxRerolls = 1000
 
 // A Modifier is a dice modifier that can apply to a set or a single die
@@ -166,7 +165,8 @@ func (m *RerollModifier) Apply(ctx context.Context, r Roller) error {
 }
 
 // rerollApplyTail is a tail-recursive function to reroll a die based on a
-// modifier.
+// modifier. The error returned must be an ErrRerolled to indicate the die was
+// changed via rerolling.
 func rerollApplyTail(ctx context.Context, m *RerollModifier, r Roller) error {
 	if err := r.Reroll(ctx); err != nil {
 		return err
@@ -175,8 +175,9 @@ func rerollApplyTail(ctx context.Context, m *RerollModifier, r Roller) error {
 	if err != nil {
 		return err
 	}
+	// Now that die has settled, return rerolled error
 	if ok {
-		return nil
+		return ErrRerolled
 	}
 	return rerollApplyTail(ctx, m, r)
 }

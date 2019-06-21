@@ -43,11 +43,17 @@ func NewDie(props *RollerProperties) (Roller, error) {
 	return die, nil
 }
 
-// rolls a die based on the die's size and type.
-func (d *Die) roll(ctx context.Context) error {
+// Roll rolls a die based on the die's size and type and calculates a value.
+func (d *Die) Roll(ctx context.Context) error {
 	if d == nil {
 		return ErrNilDie
 	}
+
+	// Check if rolled too many times already
+	if len(d.rolls) >= MaxRerolls {
+		return ErrMaxRolls
+	}
+
 	switch d.Type {
 	case TypeFudge:
 		d.Result = NewResult(float64(Source.Intn(int(d.Size*2+1)) - int(d.Size)))
@@ -74,24 +80,27 @@ func (d *Die) reset() {
 	d.rolls = []*Result{}
 }
 
-// Roll rolls the Die. The die will be reset if it had been rolled previously.
-func (d *Die) Roll(ctx context.Context) error {
+// FullRoll rolls the Die. The die will be reset if it had been rolled
+// previously.
+func (d *Die) FullRoll(ctx context.Context) error {
 	if d == nil {
 		return ErrNilDie
 	}
-	// Check if rolled too many times already
-	if len(d.rolls) >= MaxRerolls {
-		return ErrMaxRolls
-	}
-	err := d.roll(ctx)
-	if err != nil {
+
+	if err := d.Roll(ctx); err != nil {
 		return err
 	}
 
 	// Apply modifiers
 	for i := 0; i < len(d.Modifiers); i++ {
-		// TODO: handle a non-nil, "reroll and begin modifiers again" error
-		if err = d.Modifiers[i].Apply(ctx, d); err != nil {
+		err := d.Modifiers[i].Apply(ctx, d)
+		switch {
+		// die rerolled, so restart validation checks with new modifiers
+		case err == ErrRerolled:
+			i = -1
+			// i++ => 0 to restart from first modifier
+			break
+		case err != nil:
 			return err
 		}
 	}
@@ -106,10 +115,12 @@ func (d *Die) Reroll(ctx context.Context) error {
 	if d.Result == nil {
 		return ErrUnrolled
 	}
-	// mark the current result as dropped
+	// mark the current result as dropped, move it to the roll history, and
+	// unset the result
 	d.Result.Drop(ctx, true)
 	d.rolls = append(d.rolls, d.Result)
 	d.Result = nil
+	// reroll without reapplying all modifiers
 	return d.Roll(ctx)
 }
 
