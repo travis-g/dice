@@ -224,8 +224,8 @@ func (d *RollerGroup) Reroll(ctx context.Context) error {
 	return nil
 }
 
-// All is a helper function that returns true if all dice.Interfaces of a slice
-// match a predicate. All will return false on the first failure.
+// All is a helper function that returns true if all Rollers of a slice match a
+// predicate. All will return false on the first failure.
 func All(vs []Roller, f func(Roller) bool) bool {
 	for _, v := range vs {
 		if !f(v) {
