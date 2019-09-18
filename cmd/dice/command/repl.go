@@ -17,18 +17,22 @@ func REPLCommand(c *cli.Context) error {
 	ctx := context.Background()
 	scanner := bufio.NewScanner(os.Stdin)
 
-	fmt.Println("Use quit() or Ctrl-C to exit")
+	// Check if data was piped through Stdin, or if the REPL is interactive
+	in, _ := os.Stdin.Stat()
+	interactive := ((in.Mode() & os.ModeCharDevice) != 0)
 
 	// Begin the REPL:
 	for {
-		fmt.Fprintf(os.Stderr, replPrompt)
+		if interactive {
+			fmt.Fprintf(os.Stderr, replPrompt)
+		}
 		scanned := scanner.Scan()
 		if !scanned {
 			return nil
 		}
 
 		line := scanner.Text()
-		if line != "quit()" {
+		if line != "quit" {
 			exp, err := math.Evaluate(ctx, line)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err)
