@@ -37,7 +37,7 @@ var (
 // DiceWithModifiersExpressionRegex is the compiled RegEx for parsing a dice
 // notation with modifier strings appended.
 var DiceWithModifiersExpressionRegex = regexp.MustCompile(
-	DiceNotationPattern + `(?P<modifiers>[^-+ \(\)]*)`)
+	DiceNotationPattern + `(?P<modifiers>[a-zA-Z=<>\d]*)`)
 var (
 	rerollRegex   = regexp.MustCompile(`r(?P<once>o)?` + ComparePointPattern + `?`)
 	sortRegex     = regexp.MustCompile(`s(?P<sort>[ad]?)`)
