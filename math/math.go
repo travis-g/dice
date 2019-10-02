@@ -122,7 +122,7 @@ func Evaluate(ctx context.Context, expression string) (*Expression, error) {
 	// get and set the result
 	result, err := exp.Evaluate(nil)
 	if err != nil {
-		return nil, err
+		return nil, dice.ErrInvalidExpression
 	}
 	// result should be a float
 	var ok bool

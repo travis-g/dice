@@ -26,12 +26,16 @@ var (
 	// changed due to being rerolled.
 	ErrRerolled = errors.New("die rerolled")
 
+	// ErrInvalidExpression is returned when a dice expression is invalid or
+	// there is a general issue evaluating it.
+	ErrInvalidExpression = errors.New("invalid expression")
+
 	// ErrImpossibleRoll is returned when a given dice roll is deemed
 	// impossible, illogical, or will never be able to yield a result. As an
 	// example, a roll of "3d6r<6" should return this error at some stage in its
 	// evaluation, as no die in the set will ever be able to settle with the
 	// given reroll modifier.
-	ErrImpossibleRoll = errors.New("dice roll impossible")
+	ErrImpossibleRoll = errors.New("impossible roll")
 )
 
 // ErrNotImplemented is an error returned when a feature is not yet implemented.
