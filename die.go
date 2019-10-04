@@ -7,23 +7,23 @@ import (
 
 // Die represents an internally-typed die. If Result is a non-nil pointer, it
 // is considered rolled.
-type Die struct {
-	// Generic properties
-	Type DieType `json:"type,omitempty" mapstructure:"type"`
-	Size int     `json:"size" mapstructure:"size"`
+// type Die struct {
+// 	// Generic properties
+// 	Type DieType `json:"type,omitempty" mapstructure:"type"`
+// 	Size int     `json:"size" mapstructure:"size"`
 
-	rolls   []*Result
-	*Result `json:"result,omitempty" mapstructure:"result"`
+// 	rolls   []*Result
+// 	*Result `json:"result,omitempty" mapstructure:"result"`
 
-	Modifiers ModifierList `json:"modifiers,omitempty" mapstructure:"modifiers"`
-}
+// 	Modifiers ModifierList `json:"modifiers,omitempty" mapstructure:"modifiers"`
+// }
 
 // NewDie creates a new die off of a properties list. It will tweak the
 // properties list to better suit reuse.
-func NewDie(props *RollerProperties) (Roller, error) {
+func NewDie(props *Properties) (Roller, error) {
 	// If the property set was for a default fudge die set, set a default size
 	// of 1.
-	if props.Type == TypeFudge && props.Size == 0 {
+	if props.Type == DieType_FUDGE && props.Size == 0 {
 		props.Size = 1
 	}
 
@@ -53,7 +53,7 @@ func (d *Die) Roll(ctx context.Context) error {
 	}
 
 	switch d.Type {
-	case TypeFudge:
+	case DieType_FUDGE:
 		d.Result = NewResult(float64(Source.Intn(int(d.Size*2+1)) - int(d.Size)))
 		if d.Result.Value == -float64(d.Size) {
 			d.CritFailure = true
@@ -75,7 +75,7 @@ func (d *Die) Roll(ctx context.Context) error {
 func (d *Die) reset() {
 	d.Result = nil
 	d.Dropped = false
-	d.rolls = []*Result{}
+	d.Rolls = []*Result{}
 }
 
 // FullRoll rolls the Die. The die will be reset if it had been rolled
@@ -116,15 +116,15 @@ func (d *Die) Reroll(ctx context.Context) error {
 	// mark the current result as dropped, move it to the roll history, and
 	// unset the result
 	d.Result.Drop(ctx, true)
-	d.rolls = append(d.rolls, d.Result)
+	d.rolls = append(d.Rolls, d.Result)
 	d.Result = nil
 	// reroll without reapplying all modifiers
 	return d.Roll(ctx)
 }
 
-// String returns an expression-like representation of a rolled die or its type,
+// Notation returns an expression-like representation of a rolled die or its type,
 // if it has not been rolled.
-func (d *Die) String() string {
+func (d *Die) Notation() string {
 	if d == nil {
 		return ""
 	}
@@ -133,9 +133,9 @@ func (d *Die) String() string {
 		return fmt.Sprintf("%v", total)
 	}
 	switch d.Type {
-	case TypePolyhedron:
+	case DieType_STANDARD_POLYHEDRON:
 		return fmt.Sprintf("d%d%s", d.Size, d.Modifiers)
-	case TypeFudge:
+	case DieType_FUDGE:
 		if d.Size == 1 {
 			return fmt.Sprintf("dF%s", d.Modifiers)
 		}

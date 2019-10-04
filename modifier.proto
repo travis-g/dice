@@ -1,0 +1,63 @@
+syntax = "proto3";
+package dice;
+
+option go_package = "github.com/travis-g/dice";
+
+message CompareOp {
+    enum CompareType {
+        UNDEFINED = 0;
+        EQL = 1; // =
+        LSS = 2; // <
+        GTR = 3; // >
+        LEQ = 4; // <=
+        GEQ = 5; // >=
+    }
+    CompareType type = 1;
+
+    sint64 target = 2;
+}
+
+message Modifier {
+    enum ModifierType {
+        UNSPECIFIED = 0;
+        REROLL = 1;
+        DROP_KEEP = 2;
+        CRITICAL_FAILURE = 3;
+        CRITICAL_SUCCESS = 4;
+    }
+    // ModifierType type = 1;
+
+    oneof modifier_differentiating_fields {
+        DropKeepModifier drop_keep = 2;
+        CriticalSuccessModifier critical_success = 3;
+        CriticalFailureModifier critical_failure = 4;
+        RerollModifier reroll = 5;
+    }
+}
+
+message DropKeepModifier {
+    enum DropKeepMethod {
+        NOT_DEFINED  = 0;
+        DROP         = 1;
+        DROP_LOWEST  = 2;
+        DROP_HIGHEST = 3;
+        KEEP         = 4;
+        KEEP_LOWEST  = 5;
+        KEEP_HIGHEST = 6;
+    }
+    DropKeepMethod method = 1;
+    sint32 count = 2;
+}
+
+message CriticalSuccessModifier {
+    CompareOp compare = 1;
+}
+
+message CriticalFailureModifier {
+    CompareOp compare = 1;
+}
+
+message RerollModifier {
+    CompareOp compare = 1;
+    bool once = 2;
+}

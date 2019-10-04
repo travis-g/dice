@@ -33,23 +33,23 @@ func (m ModifierList) String() string {
 }
 
 // CompareOp is an comparison operator usable in modifiers.
-type CompareOp int
+// type CompareOp int
 
 // Comparison operators.
-const (
-	EMPTY CompareOp = iota
+// const (
+// 	EMPTY CompareOp = iota
 
-	compareOpStart
-	EQL // =
-	LSS // <
-	GTR // >
-	LEQ // <=
-	GEQ // >=
-	compareOpEnd
-)
+// 	compareOpStart
+// 	EQL // =
+// 	LSS // <
+// 	GTR // >
+// 	LEQ // <=
+// 	GEQ // >=
+// 	compareOpEnd
+// )
 
 var compares = [...]string{
-	EMPTY: "",
+	CompareOp_UNDEFINED: "",
 
 	EQL: "=",
 	LSS: "<",
@@ -104,10 +104,10 @@ type CompareTarget struct {
 
 // RerollModifier is a modifier that rerolls a Die if a comparison against the
 // compare target is true.
-type RerollModifier struct {
-	*CompareTarget
-	Once bool `json:"once,omitempty"`
-}
+// type RerollModifier struct {
+// 	*CompareTarget
+// 	Once bool `json:"once,omitempty"`
+// }
 
 // MarshalJSON marshals the modifier into JSON and includes an internal type
 // property.
@@ -122,17 +122,17 @@ func (m *RerollModifier) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (m *RerollModifier) String() string {
-	var buf bytes.Buffer
-	write := buf.WriteString
-	write("r")
-	// inferred equals if not specified
-	if m.Compare != EQL {
-		write(m.Compare.String())
-	}
-	write(strconv.Itoa(m.Target))
-	return buf.String()
-}
+// func (m *RerollModifier) String() string {
+// 	var buf bytes.Buffer
+// 	write := buf.WriteString
+// 	write("r")
+// 	// inferred equals if not specified
+// 	if m.Compare != EQL {
+// 		write(m.Compare.String())
+// 	}
+// 	write(strconv.Itoa(m.Target))
+// 	return buf.String()
+// }
 
 // Apply executes a RerollModifier against a Roller. The modifier may be
 // slightly modified the first time it is applied to ensure property
@@ -218,31 +218,31 @@ func (m *RerollModifier) Valid(ctx context.Context, r Roller) (bool, error) {
 
 // A DropKeepMethod is a method to use when evaluating a drop/keep modifier
 // against a dice group.
-type DropKeepMethod string
+// type DropKeepMethod string
 
 // Drop/keep methods.
-const (
-	DropKeepMethodUnknown     DropKeepMethod = ""
-	DropKeepMethodDrop        DropKeepMethod = "d"
-	DropKeepMethodDropLowest  DropKeepMethod = "dl"
-	DropKeepMethodDropHighest DropKeepMethod = "dh"
-	DropKeepMethodKeep        DropKeepMethod = "k"
-	DropKeepMethodKeepLowest  DropKeepMethod = "kl"
-	DropKeepMethodKeepHighest DropKeepMethod = "kh"
-)
+// const (
+// 	DropKeepMethodUnknown     DropKeepMethod = ""
+// 	DropKeepMethodDrop        DropKeepMethod = "d"
+// 	DropKeepMethodDropLowest  DropKeepMethod = "dl"
+// 	DropKeepMethodDropHighest DropKeepMethod = "dh"
+// 	DropKeepMethodKeep        DropKeepMethod = "k"
+// 	DropKeepMethodKeepLowest  DropKeepMethod = "kl"
+// 	DropKeepMethodKeepHighest DropKeepMethod = "kh"
+// )
 
 // A DropKeepModifier is a modifier to drop the highest or lowest Num dice
 // within a group by marking them as Dropped. The Method used to apply the
 // modifier defines if the dice are dropped or kept (meaning the Num highest
 // dice are not dropped).
-type DropKeepModifier struct {
-	Method DropKeepMethod `json:"op,omitempty"`
-	Num    int            `json:"num"`
-}
+// type DropKeepModifier struct {
+// 	Method DropKeepMethod `json:"op,omitempty"`
+// 	Num    int            `json:"num"`
+// }
 
-func (d *DropKeepModifier) String() string {
-	return string(d.Method)
-}
+// func (d *DropKeepModifier) String() string {
+// 	return string(d.Method)
+// }
 
 // Apply executes a DropKeepModifier against a Roller. If the Roller is not a
 // Group an error is returned.
