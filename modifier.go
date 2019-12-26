@@ -14,7 +14,7 @@ import (
 // MaxRerolls is the maximum number of rerolls allowed on a given die.
 var MaxRerolls = 1000
 
-// A Modifier is a dice modifier that can apply to a set or a single die
+// A Modifier is a dice modifier that can apply to a set or a single die.
 type Modifier interface {
 	// Apply executes a modifier against a Die.
 	Apply(context.Context, Roller) error
@@ -140,8 +140,10 @@ func (m *RerollModifier) String() string {
 //
 // The full roll needs to be recalculated in the event that one result may be
 // acceptable for one reroll criteria, but not for one that was already
-// evaluated. Impossible rerolls and impossible combinations of rerolls may
-// cause a stack overflow from recursion.
+// evaluated. An ErrRerolled error will be returned if the die was rerolled in
+// case other modifiers on the die need to be reapplied. Impossible rerolls and
+// impossible combinations of rerolls may cause a stack overflow from recursion
+// without a safeguard like MaxRerolls.
 func (m *RerollModifier) Apply(ctx context.Context, r Roller) error {
 	if m == nil {
 		return errors.New("nil modifier")
@@ -166,8 +168,15 @@ func (m *RerollModifier) Apply(ctx context.Context, r Roller) error {
 
 // rerollApplyTail is a tail-recursive function to reroll a die based on a
 // modifier. The error returned must be an ErrRerolled to indicate the die was
-// changed via rerolling.
+// changed via rerolling. ErrRerolled may need to bubble up to the rollable's
+// core rolling functions to indicate other modifiers must be reapplied.
+//
+// Tail recursion is used here as the stack has the potential to grow quite
+// large if the recursive calls are not optimized.
 func rerollApplyTail(ctx context.Context, m *RerollModifier, r Roller) error {
+	if m == nil {
+		return errors.New("nil modifier")
+	}
 	if err := r.Reroll(ctx); err != nil {
 		return err
 	}
