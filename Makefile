@@ -33,4 +33,8 @@ godoc:
 	@echo "==> View godoc at http://localhost:8080/pkg/github.com/travis-g/dice/"
 	@godoc -http ":8080"
 
+.PHONY: proto
+proto:
+	protoc ./*.proto --go_out=plugins=grpc,paths=source_relative:.
+
 .PHONY: clean build godoc
