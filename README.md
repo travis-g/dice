@@ -1,14 +1,19 @@
 # Dice
 
-[![GoDoc](https://godoc.org/github.com/travis-g/dice?status.svg)](https://godoc.org/github.com/travis-g/dice) [![Go Report Card](https://goreportcard.com/badge/github.com/travis-g/dice)](https://goreportcard.com/report/github.com/travis-g/dice)
+[![GoDoc](https://godoc.org/github.com/travis-g/dice?status.svg)][godoc] [![Go Report Card](https://goreportcard.com/badge/github.com/travis-g/dice)](https://goreportcard.com/report/github.com/travis-g/dice)
 
-Dice is a CLI solution to your dice-rolling needs. It's also technically a calculator.
+Dice is a Golang library and CLI solution for your dice-rolling needs. The Go source is split into two main parts:
 
+- Package `dice` implements virtualized standard polyhedral and specialty game dice. The dice roll calculations are intended to be cryptographically pseudo-random through use of `crypto/rand` by default, but the entropy source used by the package is configurable.
+- Package `main` in `cmd/dice` is a CLI utility for dice rolling and expression evaluation.
+
+<!--
 > [Dice notation][dice-notation] is an algebra-like system for indicating dice rolls in games. Dice rolls are usually given in the form ![AdX+B][tex-AdX+B], where ![A][tex-A] is the number of ![X][tex-X]-sided dice to roll, with an optional modifier ![B][tex-B]. ![B][tex-B] could be an integer or potentially another dice notation string. Additionally, ![A][tex-A] can be omitted if the number of ![X][tex-X]-sided dice to roll is 1: ![1dX][tex-1dX] can be written as simply ![dX][tex-dX].
+-->
 
 ## Install
 
-You need [Go][golang] installed. To fetch just the main CLI and place it in your [GOPATH][gopath]:
+You need [Go][golang] installed. To fetch just the main CLI, build it, and place it in your [GOPATH][gopath]:
 
 ```sh
 go get -u github.com/travis-g/dice/cmd/dice
@@ -40,6 +45,7 @@ See the `Makefile` for more.
 
 [dice-notation]: https://en.wikipedia.org/wiki/Dice_notation
 [dice-reference]: https://wiki.roll20.net/Dice_Reference
+[godoc]: https://godoc.org/github.com/travis-g/dice
 [golang]: https://golang.org/
 [gopath]: https://golang.org/doc/code.html#GOPATH
 
