@@ -8,19 +8,17 @@ import "result.proto";
 
 
 // DieType is the enum of types that a die or dice can be.
-enum DieType {
-    STANDARD_POLYHEDRON = 0;
-    FUDGE = 1;
-    INDEX = 2;
-}
+// enum DieType {
+//     STANDARD_POLYHEDRON = 0;
+//     FUDGE = 1;
+//     INDEX = 2;
+// }
 
 message Die {
-    DieType type = 1;
+    string type = 1;
 
-    oneof die_core_property {
-        sint32 size = 2;
-        // map<uint, google.protobuf.Any> results = 3;
-    }
+    sint32 size = 2;
+    // map<uint, google.protobuf.Any> results = 3;
 
     Result result = 4;
 
@@ -30,7 +28,7 @@ message Die {
 }
 
 message Properties {
-    DieType type = 1;
+    string type = 1;
 
     sint32 size = 2;
 

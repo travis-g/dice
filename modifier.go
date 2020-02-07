@@ -14,15 +14,15 @@ import (
 // MaxRerolls is the maximum number of rerolls allowed on a given die.
 var MaxRerolls = 1000
 
-// A Modifier is a dice modifier that can apply to a set or a single die
-type Modifier interface {
+// A Modifierer is a dice modifier that can apply to a set or a single die
+type Modifierer interface {
 	// Apply executes a modifier against a Die.
 	Apply(context.Context, Roller) error
 	fmt.Stringer
 }
 
 // ModifierList is a slice of modifiers that implements Stringer.
-type ModifierList []Modifier
+type ModifierList []Modifierer
 
 func (m ModifierList) String() string {
 	var buf bytes.Buffer
@@ -49,7 +49,7 @@ func (m ModifierList) String() string {
 // )
 
 var compares = [...]string{
-	CompareOp_UNDEFINED: "",
+	UNDEFINED: "",
 
 	EQL: "=",
 	LSS: "<",
@@ -72,13 +72,13 @@ func LookupCompareOp(s string) CompareOp {
 	return compareStringMap[s]
 }
 
-func (c CompareOp) String() string {
-	s := ""
-	if 0 <= c && c < CompareOp(len(compares)) {
-		s = compares[c]
-	}
-	return s
-}
+// func (c CompareOp) String() string {
+// 	s := ""
+// 	if 0 <= c && c < CompareOp(len(compares)) {
+// 		s = compares[c]
+// 	}
+// 	return s
+// }
 
 // MarshalJSON ensures the CompareOp is encoded as its string representation.
 func (c *CompareOp) MarshalJSON() ([]byte, error) {
@@ -288,11 +288,11 @@ func (d *DropKeepModifier) Apply(ctx context.Context, r Roller) error {
 
 // A CriticalSuccessModifier shifts or sets the compare point/range used to
 // classify a die's result as a critical success.
-type CriticalSuccessModifier struct {
-	*CompareTarget
-}
+// type CriticalSuccessModifier struct {
+// 	*CompareTarget
+// }
 
-func (m *CriticalSuccessModifier) String() string {
+func (m *CriticalSuccessModifier) Notation() string {
 	var buf bytes.Buffer
 	write := buf.WriteString
 	write("cs")
@@ -306,11 +306,11 @@ func (m *CriticalSuccessModifier) String() string {
 
 // A CriticalFailureModifier shifts or sets the compare point/range used to
 // classify a die's result as a critical failure.
-type CriticalFailureModifier struct {
-	*CompareTarget
-}
+// type CriticalFailureModifier struct {
+// 	*CompareTarget
+// }
 
-func (m *CriticalFailureModifier) String() string {
+func (m *CriticalFailureModifier) Notation() string {
 	var buf bytes.Buffer
 	write := buf.WriteString
 	write("cf")

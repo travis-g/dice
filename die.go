@@ -5,6 +5,11 @@ import (
 	"fmt"
 )
 
+const (
+	TypePolyhedron = ""
+	TypeFudge      = "fudge"
+)
+
 // Die represents an internally-typed die. If Result is a non-nil pointer, it
 // is considered rolled.
 // type Die struct {
@@ -23,7 +28,7 @@ import (
 func NewDie(props *Properties) (Roller, error) {
 	// If the property set was for a default fudge die set, set a default size
 	// of 1.
-	if props.Type == DieType_FUDGE && props.Size == 0 {
+	if props.Type == TypeFudge && props.Size == 0 {
 		props.Size = 1
 	}
 

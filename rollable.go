@@ -43,7 +43,7 @@ type Roller interface {
 // This may be best broken into two properties types, a RollerProperties and a
 // RollerGroupProperties.
 type RollerProperties struct {
-	Type   DieType `json:"type,omitempty" mapstructure:"type"`
+	Type   string  `json:"type,omitempty" mapstructure:"type"`
 	Size   int     `json:"size,omitempty" mapstructure:"size"`
 	Result *Result `json:"result,omitempty" mapstructure:"result"`
 	Count  int     `json:"count,omitempty" mapstructure:"count"`
@@ -56,12 +56,12 @@ type RollerProperties struct {
 // A RollerFactory is a function that takes a properties object and returns a
 // valid rollable die based off of the properties list. If there is an error
 // creating a die off of the properties list an error should be returned.
-type RollerFactory func(*RollerProperties) (Roller, error)
+type RollerFactory func(*Properties) (Roller, error)
 
 // RollerFactoryMap is the package-wide mapping of die types and the function to
 // use to create a new die of that type. This map can be modified to create dice
 // using different functions or to implement new die types.
-var RollerFactoryMap = map[DieType]RollerFactory{
+var RollerFactoryMap = map[string]RollerFactory{
 	TypePolyhedron: NewDie,
 	TypeFudge:      NewDie,
 }

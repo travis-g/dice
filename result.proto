@@ -3,14 +3,12 @@ package dice;
 
 option go_package = "github.com/travis-g/dice";
 
-import "google/protobuf/any.proto";
-
 // A Result is a value a die has rolled. By default, CritSuccess and CritFailure
 // should be set to true if the maximum or minimum value of a die is rolled
 // respectively, but the range in which a critical success/failure must be
-// overridable through modifiers. Critical
+// overridable through modifiers.
 message Result {
-    google.protobuf.Any value = 1;
+    string value = 1;
     bool dropped = 2;
 
     // CritSuccess and CritFailure are not multually exclusive. A roll of 1 on a
