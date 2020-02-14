@@ -3,6 +3,7 @@ package math
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"sort"
@@ -11,31 +12,57 @@ import (
 	"github.com/travis-g/dice"
 )
 
+// Possible error types for mathematical functions.
+var (
+	ErrNotEnoughArgs   = errors.New("not enough args")
+	ErrInvalidArgCount = errors.New("invalid argument count")
+)
+
 // DiceFunctions are functions usable in dice arithmetic operations, such as
 // round, min, and max.
+//
+// TODO: adv() and dis()
 var DiceFunctions = map[string]eval.ExpressionFunction{
 	"abs": func(args ...interface{}) (interface{}, error) {
+		if len(args) != 1 {
+			return 0, ErrInvalidArgCount
+		}
 		return math.Abs(args[0].(float64)), nil
 	},
 	"ceil": func(args ...interface{}) (interface{}, error) {
+		if len(args) != 1 {
+			return 0, ErrInvalidArgCount
+		}
 		return math.Ceil(args[0].(float64)), nil
 	},
 	"floor": func(args ...interface{}) (interface{}, error) {
+		if len(args) != 1 {
+			return 0, ErrInvalidArgCount
+		}
 		return math.Floor(args[0].(float64)), nil
 	},
 	"max": func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return 0, ErrNotEnoughArgs
+		}
 		sort.Slice(args[:], func(i, j int) bool {
 			return args[i].(float64) < args[j].(float64)
 		})
 		return args[len(args)-1], nil
 	},
 	"min": func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return 0, ErrNotEnoughArgs
+		}
 		sort.Slice(args[:], func(i, j int) bool {
 			return args[i].(float64) < args[j].(float64)
 		})
 		return args[0], nil
 	},
 	"round": func(args ...interface{}) (interface{}, error) {
+		if len(args) != 1 {
+			return 0, ErrInvalidArgCount
+		}
 		return math.Round(args[0].(float64)), nil
 	},
 }
@@ -59,6 +86,9 @@ type Expression struct {
 
 // String implements fmt.Stringer.
 func (de *Expression) String() string {
+	if de == nil {
+		return ""
+	}
 	return fmt.Sprintf("%s = %v", de.Rolled, de.Result)
 }
 
