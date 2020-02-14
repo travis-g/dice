@@ -1,19 +1,25 @@
 syntax = "proto3";
 package dice;
 
-option go_package = "github.com/travis-g/dice";
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
-// A Result is a value a die has rolled. By default, CritSuccess and CritFailure
-// should be set to true if the maximum or minimum value of a die is rolled
-// respectively, but the range in which a critical success/failure must be
-// overridable through modifiers.
-message Result {
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.goproto_getters_all) = false;
+option (gogoproto.goproto_enum_prefix_all) = false;
+
+// A RollResult is a value a die has rolled. By default, CritSuccess and
+// CritFailure should be set to true if the maximum or minimum value of a die is
+// rolled respectively, but the range in which a critical success/failure must
+// be overridable through modifiers.
+//
+// Note that CritSuccess and CritFailure are not multually exclusive:  a roll of
+// 1 on a 1-sided die should have a result that is both CritSuccess and
+// CritFailure by default.
+message RollResult {
     string value = 1;
     bool dropped = 2;
-
-    // CritSuccess and CritFailure are not multually exclusive. A roll of 1 on a
-    // 1-sided die should have a result that is both CritSuccess and CritFailure
-    // by default.
     bool crit_success = 3;
     bool crit_failure = 4;
 }

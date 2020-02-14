@@ -1,7 +1,13 @@
 syntax = "proto3";
 package dice;
 
-option go_package = "github.com/travis-g/dice";
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.goproto_getters_all) = false;
+option (gogoproto.goproto_enum_prefix_all) = false;
 
 message CompareOp {
     enum CompareType {
@@ -19,7 +25,7 @@ message CompareOp {
 
 message Modifier {
     enum ModifierType {
-        UNSPECIFIED = 0;
+        UNDEFINED = 0;
         REROLL = 1;
         DROP_KEEP = 2;
         CRITICAL_FAILURE = 3;
@@ -37,7 +43,7 @@ message Modifier {
 
 message DropKeepModifier {
     enum DropKeepMethod {
-        NOT_DEFINED  = 0;
+        UNDEFINED    = 0;
         DROP         = 1;
         DROP_LOWEST  = 2;
         DROP_HIGHEST = 3;

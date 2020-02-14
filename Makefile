@@ -33,8 +33,10 @@ godoc:
 	@echo "==> View godoc at http://localhost:8080/pkg/github.com/travis-g/dice/"
 	@godoc -http ":8080"
 
-.PHONY: proto
-proto:
-	protoc ./*.proto --go_out=plugins=grpc,paths=source_relative:.
+.PHONY: protoc
+protoc:
+	protoc -I=. -I=$(GOPATH)/src/github.com/gogo/protobuf/protobuf \
+				-I=$(GOPATH)/src \
+				--gogo_out=paths=source_relative:. *.proto
 
 .PHONY: clean build godoc

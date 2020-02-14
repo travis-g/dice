@@ -1,18 +1,22 @@
 syntax = "proto3";
 package dice;
 
-option go_package = "github.com/travis-g/dice";
-
 import "modifier.proto";
 import "result.proto";
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.goproto_getters_all) = false;
+option (gogoproto.goproto_enum_prefix_all) = false;
 
 // DieType is the enum of types that a die or dice can be.
-// enum DieType {
-//     STANDARD_POLYHEDRON = 0;
-//     FUDGE = 1;
-//     INDEX = 2;
-// }
+enum DieType {
+    STANDARD_POLYHEDRON = 0;
+    FUDGE = 1;
+    INDEX = 2;
+}
 
 message Die {
     string type = 1;
@@ -20,9 +24,9 @@ message Die {
     sint32 size = 2;
     // map<uint, google.protobuf.Any> results = 3;
 
-    Result result = 4;
+    RollResult result = 4;
 
-    repeated Result rolls = 5;
+    repeated RollResult rolls = 5;
 
     repeated Modifier modifiers = 6;
 }
@@ -32,7 +36,7 @@ message Properties {
 
     sint32 size = 2;
 
-    Result result = 3;
+    RollResult result = 3;
 
     sint32 count = 4;
 
