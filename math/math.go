@@ -119,14 +119,22 @@ func Evaluate(ctx context.Context, expression string) (*Expression, error) {
 		Original: expression,
 		Dice:     make([]*dice.RollerGroup, 0),
 	}
+
+	var evalErrors = []error{}
+
 	// systematically parse the DiceExpression for dice notation substrings,
 	// evaluate and expand the rolls, replace the notation strings with their
 	// fully-rolled and expanded counterparts, and save the expanded expression
 	// to the object.
 	rolledBytes := dice.DiceWithModifiersExpressionRegex.ReplaceAllFunc([]byte(de.Original), func(matchBytes []byte) []byte {
-		props, _ := dice.ParseExpression(ctx, string(matchBytes))
+		props, err := dice.ParseExpression(ctx, string(matchBytes))
+		if err != nil {
+			evalErrors = append(evalErrors, err)
+			return []byte{}
+		}
 		d, err := dice.NewRollerGroup(&props)
 		if err != nil {
+			evalErrors = append(evalErrors, err)
 			return []byte{}
 		}
 		d.FullRoll(ctx)
@@ -141,6 +149,9 @@ func Evaluate(ctx context.Context, expression string) (*Expression, error) {
 		write(`)`)
 		return buf.Bytes()
 	})
+	if len(evalErrors) != 0 {
+		return nil, fmt.Errorf("errors during parsing: %v", evalErrors)
+	}
 	de.Rolled = string(rolledBytes)
 
 	// populate the expression object with the roll and function data
