@@ -79,8 +79,9 @@ func roundExpressionFunction(args ...interface{}) (interface{}, error) {
 	return math.Round(args[0].(float64)), nil
 }
 
-// An Expression is a representation of a dice roll that has been evaluated.
-type Expression struct {
+// An ExpressionResult is a representation of a dice roll that has been
+// evaluated.
+type ExpressionResult struct {
 	// Original is the original expression input.
 	Original string `json:"original"`
 
@@ -97,7 +98,7 @@ type Expression struct {
 }
 
 // String implements fmt.Stringer.
-func (de *Expression) String() string {
+func (de *ExpressionResult) String() string {
 	if de == nil {
 		return ""
 	}
@@ -105,29 +106,29 @@ func (de *Expression) String() string {
 }
 
 // GoString implements fmt.GoStringer.
-func (de *Expression) GoString() string {
+func (de *ExpressionResult) GoString() string {
 	return fmt.Sprintf("%#v", *de)
 }
 
 /*
 Evaluate evaluates a string expression of dice, math, or a combination of the
-two, and returns the resulting Expression. The evaluation order needs to follow
-order of operations.
+two, and returns the resulting ExpressionResult. The evaluation order needs to
+follow order of operations.
 
 The expression passed must evaluate to a float64 result. A parsable expression
 could be a simple expression or more complex.
 
-	d20
-	2d20dl1+5
-	4d6-3d5+30
-	min(d20,d20)+1
-	floor(max(d20,2d12k1)/2+3)
+    d20
+    2d20dl1+5
+    4d6-3d5+30
+    min(d20,d20)+1
+    floor(max(d20,2d12k1)/2+3)
 
 Evaluate can likely benefit immensely from optimization and a custom parser
 implementation along with more fine-grained unit tests/benchmarks.
 */
-func Evaluate(ctx context.Context, expression string) (*Expression, error) {
-	de := &Expression{
+func Evaluate(ctx context.Context, expression string) (*ExpressionResult, error) {
+	de := &ExpressionResult{
 		Original: expression,
 		Dice:     make([]*dice.RollerGroup, 0),
 	}

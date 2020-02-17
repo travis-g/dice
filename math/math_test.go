@@ -17,8 +17,8 @@ var (
 
 // Check implements
 var (
-	_ = fmt.Stringer(&Expression{})
-	_ = fmt.GoStringer(&Expression{})
+	_ = fmt.Stringer(&ExpressionResult{})
+	_ = fmt.GoStringer(&ExpressionResult{})
 )
 
 // function to set math/rand as the RNG source
@@ -46,7 +46,7 @@ func BenchmarkEvaluate(b *testing.B) {
 		{"3d20+2d4"},
 		{"100d6"},
 	}
-	var de *Expression
+	var de *ExpressionResult
 	for _, bmark := range benchmarks {
 		b.Run(bmark.expression, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
@@ -74,7 +74,7 @@ func BenchmarkEvaluateCount(b *testing.B) {
 		{"50d20"},
 		{"100d20"},
 	}
-	var de *Expression
+	var de *ExpressionResult
 	for _, bmark := range benchmarks {
 		b.Run(bmark.expression, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
@@ -102,7 +102,7 @@ func BenchmarkEvaluateSize(b *testing.B) {
 		{"1d50"},
 		{"1d100"},
 	}
-	var de *Expression
+	var de *ExpressionResult
 	for _, bmark := range benchmarks {
 		b.Run(bmark.expression, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
@@ -125,7 +125,7 @@ func BenchmarkEvaluateDiceFunctions(b *testing.B) {
 		{"ceil", "ceil(0.5)"},
 		{"round", "round(0.5)"},
 	}
-	var de *Expression
+	var de *ExpressionResult
 	for _, bmark := range benchmarks {
 		b.Run(bmark.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
@@ -144,7 +144,7 @@ func TestEvaluate(t *testing.T) {
 		{"1", 1},
 		{"d1", 1},
 	}
-	var de *Expression
+	var de *ExpressionResult
 	for _, tc := range testCases {
 		de, err := Evaluate(ctx, tc.expression)
 		if err != nil {
@@ -173,7 +173,7 @@ func TestDiceFunctions(t *testing.T) {
 		{"round-down", "round(0.49)", 0},
 		{"round-up", "round(0.5)", 1},
 	}
-	var de *Expression
+	var de *ExpressionResult
 	for _, tc := range testCases {
 		de, err := Evaluate(ctx, tc.expression)
 		if err != nil {
