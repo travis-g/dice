@@ -66,6 +66,14 @@ func (r *RWMutexRoller) Total(ctx context.Context) (float64, error) {
 	return r.die.Total(ctx)
 }
 
+// Value read-locks the embedded Roller and returns its equivalent value for use
+// in sorting.
+func (r *RWMutexRoller) Value(ctx context.Context) (float64, error) {
+	r.l.RLock()
+	defer r.l.RUnlock()
+	return r.die.Value(ctx)
+}
+
 // Drop marks the RWMutexRoller as dropped.
 func (r *RWMutexRoller) Drop(ctx context.Context, dropped bool) {
 	r.l.RLock()

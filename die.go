@@ -156,3 +156,15 @@ func (d *Die) Total(ctx context.Context) (float64, error) {
 	}
 	return d.Result.Total(ctx)
 }
+
+// Value returns the Result.Value of a Die, regardless of whether the Die was
+// dropped.
+func (d *Die) Value(ctx context.Context) (float64, error) {
+	if d == nil {
+		return 0.0, ErrNilDie
+	}
+	if d.Result == nil {
+		return 0.0, ErrUnrolled
+	}
+	return d.Result.Value, nil
+}

@@ -264,6 +264,8 @@ func (d *DropKeepModifier) Apply(ctx context.Context, r Roller) error {
 	// create a duplicate of the slice to sort
 	dice := group.Copy()
 
+	// TODO: do these dice need to be sorted by their result value/should
+	// already-dropped dice be filtered and excluded?
 	sort.Slice(dice, func(i, j int) bool {
 		ti, _ := (dice[i]).Total(ctx)
 		tj, _ := (dice[j]).Total(ctx)

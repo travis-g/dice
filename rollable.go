@@ -24,8 +24,12 @@ type Roller interface {
 	// prevent a stack overflow.
 	Reroll(context.Context) error
 
-	// Total returns the summed results.
+	// Total returns the summed results, omitting any dropped results.
 	Total(context.Context) (float64, error)
+
+	// Value returns the rolled face value of the Roller, regardless of whether
+	// the Roller was dropped. Value should be used when sorting.
+	Value(context.Context) (float64, error)
 
 	// Drop marks the object dropped based on a provided boolean.
 	Drop(context.Context, bool)
@@ -85,7 +89,8 @@ func NewRoller(props *RollerProperties) (Roller, error) {
 // A Group is a slice of rollables.
 type Group []Roller
 
-// Total implements the Total method and sums a group of dice's totals.
+// Total implements the Total method and sums a dice group's totals, excluding
+// values of dropped dice.
 func (g Group) Total(ctx context.Context) (total float64, err error) {
 	for _, dice := range g {
 		result, err := dice.Total(ctx)
@@ -95,6 +100,12 @@ func (g Group) Total(ctx context.Context) (total float64, err error) {
 		total += result
 	}
 	return
+}
+
+// Value returns the total value of a Group for sorting purposes. It should
+// return the Group's Total still.
+func (g Group) Value(ctx context.Context) (float64, error) {
+	return g.Total(ctx)
 }
 
 func (g Group) String() string {
