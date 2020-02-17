@@ -23,48 +23,60 @@ var (
 //
 // TODO: adv() and dis()
 var DiceFunctions = map[string]eval.ExpressionFunction{
-	"abs": func(args ...interface{}) (interface{}, error) {
-		if len(args) != 1 {
-			return 0, ErrInvalidArgCount
-		}
-		return math.Abs(args[0].(float64)), nil
-	},
-	"ceil": func(args ...interface{}) (interface{}, error) {
-		if len(args) != 1 {
-			return 0, ErrInvalidArgCount
-		}
-		return math.Ceil(args[0].(float64)), nil
-	},
-	"floor": func(args ...interface{}) (interface{}, error) {
-		if len(args) != 1 {
-			return 0, ErrInvalidArgCount
-		}
-		return math.Floor(args[0].(float64)), nil
-	},
-	"max": func(args ...interface{}) (interface{}, error) {
-		if len(args) < 1 {
-			return 0, ErrNotEnoughArgs
-		}
-		sort.Slice(args[:], func(i, j int) bool {
-			return args[i].(float64) < args[j].(float64)
-		})
-		return args[len(args)-1], nil
-	},
-	"min": func(args ...interface{}) (interface{}, error) {
-		if len(args) < 1 {
-			return 0, ErrNotEnoughArgs
-		}
-		sort.Slice(args[:], func(i, j int) bool {
-			return args[i].(float64) < args[j].(float64)
-		})
-		return args[0], nil
-	},
-	"round": func(args ...interface{}) (interface{}, error) {
-		if len(args) != 1 {
-			return 0, ErrInvalidArgCount
-		}
-		return math.Round(args[0].(float64)), nil
-	},
+	"abs":   absExpressionFunction,
+	"ceil":  ceilExpressionFunction,
+	"floor": floorExpressionFunction,
+	"max":   maxExpressionFunction,
+	"min":   minExpressionFunction,
+	"round": roundExpressionFunction,
+}
+
+func absExpressionFunction(args ...interface{}) (interface{}, error) {
+	if len(args) != 1 {
+		return 0, ErrInvalidArgCount
+	}
+	return math.Abs(args[0].(float64)), nil
+}
+
+func ceilExpressionFunction(args ...interface{}) (interface{}, error) {
+	if len(args) != 1 {
+		return 0, ErrInvalidArgCount
+	}
+	return math.Ceil(args[0].(float64)), nil
+}
+
+func floorExpressionFunction(args ...interface{}) (interface{}, error) {
+	if len(args) != 1 {
+		return 0, ErrInvalidArgCount
+	}
+	return math.Floor(args[0].(float64)), nil
+}
+
+func maxExpressionFunction(args ...interface{}) (interface{}, error) {
+	if len(args) < 1 {
+		return 0, ErrNotEnoughArgs
+	}
+	sort.Slice(args[:], func(i, j int) bool {
+		return args[i].(float64) < args[j].(float64)
+	})
+	return args[len(args)-1], nil
+}
+
+func minExpressionFunction(args ...interface{}) (interface{}, error) {
+	if len(args) < 1 {
+		return 0, ErrNotEnoughArgs
+	}
+	sort.Slice(args[:], func(i, j int) bool {
+		return args[i].(float64) < args[j].(float64)
+	})
+	return args[0], nil
+}
+
+func roundExpressionFunction(args ...interface{}) (interface{}, error) {
+	if len(args) != 1 {
+		return 0, ErrInvalidArgCount
+	}
+	return math.Round(args[0].(float64)), nil
 }
 
 // An Expression is a representation of a dice roll that has been evaluated.
