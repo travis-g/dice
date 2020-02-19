@@ -33,7 +33,7 @@ func REPLCommand(c *cli.Context) error {
 
 		line := scanner.Text()
 		if line != "quit" {
-			exp, err := math.Evaluate(ctx, line)
+			exp, err := math.EvaluateExpression(ctx, line)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err)
 				continue

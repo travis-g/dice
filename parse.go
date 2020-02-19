@@ -18,13 +18,6 @@ var (
 	// notations.
 	DiceNotationRegex = regexp.MustCompile(DiceNotationPattern)
 
-	// DiceExpressionRegex is the compiled RegEx for parsing drop/keep dice
-	// notations and other expressions that would modify a dice group's result.
-	DiceExpressionRegex = regexp.MustCompile(
-		`((?P<group>\{.*\})|` +
-			DiceNotationPattern +
-			`)(?P<dropkeep>(?P<op>[dk][lh]?)(?P<num>\d{1,}))?`)
-
 	// ComparePointpattern is the base pattern that matches compare points
 	// within dice modifiers.
 	ComparePointPattern = `(?P<compare>[=<>])?(?P<point>\d+)`
@@ -37,12 +30,15 @@ var (
 // DiceWithModifiersExpressionRegex is the compiled RegEx for parsing a dice
 // notation with modifier strings appended.
 var DiceWithModifiersExpressionRegex = regexp.MustCompile(
-	DiceNotationPattern + `(?P<modifiers>[a-zA-Z=<>\d]*)`)
+	DiceNotationPattern + `(?P<modifiers>[!a-zA-Z=<>\d]*)`)
+
+// Modifier regexes.
 var (
 	rerollRegex   = regexp.MustCompile(`r(?P<once>o)?` + ComparePointPattern + `?`)
 	sortRegex     = regexp.MustCompile(`s(?P<sort>[ad]?)`)
 	dropKeepRegex = regexp.MustCompile(`(?P<op>[dk][lh]?)(?P<num>\d+)`)
 	criticalRegex = regexp.MustCompile(`c(?P<kind>[sf])` + ComparePointPattern)
+	explodeRegex  = regexp.MustCompile(`!` + ComparePointPattern)
 )
 
 // Prefixes that indicate a modifier's start in a string
@@ -52,6 +48,7 @@ const (
 	dropPrefix     = "d"
 	keepPrefix     = "k"
 	criticalPrefix = "c"
+	explodePrefix  = "!"
 )
 
 // ParseNotation parses the provided notation with updated regular expressions
@@ -154,31 +151,22 @@ func ParseNotation(ctx context.Context, notation string) (RollerProperties, erro
 				return []byte(nil)
 			})
 			modifiers = string(remainingBytes)
+
+		// explode
+		case strings.HasPrefix(modifiers, explodePrefix):
+			remainingBytes := explodeRegex.ReplaceAllFunc([]byte(modifiers), func(matchBytes []byte) []byte {
+				// TODO
+				// captures := getNamedCaptures(explodeRegex, string(matchBytes))
+
+				return []byte(nil)
+			})
+			modifiers = string(remainingBytes)
+
 		default:
 			fmt.Printf("invalid modifiers: %s\n", modifiers)
 			modifiers = ""
 			break
 		}
 	}
-	return props, nil
-}
-
-// ParseExpression parses a given expression into a properties object with
-// support for modifiers.
-func ParseExpression(ctx context.Context, expression string) (RollerProperties, error) {
-	components := FindNamedCaptureGroups(DiceWithModifiersExpressionRegex, expression)
-
-	// if group is found the core notation was not specified.
-	group := components["group"]
-	if group != "" {
-		return RollerProperties{}, &ErrNotImplemented{"arbitrary group rolls not implemented"}
-	}
-
-	// Call ParseNotation with the core dice count and size.
-	props, err := ParseNotation(ctx, expression)
-	if err != nil {
-		return RollerProperties{}, err
-	}
-
 	return props, nil
 }

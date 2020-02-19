@@ -15,7 +15,7 @@ func EvalCommand(c *cli.Context) error {
 	ctx := context.Background()
 
 	eval := c.Args().Get(0)
-	exp, err := math.Evaluate(ctx, eval)
+	exp, err := math.EvaluateExpression(ctx, eval)
 	if err != nil {
 		return err
 	}
