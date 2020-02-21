@@ -12,7 +12,7 @@ type Die struct {
 	Type DieType `json:"type,omitempty" mapstructure:"type"`
 	Size int     `json:"size" mapstructure:"size"`
 
-	rolls   []*Result
+	Rerolls int `json:"rerolls" mapstructure:"size"`
 	*Result `json:"result,omitempty" mapstructure:"result"`
 
 	Modifiers ModifierList `json:"modifiers,omitempty" mapstructure:"modifiers"`
@@ -48,7 +48,7 @@ func (d *Die) Roll(ctx context.Context) error {
 	}
 
 	// Check if rolled too many times already
-	if len(d.rolls) >= MaxRerolls {
+	if d.Rerolls >= MaxRerolls {
 		return ErrMaxRolls
 	}
 
@@ -68,6 +68,8 @@ func (d *Die) Roll(ctx context.Context) error {
 	if d.Result.Value == float64(d.Size) {
 		d.CritSuccess = true
 	}
+
+	d.Rerolls++
 	return nil
 }
 
@@ -75,7 +77,6 @@ func (d *Die) Roll(ctx context.Context) error {
 func (d *Die) reset() {
 	d.Result = nil
 	d.Dropped = false
-	d.rolls = []*Result{}
 }
 
 // FullRoll rolls the Die. The die will be reset if it had been rolled
@@ -113,10 +114,7 @@ func (d *Die) Reroll(ctx context.Context) error {
 	if d.Result == nil {
 		return ErrUnrolled
 	}
-	// mark the current result as dropped, move it to the roll history, and
-	// unset the result
-	d.Result.Drop(ctx, true)
-	d.rolls = append(d.rolls, d.Result)
+
 	d.Result = nil
 	// reroll without reapplying all modifiers
 	return d.Roll(ctx)

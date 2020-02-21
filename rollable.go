@@ -113,6 +113,9 @@ func (g Group) String() string {
 	for i, dice := range g {
 		temp[i] = fmt.Sprintf("%v", dice.String())
 	}
+	if len(temp) == 0 {
+		temp = []string{"0"}
+	}
 	t, _ := g.Total(context.TODO())
 	return fmt.Sprintf("%s => %v", expression(strings.Join(temp, "+")), t)
 }
@@ -189,8 +192,10 @@ type RollerGroup struct {
 // list it will default to a count of 1 and tweak the provided properties object
 // accordingly.
 func NewRollerGroup(props *RollerProperties) (*RollerGroup, error) {
-	if props.Count <= 0 {
-		props.Count = 1
+	if props.Count == 0 {
+		return &RollerGroup{
+			Modifiers: props.GroupModifiers,
+		}, nil
 	}
 	dice := make([]Roller, props.Count)
 	for i := range dice {
