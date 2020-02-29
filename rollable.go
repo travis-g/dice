@@ -117,7 +117,7 @@ func (g Group) String() string {
 		temp = []string{"0"}
 	}
 	t, _ := g.Total(context.TODO())
-	return fmt.Sprintf("%s => %v", expression(strings.Join(temp, "+")), t)
+	return fmt.Sprintf("%s => %.0f", expression(strings.Join(temp, "+")), t)
 }
 
 // Drop is (presently) a noop on the group.

@@ -27,6 +27,14 @@ var DiceFunctions = map[string]eval.ExpressionFunction{
 	"round": roundExpressionFunction,
 }
 
+func ListDiceFunctions() []string {
+	funcs := make([]string, 0, len(DiceFunctions))
+	for name := range DiceFunctions {
+		funcs = append(funcs, name)
+	}
+	return funcs
+}
+
 func absExpressionFunction(args ...interface{}) (interface{}, error) {
 	if len(args) != 1 {
 		return 0, ErrInvalidArgCount

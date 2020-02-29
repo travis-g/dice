@@ -128,7 +128,7 @@ func (d *Die) String() string {
 	}
 	if d.Result != nil {
 		total, _ := d.Total(context.Background())
-		return fmt.Sprintf("%v", total)
+		return fmt.Sprintf("%.0f", total)
 	}
 	switch d.Type {
 	case TypePolyhedron:

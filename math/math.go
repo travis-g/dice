@@ -3,6 +3,7 @@ package math
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 
 	eval "github.com/Knetic/govaluate"
@@ -32,6 +33,7 @@ func (de *ExpressionResult) String() string {
 	if de == nil {
 		return ""
 	}
+	// as there could be a float/decimal result, use %v
 	return fmt.Sprintf("%s = %v", de.Rolled, de.Result)
 }
 
@@ -102,6 +104,9 @@ func EvaluateExpression(ctx context.Context, expression string) (*ExpressionResu
 	if err != nil {
 		return nil, err
 	}
+	if exp == nil {
+		return nil, ErrNilExpression
+	}
 
 	// get and set the result
 	result, err := exp.Evaluate(nil)
@@ -116,3 +121,8 @@ func EvaluateExpression(ctx context.Context, expression string) (*ExpressionResu
 
 	return de, nil
 }
+
+// Math package errors.
+var (
+	ErrNilExpression = errors.New("nil expression")
+)

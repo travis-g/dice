@@ -65,7 +65,8 @@ func ParseNotation(ctx context.Context, notation string) (RollerProperties, erro
 	count64, err := strconv.ParseInt(components["count"], 10, 0)
 	count := int(count64)
 	if err != nil {
-		// either there was an implied count, ex 'd20', or count was invalid
+		// either there was an implied count, ex 'd20', or count was invalid.
+		// parsing "0dX" should not result in a count of 1.
 		count = 1
 	}
 	props.Count = count
