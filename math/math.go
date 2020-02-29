@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 
 	eval "github.com/Knetic/govaluate"
 	"github.com/travis-g/dice"
@@ -33,8 +34,8 @@ func (de *ExpressionResult) String() string {
 	if de == nil {
 		return ""
 	}
-	// as there could be a float/decimal result, use %v
-	return fmt.Sprintf("%s = %v", de.Rolled, de.Result)
+	// as there could be a float/decimal result, format the float properly
+	return fmt.Sprintf("%s = %s", de.Rolled, strconv.FormatFloat(de.Result, 'f', -1, 64))
 }
 
 // GoString implements fmt.GoStringer.
