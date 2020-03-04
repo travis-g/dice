@@ -4,7 +4,6 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
 	"io"
 	"strconv"
@@ -114,9 +113,9 @@ func (s *Scanner) Scan() (tok Token, lit string) {
 
 // scanWhitespace consumes the current rune and all contiguous whitespace.
 func (s *Scanner) scanWhitespace() (tok Token, lit string) {
-	// Create a buffer and read the current character into it.
-	var buf bytes.Buffer
-	buf.WriteRune(s.read())
+	// Create a builder and read the current character into it.
+	var b strings.Builder
+	b.WriteRune(s.read())
 
 	// Read every subsequent whitespace character into the buffer.
 	// Non-whitespace characters and EOF will cause the loop to exit.
@@ -127,18 +126,18 @@ func (s *Scanner) scanWhitespace() (tok Token, lit string) {
 			s.unread()
 			break
 		} else {
-			buf.WriteRune(ch)
+			b.WriteRune(ch)
 		}
 	}
 
-	return WS, buf.String()
+	return WS, b.String()
 }
 
 // scanIdent consumes the current rune and all contiguous ident runes.
 func (s *Scanner) scanIdent() (tok Token, lit string) {
-	// Create a buffer and read the current character into it.
-	var buf bytes.Buffer
-	buf.WriteRune(s.read())
+	// Create a builder and read the current character into it.
+	var b strings.Builder
+	b.WriteRune(s.read())
 
 	// Read every subsequent ident character into the buffer.
 	// Non-ident characters and EOF will cause the loop to exit.
@@ -149,25 +148,25 @@ func (s *Scanner) scanIdent() (tok Token, lit string) {
 			s.unread()
 			break
 		} else {
-			buf.WriteRune(ch)
+			b.WriteRune(ch)
 		}
 	}
 
 	// If the string matches a keyword then return that keyword.
-	upper := strings.ToUpper(buf.String())
+	upper := strings.ToUpper(b.String())
 	switch {
 	case strings.HasPrefix(upper, "D"):
-		return DIE, buf.String()
+		return DIE, b.String()
 	}
 
 	// Otherwise return as a regular identifier.
-	return IDENT, buf.String()
+	return IDENT, b.String()
 }
 
 func (s *Scanner) scanLetters() (tok Token, lit string) {
-	// Create a buffer and read the current character into it.
-	var buf bytes.Buffer
-	buf.WriteRune(s.read())
+	// Create a builder and read the current character into it.
+	var b strings.Builder
+	b.WriteRune(s.read())
 
 	// Read every subsequent ident character into the buffer.
 	// Non-ident characters and EOF will cause the loop to exit.
@@ -178,26 +177,26 @@ func (s *Scanner) scanLetters() (tok Token, lit string) {
 			s.unread()
 			break
 		} else {
-			buf.WriteRune(ch)
+			b.WriteRune(ch)
 		}
 	}
 
 	// If the string matches a keyword then return that keyword.
-	upper := strings.ToUpper(buf.String())
+	upper := strings.ToUpper(b.String())
 	switch {
 	case strings.HasPrefix(upper, "D"):
-		return DIE, buf.String()
+		return DIE, b.String()
 	}
 
 	// Otherwise return as a regular identifier.
-	return IDENT, buf.String()
+	return IDENT, b.String()
 }
 
 // scanDigit consumes the current rune and all contiguous digit runes.
 func (s *Scanner) scanDigit() (tok Token, lit string) {
-	// Create a buffer and read the current character into it.
-	var buf bytes.Buffer
-	buf.WriteRune(s.read())
+	// Create a builder and read the current character into it.
+	var b strings.Builder
+	b.WriteRune(s.read())
 
 	// Read every subsequent ident character into the buffer.
 	// Non-ident characters and EOF will cause the loop to exit.
@@ -208,12 +207,12 @@ func (s *Scanner) scanDigit() (tok Token, lit string) {
 			s.unread()
 			break
 		} else {
-			buf.WriteRune(ch)
+			b.WriteRune(ch)
 		}
 	}
 
 	// Otherwise return as number.
-	return NUM, buf.String()
+	return NUM, b.String()
 }
 
 // Parser represents a parser.

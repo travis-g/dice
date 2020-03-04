@@ -1,11 +1,12 @@
 package math
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
+	"strings"
 
 	eval "github.com/Knetic/govaluate"
 	"github.com/travis-g/dice"
@@ -88,12 +89,12 @@ func EvaluateExpression(ctx context.Context, expression string) (*ExpressionResu
 		de.Dice = append(de.Dice, d)
 
 		// write expanded result back as bytes
-		var buf bytes.Buffer
-		write := buf.WriteString
+		var b strings.Builder
+		write := b.WriteString
 		write(`(`)
 		write(d.Expression())
 		write(`)`)
-		return buf.Bytes()
+		return []byte(b.String())
 	})
 	if len(evalErrors) != 0 {
 		return nil, fmt.Errorf("errors during parsing: %v", evalErrors)
@@ -127,3 +128,11 @@ func EvaluateExpression(ctx context.Context, expression string) (*ExpressionResu
 var (
 	ErrNilExpression = errors.New("nil expression")
 )
+
+// ParseExpressionWithFunc
+//
+// rolledBytes, err := ParseExpressionWithFunc(ctx, dice.DiceWithModifiersExpressionRegex, de.Original, )
+func ParseExpressionWithFunc(ctx context.Context, regexp *regexp.Regexp, expression string, repl func([]byte) []byte) (string, error) {
+	bytes := regexp.ReplaceAllFunc([]byte(expression), repl)
+	return string(bytes), nil
+}

@@ -1,12 +1,12 @@
 package dice
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -25,11 +25,11 @@ type Modifier interface {
 type ModifierList []Modifier
 
 func (m ModifierList) String() string {
-	var buf bytes.Buffer
+	var b strings.Builder
 	for _, mod := range m {
-		buf.WriteString(mod.String())
+		b.WriteString(mod.String())
 	}
-	return buf.String()
+	return b.String()
 }
 
 // CompareOp is an comparison operator usable in modifiers.
@@ -123,15 +123,15 @@ func (m *RerollModifier) MarshalJSON() ([]byte, error) {
 }
 
 func (m *RerollModifier) String() string {
-	var buf bytes.Buffer
-	write := buf.WriteString
+	var b strings.Builder
+	write := b.WriteString
 	write("r")
 	// inferred equals if not specified
 	if m.Compare != EQL {
 		write(m.Compare.String())
 	}
 	write(strconv.Itoa(m.Target))
-	return buf.String()
+	return b.String()
 }
 
 // Apply executes a RerollModifier against a Roller. The modifier may be
@@ -304,15 +304,15 @@ type CriticalSuccessModifier struct {
 }
 
 func (m *CriticalSuccessModifier) String() string {
-	var buf bytes.Buffer
-	write := buf.WriteString
+	var b strings.Builder
+	write := b.WriteString
 	write("cs")
 	// inferred equals if not specified
 	if m.Compare != EQL {
 		write(m.Compare.String())
 	}
 	write(strconv.Itoa(m.Target))
-	return buf.String()
+	return b.String()
 }
 
 // A CriticalFailureModifier shifts or sets the compare point/range used to
@@ -322,13 +322,13 @@ type CriticalFailureModifier struct {
 }
 
 func (m *CriticalFailureModifier) String() string {
-	var buf bytes.Buffer
-	write := buf.WriteString
+	var b strings.Builder
+	write := b.WriteString
 	write("cf")
 	// inferred equals if not specified
 	if m.Compare != EQL {
 		write(m.Compare.String())
 	}
 	write(strconv.Itoa(m.Target))
-	return buf.String()
+	return b.String()
 }
