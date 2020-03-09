@@ -12,7 +12,7 @@ import (
 var (
 	// DiceNotationPattern is the base XdY notation pattern for matching dice
 	// strings.
-	DiceNotationPattern = `(?P<count>\d+)?d(?P<size>\d{1,}|F)`
+	DiceNotationPattern = `(?P<count>\d+)?d(?P<size>\d{1,}|f|F)`
 
 	// DiceNotationRegex is the compiled RegEx for parsing supported dice
 	// notations.
@@ -35,7 +35,7 @@ var DiceWithModifiersExpressionRegex = regexp.MustCompile(
 // Modifier regexes.
 var (
 	rerollRegex   = regexp.MustCompile(`r(?P<once>o)?` + ComparePointPattern + `?`)
-	sortRegex     = regexp.MustCompile(`s(?P<sort>[ad]?)`)
+	sortRegex     = regexp.MustCompile(`s(?P<sort>[ad])?`)
 	dropKeepRegex = regexp.MustCompile(`(?P<op>[dk][lh]?)(?P<num>\d+)`)
 	criticalRegex = regexp.MustCompile(`c(?P<kind>[sf])` + ComparePointPattern)
 	explodeRegex  = regexp.MustCompile(`!` + ComparePointPattern)
@@ -72,7 +72,7 @@ func ParseNotation(ctx context.Context, notation string) (RollerProperties, erro
 	props.Count = count
 
 	var size64 int64
-	if components["size"] == "F" {
+	if strings.EqualFold(components["size"], "f") {
 		props.Type = TypeFudge
 		props.Size = 1
 	} else if size64, err = strconv.ParseInt(components["size"], 10, 0); err != nil {
@@ -114,9 +114,17 @@ func ParseNotation(ctx context.Context, notation string) (RollerProperties, erro
 		// sort
 		case strings.HasPrefix(modifiers, sortPrefix):
 			remainingBytes := sortRegex.ReplaceAllFunc([]byte(modifiers), func(matchBytes []byte) []byte {
-				// TODO
-				// captures := getNamedCaptures(sortRegex, string(matchBytes))
+				captures := FindNamedCaptureGroups(sortRegex, string(matchBytes))
 
+				mod := new(SortModifier)
+				switch captures["sort"] {
+				case "d":
+					mod.Direction = SortDirectionDescending
+				default:
+					mod.Direction = SortDirectionAscending
+				}
+
+				props.GroupModifiers = append(props.GroupModifiers, mod)
 				return []byte(nil)
 			})
 			modifiers = string(remainingBytes)

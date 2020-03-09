@@ -3,6 +3,7 @@ package dice
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -33,6 +34,9 @@ type Roller interface {
 
 	// Drop marks the object dropped based on a provided boolean.
 	Drop(context.Context, bool)
+
+	// IsDropped returns the dropped status of the Roller.
+	IsDropped(context.Context) bool
 
 	// Must implement a String method; if the object has not been rolled String
 	// should return a stringified representation of that can be re-parsed to
@@ -125,6 +129,11 @@ func (g Group) Drop(_ context.Context, _ bool) {
 	// noop
 }
 
+// IsDropped returns whether the Group is dropped. It always returns false.
+func (g Group) IsDropped(_ context.Context) bool {
+	return false
+}
+
 // Copy returns a copy of the dice within the group
 func (g Group) Copy() []Roller {
 	self := make([]Roller, len(g))
@@ -169,14 +178,56 @@ func (g Group) Reroll(ctx context.Context) (err error) {
 }
 
 // Expression returns an expression to represent the group's total. Dice in the
-// group that are unrolled are replaced with their roll notations
+// group that are unrolled are replaced with their roll notations and dropped
+// dice results are omitted.
 func (g Group) Expression() string {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	dice := make([]string, 0)
 	for _, die := range g {
-		dice = append(dice, die.String())
+		if !die.IsDropped(ctx) {
+			dice = append(dice, die.String())
+		}
 	}
 	// simplify the expression
 	return strings.Replace(strings.Join(dice, "+"), "+-", "-", -1)
+}
+
+var _ sort.Interface = (*Group)(nil)
+
+// Len returns the number of elements in a Group.
+func (g Group) Len() int {
+	return len(g)
+}
+
+// Less determines the sort order of Rollers in a Group.
+func (g Group) Less(i, j int) bool {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// if i is dropped, sort i after
+	if g[i].IsDropped(ctx) {
+		return true
+	}
+	// if j is dropped, sort j after
+	if g[j].IsDropped(ctx) {
+		return false
+	}
+
+	// if i's total is less than j, sort i after
+	it, _ := g[i].Total(ctx)
+	jt, _ := g[j].Total(ctx)
+	if it < jt {
+		return true
+	}
+	return false
+}
+
+// Swap swaps the positions of two Rollers in a Group. This method is not thread
+// safe.
+func (g Group) Swap(i, j int) {
+	g[i], g[j] = g[j], g[i]
 }
 
 // RollerGroup is a wrapper around a Group that implements Roller. The Modifiers

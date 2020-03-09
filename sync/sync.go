@@ -81,6 +81,13 @@ func (r *RWMutexRoller) Drop(ctx context.Context, dropped bool) {
 	r.die.Drop(ctx, dropped)
 }
 
+// IsDropped returns whether the RWMutexRoller was dropped.
+func (r *RWMutexRoller) IsDropped(ctx context.Context) bool {
+	r.l.RLock()
+	defer r.l.RUnlock()
+	return r.die.IsDropped(ctx)
+}
+
 // String read-locks the embedded Roller and returns the Roller's string
 // representation.
 func (r *RWMutexRoller) String() string {

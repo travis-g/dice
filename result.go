@@ -29,6 +29,15 @@ func (r *Result) Drop(ctx context.Context, drop bool) {
 	r.Dropped = drop
 }
 
+// IsDropped returns whether a Result was dropped.
+func (r *Result) IsDropped(ctx context.Context) bool {
+	// If there's no result, the die can't have been dropped; it's unrolled.
+	if r == nil {
+		return false
+	}
+	return r.Dropped
+}
+
 // Total returns the Result's value or 0 if the result was dropped.
 func (r *Result) Total(ctx context.Context) (float64, error) {
 	if r == nil {

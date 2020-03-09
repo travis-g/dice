@@ -121,8 +121,8 @@ func TestGroup_Expression(t *testing.T) {
 			name: "unrolled",
 			g: Group{
 				&Die{Size: 3},
-				&Die{Result: &Result{Value: 3}},
-				&Die{Result: &Result{Value: 4}},
+				&Die{Result: &Result{Value: 3, Dropped: false}},
+				&Die{Result: &Result{Value: 4, Dropped: false}},
 			},
 			want: "d3+3+4",
 		},

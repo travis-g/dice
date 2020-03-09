@@ -332,3 +332,40 @@ func (m *CriticalFailureModifier) String() string {
 	write(strconv.Itoa(m.Target))
 	return b.String()
 }
+
+// SortDirection is a possible direction for sorting dice.
+type SortDirection uint8
+
+// Sort directions for sorting modifiers.
+const (
+	SortDirectionAscending SortDirection = iota
+	SortDirectionDescending
+)
+
+// SortModifier is a modifier that will sort the Roller group.
+type SortModifier struct {
+	Direction SortDirection `json:"direction"`
+}
+
+func (s *SortModifier) String() string {
+	if s.Direction == SortDirectionDescending {
+		return "sd"
+	}
+	return "s"
+}
+
+// Apply applies a sort to a Roller.
+func (s *SortModifier) Apply(ctx context.Context, r Roller) error {
+	group, ok := r.(*RollerGroup)
+	if !ok {
+		return errors.New("target for modifier not a dice group")
+	}
+
+	switch s.Direction {
+	case SortDirectionAscending:
+		sort.Sort(group.Group)
+	case SortDirectionDescending:
+		sort.Sort(sort.Reverse(group.Group))
+	}
+	return nil
+}
