@@ -184,6 +184,11 @@ func (g Group) Expression() string {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// return 0 if no dice in the group.
+	if len(g) == 0 {
+		return "0"
+	}
+
 	dice := make([]string, 0)
 	for _, die := range g {
 		if !die.IsDropped(ctx) {

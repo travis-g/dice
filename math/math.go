@@ -115,6 +115,10 @@ func EvaluateExpression(ctx context.Context, expression string) (*ExpressionResu
 	if err != nil {
 		return nil, dice.ErrInvalidExpression
 	}
+	if result == nil {
+		return de, ErrNilResult
+	}
+
 	// result should be a float
 	var ok bool
 	if de.Result, ok = result.(float64); !ok {
@@ -127,6 +131,7 @@ func EvaluateExpression(ctx context.Context, expression string) (*ExpressionResu
 // Math package errors.
 var (
 	ErrNilExpression = errors.New("nil expression")
+	ErrNilResult     = errors.New("nil result")
 )
 
 // ParseExpressionWithFunc
