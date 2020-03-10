@@ -77,8 +77,8 @@ func ParseNotation(ctx context.Context, notation string) (RollerProperties, erro
 		props.Size = 1
 	} else if size64, err = strconv.ParseInt(components["size"], 10, 0); err != nil {
 		return props, &ErrParseError{notation, components["size"], "size", ": invalid size"}
-	} else if size64 <= 0 {
-		return props, ErrSizeZero
+	} else if size64 < 0 {
+		return props, &ErrParseError{notation, components["size"], "size", ": invalid size"}
 	}
 	props.Size = int(size64)
 

@@ -61,18 +61,12 @@ func CryptoInt64() (int64, error) {
 	return i.Int64(), nil
 }
 
-// CryptoIntn is a convenience wrapper for emulating rand.Intn using crypto/rand.
-// Rather than panicking if max <= 0, if max <= 0 an ErrSizeZero error is
-// returned and n will be 0. Any other errors encountered when generating the
-// integer are passed through by err.
+// CryptoIntn is a convenience wrapper for emulating rand.Intn using
+// crypto/rand. Panics if max <= 0, and any other errors encountered when
+// generating the integer are passed through by err.
 //
-// CryptoIntn does not use the package's global Source.
+// CryptoIntn does not use the package's global Source, it uses crypto.Reader.
 func CryptoIntn(max int) (n int, err error) {
-	if max <= 0 {
-		n = 0
-		err = ErrSizeZero
-		return
-	}
 	bigInt, err := crypto.Int(crypto.Reader, big.NewInt(int64(max)))
 	n = int(bigInt.Int64())
 	return

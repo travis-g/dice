@@ -27,11 +27,6 @@ func NewDie(props *RollerProperties) (Roller, error) {
 		props.Size = 1
 	}
 
-	// Check if size was zero and it's not a fudge die
-	if props.Size == 0 {
-		return nil, ErrSizeZero
-	}
-
 	die := &Die{
 		Type:      props.Type,
 		Size:      props.Size,
@@ -50,6 +45,11 @@ func (d *Die) Roll(ctx context.Context) error {
 	// Check if rolled too many times already
 	if d.Rerolls >= MaxRerolls {
 		return ErrMaxRolls
+	}
+
+	if d.Size == 0 {
+		d.Result = NewResult(0)
+		return nil
 	}
 
 	switch d.Type {
