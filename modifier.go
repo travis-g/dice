@@ -421,3 +421,19 @@ func (s *SortModifier) Apply(ctx context.Context, r Roller) error {
 	}
 	return nil
 }
+
+// LabelModifier is a modifier that adds metadata/a label to a Group.
+type LabelModifier struct {
+	Label string `json:"label,omitempty"`
+}
+
+func (l *LabelModifier) String() string {
+	b := new(strings.Builder)
+	fmt.Fprintf(b, "[%s]", l.Label)
+	return b.String()
+}
+
+// Apply for a LabelModifier is a no-op on the Roller.
+func (l *LabelModifier) Apply(_ context.Context, _ Roller) error {
+	return nil
+}
