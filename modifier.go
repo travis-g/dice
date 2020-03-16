@@ -249,13 +249,26 @@ type DropKeepModifier struct {
 	Num    int            `json:"num"`
 }
 
-func (d *DropKeepModifier) String() string {
-	return string(d.Method)
+func (dk *DropKeepModifier) String() string {
+	return string(dk.Method)
+}
+
+// MarshalJSON marshals the DropKeepModifier into JSON and includes an
+// internal type property.
+func (dk *DropKeepModifier) MarshalJSON() ([]byte, error) {
+	type Faux DropKeepModifier
+	return json.Marshal(&struct {
+		Type string `json:"type"`
+		*Faux
+	}{
+		Type: "drop_keep",
+		Faux: (*Faux)(dk),
+	})
 }
 
 // Apply executes a DropKeepModifier against a Roller. If the Roller is not a
 // Group an error is returned.
-func (d *DropKeepModifier) Apply(ctx context.Context, r Roller) error {
+func (dk *DropKeepModifier) Apply(ctx context.Context, r Roller) error {
 	group, ok := r.(*RollerGroup)
 	if !ok {
 		return errors.New("target for modifier not a dice group")
@@ -272,23 +285,23 @@ func (d *DropKeepModifier) Apply(ctx context.Context, r Roller) error {
 		return ti < tj
 	})
 
-	switch d.Method {
+	switch dk.Method {
 	case DropKeepMethodDrop, DropKeepMethodDropLowest:
 		// drop lowest Num
-		for i := 0; i < d.Num && i < len(dice); i++ {
+		for i := 0; i < dk.Num && i < len(dice); i++ {
 			dice[i].Drop(ctx, true)
 		}
 	case DropKeepMethodKeep, DropKeepMethodKeepHighest:
 		// drop all but highest Num
-		for i := 0; i < len(dice)-d.Num && i < len(dice); i++ {
+		for i := 0; i < len(dice)-dk.Num && i < len(dice); i++ {
 			dice[i].Drop(ctx, true)
 		}
 	case DropKeepMethodDropHighest:
-		for i := len(dice) - d.Num; i < len(dice) && i < len(dice); i++ {
+		for i := len(dice) - dk.Num; i < len(dice) && i < len(dice); i++ {
 			dice[i].Drop(ctx, true)
 		}
 	case DropKeepMethodKeepLowest:
-		for i := d.Num; i < len(dice) && i < len(dice); i++ {
+		for i := dk.Num; i < len(dice) && i < len(dice); i++ {
 			dice[i].Drop(ctx, true)
 		}
 	default:
@@ -303,16 +316,29 @@ type CriticalSuccessModifier struct {
 	*CompareTarget
 }
 
-func (m *CriticalSuccessModifier) String() string {
+func (cs *CriticalSuccessModifier) String() string {
 	var b strings.Builder
 	write := b.WriteString
 	write("cs")
 	// inferred equals if not specified
-	if m.Compare != EQL {
-		write(m.Compare.String())
+	if cs.Compare != EQL {
+		write(cs.Compare.String())
 	}
-	write(strconv.Itoa(m.Target))
+	write(strconv.Itoa(cs.Target))
 	return b.String()
+}
+
+// MarshalJSON marshals the CriticalSuccessModifer into JSON and includes an
+// internal type property.
+func (cs *CriticalSuccessModifier) MarshalJSON() ([]byte, error) {
+	type Faux CriticalSuccessModifier
+	return json.Marshal(&struct {
+		Type string `json:"type"`
+		*Faux
+	}{
+		Type: "critical_success",
+		Faux: (*Faux)(cs),
+	})
 }
 
 // A CriticalFailureModifier shifts or sets the compare point/range used to
@@ -321,16 +347,29 @@ type CriticalFailureModifier struct {
 	*CompareTarget
 }
 
-func (m *CriticalFailureModifier) String() string {
+func (cf *CriticalFailureModifier) String() string {
 	var b strings.Builder
 	write := b.WriteString
 	write("cf")
 	// inferred equals if not specified
-	if m.Compare != EQL {
-		write(m.Compare.String())
+	if cf.Compare != EQL {
+		write(cf.Compare.String())
 	}
-	write(strconv.Itoa(m.Target))
+	write(strconv.Itoa(cf.Target))
 	return b.String()
+}
+
+// MarshalJSON marshals the CriticalFailureModifer into JSON and includes an
+// internal type property.
+func (cf *CriticalFailureModifier) MarshalJSON() ([]byte, error) {
+	type Faux CriticalFailureModifier
+	return json.Marshal(&struct {
+		Type string `json:"type"`
+		*Faux
+	}{
+		Type: "critical_failure",
+		Faux: (*Faux)(cf),
+	})
 }
 
 // SortDirection is a possible direction for sorting dice.
@@ -344,7 +383,7 @@ const (
 
 // SortModifier is a modifier that will sort the Roller group.
 type SortModifier struct {
-	Direction SortDirection `json:"direction"`
+	Direction SortDirection `json:"direction,omitempty"`
 }
 
 func (s *SortModifier) String() string {
@@ -352,6 +391,19 @@ func (s *SortModifier) String() string {
 		return "sd"
 	}
 	return "s"
+}
+
+// MarshalJSON marshals the SortModifier modifier into JSON and includes an
+// internal type property.
+func (s *SortModifier) MarshalJSON() ([]byte, error) {
+	type Faux SortModifier
+	return json.Marshal(&struct {
+		Type string `json:"type"`
+		*Faux
+	}{
+		Type: "sort",
+		Faux: (*Faux)(s),
+	})
 }
 
 // Apply applies a sort to a Roller.
