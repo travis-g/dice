@@ -29,10 +29,8 @@ func init() {
 // rand.Source64.
 type csprngSource struct{}
 
-// Seed is a noop; a csprngSource does not need to be seeded.
-func (s *csprngSource) Seed(int64) {
-	// noop; system CSPRNG cannot be seeded
-}
+// Seed is a no op; a csprngSource does not need to be seeded.
+func (s *csprngSource) Seed(int64) {}
 
 func (s *csprngSource) Int63() int64 {
 	return int64(s.Uint64() & ^uint64(1<<63))
@@ -77,9 +75,10 @@ func quote(s string) string {
 	return strings.Join([]string{"\"", s, "\""}, "")
 }
 
-// expression creates a math expression from an arbitrary set of interfaces,
-// simplifying the result using the commutative property of addition.
-func expression(i ...interface{}) string {
+// SimplifyExpression creates a math expression string from an arbitrary set of
+// interfaces, simplifying the resulting expression using the commutative
+// property of addition.
+func SimplifyExpression(i ...interface{}) string {
 	raw := strings.Trim(strings.Join(strings.Fields(fmt.Sprint(i...)), "+"), "[]")
 	return strings.Replace(raw, "+-", "-", -1)
 }

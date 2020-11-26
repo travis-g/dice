@@ -32,9 +32,8 @@ var (
 
 	// ErrImpossibleRoll is returned when a given dice roll is deemed
 	// impossible, illogical, or will never be able to yield a result. As an
-	// example, a roll of "3d6r<6" should return this error at some stage in its
-	// evaluation, as no die in the set will ever be able to settle with the
-	// given reroll modifier.
+	// example, a roll of "3d6r<6" should return this error as no die in the set
+	// will ever be able to settle.
 	ErrImpossibleRoll = errors.New("impossible roll")
 )
 

@@ -14,11 +14,25 @@ import (
 // MaxRerolls is the maximum number of rerolls allowed on a given die.
 var MaxRerolls = 1000
 
+// ErrNilModifier is the error returned when a nil modifier is used.
+var ErrNilModifier = errors.New("nil modifier")
+
 // A Modifier is a dice modifier that can apply to a set or a single die.
 type Modifier interface {
 	// Apply executes a modifier against a Die.
 	Apply(context.Context, Roller) error
 	fmt.Stringer
+}
+
+// A RollModifier is a modifier that changes the way a Roller is rolled.
+type RollModifier interface {
+	Modifier
+	// Valid assesses the modifier's validity against a Roller. If the modifier
+	// is valid, it should be applied.
+	Valid(context.Context, Roller) (bool, error)
+
+	// Func returns a function to use in place of the default Roll for a Roller.
+	Func() func(context.Context) error
 }
 
 // ModifierList is a slice of modifiers that implements Stringer.
@@ -146,7 +160,7 @@ func (m *RerollModifier) String() string {
 // without a safeguard like MaxRerolls.
 func (m *RerollModifier) Apply(ctx context.Context, r Roller) error {
 	if m == nil {
-		return errors.New("nil modifier")
+		return ErrNilModifier
 	}
 	if m.Compare == EMPTY {
 		m.Compare = EQL
@@ -175,7 +189,7 @@ func (m *RerollModifier) Apply(ctx context.Context, r Roller) error {
 // large if the recursive calls are not optimized.
 func rerollApplyTail(ctx context.Context, m *RerollModifier, r Roller) error {
 	if m == nil {
-		return errors.New("nil modifier")
+		return ErrNilModifier
 	}
 	if err := r.Reroll(ctx); err != nil {
 		return err
@@ -195,7 +209,7 @@ func rerollApplyTail(ctx context.Context, m *RerollModifier, r Roller) error {
 // the reroll modifier should be applied, unless there is an error.
 func (m *RerollModifier) Valid(ctx context.Context, r Roller) (bool, error) {
 	if m == nil {
-		return false, errors.New("nil modifier")
+		return false, ErrNilModifier
 	}
 	var (
 		result float64
@@ -424,7 +438,7 @@ func (s *SortModifier) Apply(ctx context.Context, r Roller) error {
 
 // LabelModifier is a modifier that adds metadata/a label to a Group.
 type LabelModifier struct {
-	Label string `json:"label,omitempty"`
+	Label string `json:"label"`
 }
 
 func (l *LabelModifier) String() string {

@@ -5,17 +5,18 @@ import (
 	"fmt"
 )
 
-// Die represents an internally-typed die. If Result is a non-nil pointer, it
+// Die represents a typed die. If Result is a non-nil pointer, it
 // is considered rolled.
 type Die struct {
 	// Generic properties
-	Type DieType `json:"type,omitempty" mapstructure:"type"`
-	Size int     `json:"size" mapstructure:"size"`
+	Type    DieType   `json:"type,omitempty" mapstructure:"type"`
+	Size    int       `json:"size" mapstructure:"size"`
+	Rerolls int       `json:"rerolls" mapstructure:"rerolls"`
+	Results []*Result `json:"results,omitempty" mapstructure:"results"`
+	Dropped bool      `json:"dropped,omitempty" mapstructure:"dropped"`
 
-	Rerolls int `json:"rerolls" mapstructure:"size"`
-	*Result `json:"result,omitempty" mapstructure:"result"`
-
-	Modifiers ModifierList `json:"modifiers,omitempty" mapstructure:"modifiers"`
+	RollModifiers ModifierList `json:"roll_modifiers,omitempty" mapstructure:"roll_modifiers"`
+	Modifiers     ModifierList `json:"modifiers,omitempty" mapstructure:"modifiers"`
 }
 
 // NewDie creates a new die off of a properties list. It will tweak the
@@ -30,8 +31,13 @@ func NewDie(props *RollerProperties) (Roller, error) {
 	die := &Die{
 		Type:      props.Type,
 		Size:      props.Size,
-		Result:    props.Result,
 		Modifiers: props.DieModifiers,
+	}
+	if props.Result != nil {
+		die.Results = []*Result{props.Result}
+	}
+	if len(props.Results) > 0 {
+		die.Results = props.Results
 	}
 	return die, nil
 }
@@ -48,25 +54,28 @@ func (d *Die) Roll(ctx context.Context) error {
 	}
 
 	if d.Size == 0 {
-		d.Result = NewResult(0)
+		d.Results = []*Result{NewResult(0)}
 		return nil
 	}
 
+	var r *Result
 	switch d.Type {
 	case TypeFudge:
-		d.Result = NewResult(float64(Source.Intn(int(d.Size*2+1)) - int(d.Size)))
-		if d.Result.Value == -float64(d.Size) {
-			d.CritFailure = true
+		r = NewResult(float64(Source.Intn(int(d.Size*2+1)) - int(d.Size)))
+		if r.Value == -float64(d.Size) {
+			r.CritFailure = true
 		}
+		d.Results = append(d.Results, r)
 	default:
-		d.Result = NewResult(float64(1 + Source.Intn(int(d.Size))))
-		if d.Result.Value == 1 {
-			d.CritFailure = true
+		r = NewResult(float64(1 + Source.Intn(int(d.Size))))
+		if r.Value == 1 {
+			r.CritFailure = true
 		}
+		d.Results = append(d.Results, r)
 	}
 	// default critical success on max roll; override via modifiers
-	if d.Result.Value == float64(d.Size) {
-		d.CritSuccess = true
+	if r.Value == float64(d.Size) {
+		r.CritSuccess = true
 	}
 
 	d.Rerolls++
@@ -75,7 +84,7 @@ func (d *Die) Roll(ctx context.Context) error {
 
 // reset resets a Die's properties so that it can be re-rolled.
 func (d *Die) reset() {
-	d.Result = nil
+	d.Results = nil
 	d.Dropped = false
 }
 
@@ -111,11 +120,11 @@ func (d *Die) Reroll(ctx context.Context) error {
 	if d == nil {
 		return ErrNilDie
 	}
-	if d.Result == nil {
+	if d.Results == nil {
 		return ErrUnrolled
 	}
 
-	d.Result = nil
+	d.Results = nil
 	// reroll without reapplying all modifiers
 	return d.Roll(ctx)
 }
@@ -126,43 +135,79 @@ func (d *Die) String() string {
 	if d == nil {
 		return ""
 	}
-	if d.Result != nil {
+	if len(d.Results) != 0 {
 		total, _ := d.Total(context.Background())
 		return fmt.Sprintf("%.0f", total)
 	}
 	switch d.Type {
 	case TypePolyhedron:
-		return fmt.Sprintf("d%d%s", d.Size, d.Modifiers)
+		return fmt.Sprintf("d%d%s%s", d.Size, d.RollModifiers, d.Modifiers)
 	case TypeFudge:
 		if d.Size == 1 {
-			return fmt.Sprintf("dF%s", d.Modifiers)
+			return fmt.Sprintf("dF%s%s", d.RollModifiers, d.Modifiers)
 		}
-		return fmt.Sprintf("f%d%s", d.Size, d.Modifiers)
+		return fmt.Sprintf("f%d%s%s", d.Size, d.RollModifiers, d.Modifiers)
 	default:
 		return d.Type.String()
 	}
 }
 
 // Total implements the Total method. An ErrUnrolled error will be returned if
-// the die has not been rolled.
+// the die has no Results.
 func (d *Die) Total(ctx context.Context) (float64, error) {
 	if d == nil {
 		return 0.0, ErrNilDie
 	}
-	if d.Result == nil {
+	if len(d.Results) == 0 {
 		return 0.0, ErrUnrolled
 	}
-	return d.Result.Total(ctx)
+	if d.IsDropped(ctx) {
+		return 0.0, nil
+	}
+	sum := 0.0
+	for _, r := range d.Results {
+		total, err := r.Total(ctx)
+		if err != nil {
+			return sum, err
+		}
+		sum += total
+	}
+	return sum, nil
 }
 
-// Value returns the Result.Value of a Die, regardless of whether the Die was
-// dropped.
+// Value returns the sum of undropped Result.Values of a Die, regardless of
+// whether the Die was dropped.
 func (d *Die) Value(ctx context.Context) (float64, error) {
 	if d == nil {
 		return 0.0, ErrNilDie
 	}
-	if d.Result == nil {
+	if len(d.Results) == 0 {
 		return 0.0, ErrUnrolled
 	}
-	return d.Result.Value, nil
+	sum := 0.0
+	for _, r := range d.Results {
+		total, err := r.Total(ctx)
+		if err != nil {
+			return sum, err
+		}
+		sum += total
+	}
+	return sum, nil
+}
+
+// Drop marks a die as dropped, indicating all of its Results should be ignored
+// from totals.
+func (d *Die) Drop(_ context.Context, drop bool) {
+	if d != nil {
+		d.Dropped = drop
+	}
+}
+
+// IsDropped returns whether a Die was dropped.
+func (d *Die) IsDropped(_ context.Context) bool {
+	// If there's no die, the die can't have been dropped, it's unrolled.
+	if d == nil {
+		return false
+	}
+	return d.Dropped
 }

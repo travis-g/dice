@@ -8,14 +8,6 @@ import (
 
 var _ Roller = (*RollerGroup)(nil)
 
-func newInt(i int) *int {
-	return &i
-}
-
-func newFloat(f float64) *float64 {
-	return &f
-}
-
 var groupProperties = []struct {
 	name  string
 	props RollerProperties
@@ -28,6 +20,12 @@ var groupProperties = []struct {
 }, {"3dF",
 	RollerProperties{
 		Type:  TypeFudge,
+		Count: 3,
+	},
+}, {"3f3",
+	RollerProperties{
+		Type:  TypeFudge,
+		Size:  3,
 		Count: 3,
 	},
 },
@@ -54,37 +52,37 @@ func TestGroup_Total(t *testing.T) {
 		{
 			name: "basic",
 			g: Group{
-				&Die{Result: &Result{Value: 2.0}},
-				&Die{Result: &Result{Value: 3.0}},
-				&Die{Result: &Result{Value: 4.0}},
+				&Die{Results: []*Result{{Value: 2}}},
+				&Die{Results: []*Result{{Value: 3}}},
+				&Die{Results: []*Result{{Value: 4}}},
 			},
 			want: 9,
 		},
 		{
 			name: "nested",
 			g: Group{
-				&Die{Result: &Result{Value: 2.0}},
+				&Die{Results: []*Result{{Value: 2}}},
 				&Group{
-					&Die{Result: &Result{Value: 3.0}},
+					&Die{Results: []*Result{{Value: 3}}},
 				},
-				&Die{Result: &Result{Value: 4.0}},
+				&Die{Results: []*Result{{Value: 4}}},
 			},
 			want: 9,
 		},
 		{
 			name: "dropped",
 			g: Group{
-				&Die{Result: &Result{Value: 2.0, Dropped: true}},
-				&Die{Result: &Result{Value: 4.0}},
+				&Die{Results: []*Result{{Value: 2, Dropped: true}}},
+				&Die{Results: []*Result{{Value: 4}}},
 			},
 			want: 4,
 		},
 		{
 			name: "mixed",
 			g: Group{
-				&Die{Result: &Result{Value: 2.0, Dropped: true}},
-				&Die{Result: &Result{Value: 1}},
-				&Die{Type: TypeFudge, Result: &Result{Value: -1}},
+				&Die{Results: []*Result{{Value: 2, Dropped: true}}},
+				&Die{Results: []*Result{{Value: 1}}},
+				&Die{Type: TypeFudge, Results: []*Result{{Value: -1}}},
 			},
 			want: 0,
 		},
@@ -96,7 +94,7 @@ func TestGroup_Total(t *testing.T) {
 				t.Errorf("Got error on %v: %v", tt, err)
 			}
 			if got := total; got != tt.want {
-				t.Errorf("Group.Total() = %v, want %v", got, tt.want)
+				t.Errorf("Group.Total(%s) = %v, want %v", tt.name, got, tt.want)
 			}
 		})
 	}
@@ -109,11 +107,16 @@ func TestGroup_Expression(t *testing.T) {
 		want string
 	}{
 		{
+			name: "empty",
+			g:    Group{},
+			want: "0",
+		},
+		{
 			name: "basic",
 			g: Group{
-				&Die{Result: &Result{Value: 2}},
-				&Die{Result: &Result{Value: 3}},
-				&Die{Result: &Result{Value: 4}},
+				&Die{Results: []*Result{{Value: 2}}},
+				&Die{Results: []*Result{{Value: 3}}},
+				&Die{Results: []*Result{{Value: 4}}},
 			},
 			want: "2+3+4",
 		},
@@ -121,8 +124,8 @@ func TestGroup_Expression(t *testing.T) {
 			name: "unrolled",
 			g: Group{
 				&Die{Size: 3},
-				&Die{Result: &Result{Value: 3, Dropped: false}},
-				&Die{Result: &Result{Value: 4, Dropped: false}},
+				&Die{Results: []*Result{{Value: 3, Dropped: false}}},
+				&Die{Results: []*Result{{Value: 4, Dropped: false}}},
 			},
 			want: "d3+3+4",
 		},
@@ -130,7 +133,7 @@ func TestGroup_Expression(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := tt.g.Expression(); got != tt.want {
-				t.Errorf("Group.Expression() = %v, want %v", got, tt.want)
+				t.Errorf("Group.Expression(%s) = %v, want %v", tt.name, got, tt.want)
 			}
 		})
 	}

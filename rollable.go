@@ -29,7 +29,7 @@ type Roller interface {
 	Total(context.Context) (float64, error)
 
 	// Value returns the rolled face value of the Roller, regardless of whether
-	// the Roller was dropped. Value should be used when sorting.
+	// the Roller was dropped. The Value method should be used when sorting.
 	Value(context.Context) (float64, error)
 
 	// Drop marks the object dropped based on a provided boolean.
@@ -51,12 +51,14 @@ type Roller interface {
 // This may be best broken into two properties types, a RollerProperties and a
 // RollerGroupProperties.
 type RollerProperties struct {
-	Type   DieType `json:"type,omitempty" mapstructure:"type"`
-	Size   int     `json:"size,omitempty" mapstructure:"size"`
-	Result *Result `json:"result,omitempty" mapstructure:"result"`
-	Count  int     `json:"count,omitempty" mapstructure:"count"`
+	Type    DieType   `json:"type,omitempty" mapstructure:"type"`
+	Size    int       `json:"size,omitempty" mapstructure:"size"`
+	Result  *Result   `json:"result,omitempty" mapstructure:"result"`
+	Results []*Result `json:"results,omitempty" mapstructure:"results"`
+	Count   int       `json:"count,omitempty" mapstructure:"count"`
 
 	// Modifiers for the dice or parent set
+	RollModifiers  ModifierList `json:"roll_modifiers,omitempty" mapstructure:"roll_modifiers"`
 	DieModifiers   ModifierList `json:"die_modifiers,omitempty" mapstructure:"die_modifiers"`
 	GroupModifiers ModifierList `json:"group_modifiers,omitempty" mapstructure:"group_modifiers"`
 }
@@ -90,7 +92,8 @@ func NewRoller(props *RollerProperties) (Roller, error) {
 	return f(props)
 }
 
-// A Group is a slice of rollables.
+// A Group is a slice of Rollers. Groups can be comprised of any mix of
+// individual dice and other nested Groups.
 type Group []Roller
 
 // Total implements the Total method and sums a dice group's totals, excluding
@@ -113,18 +116,20 @@ func (g Group) Value(ctx context.Context) (float64, error) {
 }
 
 func (g Group) String() string {
+	// TODO: use buffers/[]byte
+	if len(g) == 0 {
+		// short circuit
+		return "0 => 0"
+	}
 	temp := make([]string, len(g))
 	for i, dice := range g {
 		temp[i] = fmt.Sprintf("%v", dice.String())
 	}
-	if len(temp) == 0 {
-		temp = []string{"0"}
-	}
-	t, _ := g.Total(context.TODO())
-	return fmt.Sprintf("%s => %.0f", expression(strings.Join(temp, "+")), t)
+	t, _ := g.Total(context.Background())
+	return fmt.Sprintf("%s => %.0f", SimplifyExpression(strings.Join(temp, "+")), t)
 }
 
-// Drop is (presently) a noop on the group.
+// Drop is (presently) a no op on the group.
 func (g Group) Drop(_ context.Context, _ bool) {
 	// noop
 }
@@ -184,7 +189,7 @@ func (g Group) Expression() string {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// return 0 if no dice in the group.
+	// return 0 if the Group is empty.
 	if len(g) == 0 {
 		return "0"
 	}
@@ -199,6 +204,7 @@ func (g Group) Expression() string {
 	return strings.Replace(strings.Join(dice, "+"), "+-", "-", -1)
 }
 
+// Group should implement the sort interface.
 var _ sort.Interface = (*Group)(nil)
 
 // Len returns the number of elements in a Group.
@@ -239,8 +245,9 @@ func (g Group) Swap(i, j int) {
 // supplied at this level should be group-level modifiers, like drop/keep
 // modifiers.
 type RollerGroup struct {
-	Group     `json:"group" mapstructure:"group"`
-	Modifiers ModifierList `json:"modifiers,omitempty" mapstructure:"modifiers"`
+	Group         `json:"group" mapstructure:"group"`
+	Modifiers     ModifierList `json:"modifiers,omitempty" mapstructure:"modifiers"`
+	RollModifiers ModifierList `json:"roll_modifiers,omitempty" mapstructure:"roll_modifiers"`
 }
 
 // NewRollerGroup creates a new dice group with the count provided by the
