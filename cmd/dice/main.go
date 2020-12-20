@@ -21,30 +21,30 @@ func main() {
 	// globalFlags should be set up so that they can be used anywhere in the
 	// command
 	globalFlags := []cli.Flag{
-		cli.StringFlag{
-			Name:   "format",
-			Value:  "",
-			Usage:  "output format",
-			EnvVar: "FORMAT",
+		&cli.StringFlag{
+			Name:    "format",
+			Value:   "",
+			Usage:   "output format",
+			EnvVars: []string{"FORMAT"},
 		},
-		cli.StringFlag{
-			Name:   "field",
-			Value:  "",
-			Usage:  "output specific field (unimplemented)",
-			EnvVar: "FIELD",
+		&cli.StringFlag{
+			Name:    "field",
+			Value:   "",
+			Usage:   "output specific field (unimplemented)",
+			EnvVars: []string{"FIELD"},
 		},
 	}
 
 	httpFlags := []cli.Flag{
-		cli.StringFlag{
-			Name:   "http",
-			Value:  ":6436", // base64("d6")
-			Usage:  "HTTP service address",
-			EnvVar: "HTTP",
+		&cli.StringFlag{
+			Name:    "http",
+			Value:   ":6436", // base64("d6")
+			Usage:   "HTTP service address",
+			EnvVars: []string{"HTTP"},
 		},
 	}
 
-	cmd.Commands = []cli.Command{
+	cmd.Commands = []*cli.Command{
 		{
 			Name:    "eval",
 			Aliases: []string{"e"},
