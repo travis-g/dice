@@ -11,7 +11,7 @@ import (
 // RollCommand is a command that will create a Dice from the first argument
 // passed and roll it, printing the result.
 func RollCommand(c *cli.Context) error {
-	ctx := context.Background()
+	ctx := dice.NewContextFromContext(context.Background())
 
 	roll := c.Args().Get(0)
 	props, err := dice.ParseNotation(ctx, roll)

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"go.uber.org/atomic"
 )
 
 var _ Roller = (*Group)(nil)
@@ -17,7 +19,8 @@ type Roller interface {
 	FullRoll(context.Context) error
 
 	// Roll rolls and records the object's Result. Roll should not apply
-	// modifiers.
+	// modifiers. However, it should always increment the appropriate roll
+	// count context key.
 	Roll(context.Context) error
 
 	// Reroll resets the object and should re-roll the core die by calling Roll.
@@ -37,6 +40,12 @@ type Roller interface {
 
 	// IsDropped returns the dropped status of the Roller.
 	IsDropped(context.Context) bool
+
+	// Parent returns the parent of the Roller, or nil.
+	Parent() Roller
+
+	// Add associates a Roller as a child.
+	Add(Roller)
 
 	// Must implement a String method; if the object has not been rolled String
 	// should return a stringified representation of that can be re-parsed to
@@ -146,6 +155,11 @@ func (g Group) Copy() []Roller {
 // FullRoll implements the Roller interface's FullRoll method by rolling each
 // object/Roller within the group.
 func (g Group) FullRoll(ctx context.Context) (err error) {
+	// ensure context has roll counter
+	if _, ok := ctx.Value(CtxKeyTotalRolls).(*atomic.Uint64); !ok {
+		ctx = context.WithValue(ctx, CtxKeyTotalRolls, atomic.NewUint64(0))
+	}
+
 	for _, dice := range g {
 		err = dice.FullRoll(ctx)
 		if err != nil {
@@ -199,6 +213,16 @@ func (g Group) Expression() string {
 	return strings.Replace(strings.Join(dice, "+"), "+-", "-", -1)
 }
 
+// Parent returns the parent object of the Group, which should be nil.
+func (g Group) Parent() Roller {
+	return nil
+}
+
+func (g Group) Add(r Roller) {
+	g = append(g, r)
+}
+
+// ensure a Group can be sorted.
 var _ sort.Interface = (*Group)(nil)
 
 // Len returns the number of elements in a Group.
@@ -211,19 +235,10 @@ func (g Group) Less(i, j int) bool {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// if i is dropped, sort i after
-	if g[i].IsDropped(ctx) {
-		return true
-	}
-	// if j is dropped, sort j after
-	if g[j].IsDropped(ctx) {
-		return false
-	}
-
-	// if i's total is less than j, sort i after
-	it, _ := g[i].Total(ctx)
-	jt, _ := g[j].Total(ctx)
-	if it < jt {
+	// if i's face value is less than j's, sort j after
+	iv, _ := g[i].Value(ctx)
+	jv, _ := g[j].Value(ctx)
+	if iv < jv {
 		return true
 	}
 	return false
@@ -241,6 +256,8 @@ func (g Group) Swap(i, j int) {
 type RollerGroup struct {
 	Group     `json:"group" mapstructure:"group"`
 	Modifiers ModifierList `json:"modifiers,omitempty" mapstructure:"modifiers"`
+	rolls     int64
+	parent    Roller
 }
 
 // NewRollerGroup creates a new dice group with the count provided by the
@@ -270,6 +287,11 @@ func NewRollerGroup(props *RollerProperties) (*RollerGroup, error) {
 
 // FullRoll rolls each die embedded in the dice group.
 func (d *RollerGroup) FullRoll(ctx context.Context) error {
+	// ensure context has roll counter
+	if _, ok := ctx.Value(CtxKeyTotalRolls).(*atomic.Uint64); !ok {
+		ctx = context.WithValue(ctx, CtxKeyTotalRolls, atomic.NewUint64(0))
+	}
+
 	if err := d.Group.FullRoll(ctx); err != nil {
 		return err
 	}

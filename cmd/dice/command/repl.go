@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/travis-g/dice"
 	"github.com/travis-g/dice/math"
 	"github.com/urfave/cli"
 )
@@ -14,7 +15,6 @@ const replPrompt = ">>> "
 
 // REPLCommand is a command that will initiate a dice REPL.
 func REPLCommand(c *cli.Context) error {
-	ctx := context.Background()
 	scanner := bufio.NewScanner(os.Stdin)
 
 	// Check if data was piped through Stdin, or if the REPL is interactive
@@ -23,6 +23,8 @@ func REPLCommand(c *cli.Context) error {
 
 	// Begin the REPL:
 	for {
+		// context for each interation
+		ctx := dice.NewContextFromContext(context.Background())
 		if interactive {
 			fmt.Fprintf(os.Stderr, replPrompt)
 		}
@@ -37,6 +39,9 @@ func REPLCommand(c *cli.Context) error {
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err)
 				continue
+			}
+			if exp == nil {
+				err = math.ErrNilExpression
 			}
 			out, err := Output(c, exp)
 			if err != nil {

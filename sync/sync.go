@@ -96,6 +96,15 @@ func (r *RWMutexRoller) String() string {
 	return r.die.String()
 }
 
+func (r *RWMutexRoller) Parent() dice.Roller {
+	panic("unimplemented code")
+	return nil
+}
+
+func (r *RWMutexRoller) Add(die dice.Roller) {
+	panic("unimplemented code")
+}
+
 // Lock locks the mutex of RWMutexRoller.
 func (r *RWMutexRoller) Lock() {
 	r.l.Lock()

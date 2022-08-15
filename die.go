@@ -3,6 +3,8 @@ package dice
 import (
 	"context"
 	"fmt"
+
+	"go.uber.org/atomic"
 )
 
 // Die represents an internally-typed die. If Result is a non-nil pointer, it
@@ -12,15 +14,23 @@ type Die struct {
 	Type DieType `json:"type,omitempty" mapstructure:"type"`
 	Size int     `json:"size" mapstructure:"size"`
 
-	Rerolls int `json:"rerolls" mapstructure:"size"`
+	Rerolls int `json:"rerolls" mapstructure:"rerolls"`
 	*Result `json:"result,omitempty" mapstructure:"result"`
 
 	Modifiers ModifierList `json:"modifiers,omitempty" mapstructure:"modifiers"`
+
+	parent Roller
 }
 
 // NewDie creates a new die off of a properties list. It will tweak the
 // properties list to better suit reuse.
 func NewDie(props *RollerProperties) (Roller, error) {
+	return NewDieWithParent(props, nil)
+}
+
+// NewDieWithParent creates a new die off of a properties list. It will tweak the
+// properties list to better suit reuse.
+func NewDieWithParent(props *RollerProperties, parent Roller) (Roller, error) {
 	// If the property set was for a default fudge die set, set a default size
 	// of 1.
 	if props.Type == TypeFudge && props.Size == 0 {
@@ -33,6 +43,10 @@ func NewDie(props *RollerProperties) (Roller, error) {
 		Result:    props.Result,
 		Modifiers: props.DieModifiers,
 	}
+
+	if parent != nil {
+		parent.Add(die)
+	}
 	return die, nil
 }
 
@@ -43,9 +57,21 @@ func (d *Die) Roll(ctx context.Context) error {
 	}
 
 	// Check if rolled too many times already
-	if d.Rerolls >= MaxRerolls {
-		return ErrMaxRolls
+	var maxRolls = int64(MaxRerolls)
+	if ctxMaxRolls, ok := ctx.Value(CtxKeyMaxRolls).(int64); ok {
+		maxRolls = ctxMaxRolls
 	}
+	ctxTotalRolls, ok := ctx.Value(CtxKeyTotalRolls).(*atomic.Uint64)
+	if ok {
+		if ctxTotalRolls.Load() >= uint64(maxRolls) {
+			return ErrMaxRolls
+		}
+	} else {
+		ctxTotalRolls = atomic.NewUint64(0)
+		ctx = context.WithValue(ctx, CtxKeyTotalRolls, ctxTotalRolls)
+	}
+	// bump context roll count at the end
+	defer ctxTotalRolls.Inc()
 
 	if d.Size == 0 {
 		d.Result = NewResult(0)
@@ -69,11 +95,10 @@ func (d *Die) Roll(ctx context.Context) error {
 		d.CritSuccess = true
 	}
 
-	d.Rerolls++
 	return nil
 }
 
-// reset resets a Die's properties so that it can be re-rolled.
+// reset resets a Die's properties so that it can be re-rolled from scratch.
 func (d *Die) reset() {
 	d.Result = nil
 	d.Dropped = false
@@ -84,6 +109,21 @@ func (d *Die) reset() {
 func (d *Die) FullRoll(ctx context.Context) error {
 	if d == nil {
 		return ErrNilDie
+	}
+
+	// Check if rolled too many times already
+	var maxRolls = int64(MaxRerolls)
+	if ctxMaxRolls, ok := ctx.Value(CtxKeyMaxRolls).(int64); ok {
+		maxRolls = ctxMaxRolls
+	}
+	ctxTotalRolls, ok := ctx.Value(CtxKeyTotalRolls).(*atomic.Uint64)
+	if ok {
+		if ctxTotalRolls.Load() >= uint64(maxRolls) {
+			return ErrMaxRolls
+		}
+	} else {
+		ctxTotalRolls = atomic.NewUint64(0)
+		ctx = context.WithValue(ctx, CtxKeyTotalRolls, ctxTotalRolls)
 	}
 
 	if err := d.Roll(ctx); err != nil {
@@ -165,4 +205,17 @@ func (d *Die) Value(ctx context.Context) (float64, error) {
 		return 0.0, ErrUnrolled
 	}
 	return d.Result.Value, nil
+}
+
+// Parent returns the Die's parent, which will be nil if an orphan.
+func (d *Die) Parent() Roller {
+	if d == nil {
+		return nil
+	}
+	return d.parent
+}
+
+// Add causes a panic as a single Die cannot have a descendent.
+func (d *Die) Add(r Roller) {
+	panic("impossible action")
 }
