@@ -11,9 +11,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// MaxRerolls is the maximum number of rerolls allowed on a given die.
-var MaxRerolls = 1000
-
 // A Modifier is a dice modifier that can apply to a set or a single die.
 type Modifier interface {
 	// Apply executes a modifier against a Die.
@@ -284,11 +281,11 @@ func (d *DropKeepModifier) Apply(ctx context.Context, r Roller) error {
 			dice[i].Drop(ctx, true)
 		}
 	case DropKeepMethodDropHighest:
-		for i := len(dice) - d.Num; i < len(dice) && i < len(dice); i++ {
+		for i := len(dice) - d.Num; i < len(dice); i++ {
 			dice[i].Drop(ctx, true)
 		}
 	case DropKeepMethodKeepLowest:
-		for i := d.Num; i < len(dice) && i < len(dice); i++ {
+		for i := d.Num; i < len(dice); i++ {
 			dice[i].Drop(ctx, true)
 		}
 	default:
@@ -368,4 +365,85 @@ func (s *SortModifier) Apply(ctx context.Context, r Roller) error {
 		sort.Sort(sort.Reverse(group.Group))
 	}
 	return nil
+}
+
+type ExplodeModifier struct {
+	*CompareTarget
+	Once bool `json:"once,omitempty"`
+}
+
+func (m *ExplodeModifier) String() string {
+	var b strings.Builder
+	write := b.WriteString
+	write("!")
+	if m.Once {
+		write("o")
+	}
+	// inferred equals if not specified
+	if m.Compare != EQL {
+		write(m.Compare.String())
+	}
+	if m.Target > 0 {
+		write(strconv.Itoa(m.Target))
+	}
+	return b.String()
+}
+
+func (m *ExplodeModifier) Apply(ctx context.Context, r Roller) error {
+	die, ok := r.(*Die)
+	if !ok {
+		return errors.New("roller not a die")
+	}
+
+	group, ok := die.Parent().(*Group)
+	if !ok {
+		return errors.New("parent is not a Group")
+	}
+	if group == nil {
+		return errors.New("parent is nil")
+	}
+	if ok, err := m.Valid(ctx, r); err == nil && ok {
+		group.Add(&Die{
+			Type:      die.Type,
+			Size:      die.Size,
+			Modifiers: die.Modifiers, // FIXME: these need to be a copy
+			parent:    group,
+		})
+	}
+
+	return nil
+}
+
+func (m *ExplodeModifier) Valid(ctx context.Context, r Roller) (bool, error) {
+	if m == nil {
+		return false, errors.New("nil modifier")
+	}
+	var (
+		result float64
+		err    error
+	)
+
+	result, err = r.Value(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	if m.Compare == EMPTY {
+		m.Compare = EQL
+	}
+	switch m.Compare {
+	// until the comparison operation succeeds and the reroll passes, keep
+	// rerolling.
+	case EQL:
+		return result != float64(m.Target), nil
+	case LSS, LEQ:
+		return !(result <= float64(m.Target)), nil
+	case GTR, GEQ:
+		return !(result >= float64(m.Target)), nil
+	default:
+		err = &ErrNotImplemented{
+			fmt.Sprintf("uncaught case for exploding compare: %s", m.Compare),
+		}
+		return false, err
+	}
 }

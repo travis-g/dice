@@ -1,301 +1,238 @@
+//go:build ignore
 // +build ignore
 
 package main
 
 import (
-	"bufio"
+	"encoding/json"
 	"fmt"
-	"io"
+	"log"
+	"math"
+	"os"
 	"strconv"
 	"strings"
+
+	"github.com/alecthomas/kong"
+
+	"github.com/alecthomas/participle/v2"
+	"github.com/alecthomas/participle/v2/lexer/stateful"
 )
 
-// Token constants are lexer/parser tokens.
-type Token int
+var cli struct {
+	AST        bool               `help:"Print AST for expression."`
+	Set        map[string]float64 `short:"s" help:"Set variables."`
+	Expression []string           `arg required help:"Expression to evaluate."`
+}
 
-// Token constants
+type Operator int
+
 const (
-	// Special tokens
-	ILLEGAL Token = iota
-	EOF
-	WS
-
-	// Literals
-	IDENT
-	DIE
-	NUM
-
-	// Misc
-	PLUS
-	MINUS
-	ASTERISK
-	SLASH
-	EQ
-	LT
-	GT
-	LPAREN
-	RPAREN
+	OpMul Operator = iota
+	OpDiv
+	OpAdd
+	OpSub
 )
 
-func isWhitespace(ch rune) bool {
-	return ch == ' ' || ch == '\t' || ch == '\n'
+var operatorMap = map[string]Operator{"+": OpAdd, "-": OpSub, "*": OpMul, "/": OpDiv}
+
+func (o *Operator) Capture(s []string) error {
+	*o = operatorMap[s[0]]
+	return nil
 }
 
-func isLetter(ch rune) bool {
-	return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')
+// E --> T {( "+" | "-" ) T}
+// T --> F {( "*" | "/" ) F}
+// F --> P ["^" F]
+// P --> v | "(" E ")" | "-" T
+
+type Value struct {
+	Dice          *Notation   `  @@`
+	Number        *float64    `| @(Float|Int)`
+	Subexpression *Expression `| "(" @@ ")"`
+	// Variable      *string     `| @Ident`
 }
 
-func isDigit(ch rune) bool {
-	return (ch >= '0' && ch <= '9')
+type Notation struct {
+	Count *int64 `(@Int)? `
+	Size  *int64 `"d" @Int`
 }
 
-var eof = rune(0)
-
-// Scanner represents a lexical scanner.
-type Scanner struct {
-	r *bufio.Reader
-}
-
-// NewScanner returns a new instance of Scanner.
-func NewScanner(r io.Reader) *Scanner {
-	return &Scanner{r: bufio.NewReader(r)}
-}
-
-// read reads the next rune from the bufferred reader.
-// Returns the rune(0) if an error occurs (or io.EOF is returned).
-func (s *Scanner) read() rune {
-	ch, _, err := s.r.ReadRune()
-	if err != nil {
-		return eof
+func (n *Notation) Capture(s []string) error {
+	log.Println(s)
+	size, err := strconv.ParseInt((s[0][1:]), 10, 64)
+	*n = Notation{
+		Size: &size,
 	}
-	return ch
+	return err
 }
 
-// unread places the previously read rune back on the reader.
-func (s *Scanner) unread() { _ = s.r.UnreadRune() }
-
-// Scan returns the next token and literal value.
-func (s *Scanner) Scan() (tok Token, lit string) {
-	// Read the next rune.
-	ch := s.read()
-
-	// If we see whitespace then consume all contiguous whitespace.
-	// If we see a letter then consume as an ident or reserved word.
-	if isWhitespace(ch) {
-		s.unread()
-		return s.scanWhitespace()
-	} else if isLetter(ch) {
-		s.unread()
-		return s.scanLetters()
-	} else if isDigit(ch) {
-		s.unread()
-		return s.scanDigit()
-	}
-
-	// Otherwise read the individual character.
-	switch ch {
-	case eof:
-		return EOF, ""
-	case '-':
-		return MINUS, string(ch)
-	case '+':
-		return PLUS, string(ch)
-	case '<':
-		return LT, string(ch)
-	case '>':
-		return GT, string(ch)
-	case '=':
-		return EQ, string(ch)
-	}
-
-	return ILLEGAL, string(ch)
+type Factor struct {
+	Base     *Value `@@`
+	Exponent *Value `( "^" @@ )?`
 }
 
-// scanWhitespace consumes the current rune and all contiguous whitespace.
-func (s *Scanner) scanWhitespace() (tok Token, lit string) {
-	// Create a builder and read the current character into it.
-	var b strings.Builder
-	b.WriteRune(s.read())
-
-	// Read every subsequent whitespace character into the buffer.
-	// Non-whitespace characters and EOF will cause the loop to exit.
-	for {
-		if ch := s.read(); ch == eof {
-			break
-		} else if !isWhitespace(ch) {
-			s.unread()
-			break
-		} else {
-			b.WriteRune(ch)
-		}
-	}
-
-	return WS, b.String()
+type OpFactor struct {
+	Operator Operator `@("*" | "/")`
+	Factor   *Factor  `@@`
 }
 
-// scanIdent consumes the current rune and all contiguous ident runes.
-func (s *Scanner) scanIdent() (tok Token, lit string) {
-	// Create a builder and read the current character into it.
-	var b strings.Builder
-	b.WriteRune(s.read())
+type Term struct {
+	Left  *Factor     `@@`
+	Right []*OpFactor `@@*`
+}
 
-	// Read every subsequent ident character into the buffer.
-	// Non-ident characters and EOF will cause the loop to exit.
-	for {
-		if ch := s.read(); ch == eof {
-			break
-		} else if !isLetter(ch) && !isDigit(ch) {
-			s.unread()
-			break
-		} else {
-			b.WriteRune(ch)
-		}
+type OpTerm struct {
+	Operator Operator `@("+" | "-")`
+	Term     *Term    `@@`
+}
+
+type Expression struct {
+	Left  *Term     `@@`
+	Right []*OpTerm `@@*`
+}
+
+// Display
+
+func (o Operator) String() string {
+	switch o {
+	case OpMul:
+		return "*"
+	case OpDiv:
+		return "/"
+	case OpSub:
+		return "-"
+	case OpAdd:
+		return "+"
 	}
+	panic("unsupported operator")
+}
 
-	// If the string matches a keyword then return that keyword.
-	upper := strings.ToUpper(b.String())
+func (v *Value) String() string {
+	if v.Number != nil {
+		return fmt.Sprintf("%g", *v.Number)
+	}
+	// if v.Variable != nil {
+	// 	return *v.Variable
+	// }
+	return "(" + v.Subexpression.String() + ")"
+}
+
+func (f *Factor) String() string {
+	out := f.Base.String()
+	if f.Exponent != nil {
+		out += " ^ " + f.Exponent.String()
+	}
+	return out
+}
+
+func (o *OpFactor) String() string {
+	return fmt.Sprintf("%s %s", o.Operator, o.Factor)
+}
+
+func (t *Term) String() string {
+	out := []string{t.Left.String()}
+	for _, r := range t.Right {
+		out = append(out, r.String())
+	}
+	return strings.Join(out, " ")
+}
+
+func (o *OpTerm) String() string {
+	return fmt.Sprintf("%s %s", o.Operator, o.Term)
+}
+
+func (e *Expression) String() string {
+	out := []string{e.Left.String()}
+	for _, r := range e.Right {
+		out = append(out, r.String())
+	}
+	return strings.Join(out, " ")
+}
+
+// Evaluation
+
+func (o Operator) Eval(l, r float64) float64 {
+	switch o {
+	case OpMul:
+		return l * r
+	case OpDiv:
+		return l / r
+	case OpAdd:
+		return l + r
+	case OpSub:
+		return l - r
+	}
+	panic("unsupported operator")
+}
+
+func (v *Value) Eval(ctx Context) float64 {
 	switch {
-	case strings.HasPrefix(upper, "D"):
-		return DIE, b.String()
-	}
-
-	// Otherwise return as a regular identifier.
-	return IDENT, b.String()
-}
-
-func (s *Scanner) scanLetters() (tok Token, lit string) {
-	// Create a builder and read the current character into it.
-	var b strings.Builder
-	b.WriteRune(s.read())
-
-	// Read every subsequent ident character into the buffer.
-	// Non-ident characters and EOF will cause the loop to exit.
-	for {
-		if ch := s.read(); ch == eof {
-			break
-		} else if !isLetter(ch) {
-			s.unread()
-			break
-		} else {
-			b.WriteRune(ch)
-		}
-	}
-
-	// If the string matches a keyword then return that keyword.
-	upper := strings.ToUpper(b.String())
-	switch {
-	case strings.HasPrefix(upper, "D"):
-		return DIE, b.String()
-	}
-
-	// Otherwise return as a regular identifier.
-	return IDENT, b.String()
-}
-
-// scanDigit consumes the current rune and all contiguous digit runes.
-func (s *Scanner) scanDigit() (tok Token, lit string) {
-	// Create a builder and read the current character into it.
-	var b strings.Builder
-	b.WriteRune(s.read())
-
-	// Read every subsequent ident character into the buffer.
-	// Non-ident characters and EOF will cause the loop to exit.
-	for {
-		if ch := s.read(); ch == eof {
-			break
-		} else if !isDigit(ch) {
-			s.unread()
-			break
-		} else {
-			b.WriteRune(ch)
-		}
-	}
-
-	// Otherwise return as number.
-	return NUM, b.String()
-}
-
-// Parser represents a parser.
-type Parser struct {
-	s   *Scanner
-	buf struct {
-		tok Token  // last read token
-		lit string // last read literal
-		n   int    // buffer size (max=1)
+	case v.Number != nil:
+		return *v.Number
+	// case v.Variable != nil:
+	// 	value, ok := ctx[*v.Variable]
+	// 	if !ok {
+	// 		panic("no such variable " + *v.Variable)
+	// 	}
+	// 	return value
+	default:
+		return v.Subexpression.Eval(ctx)
 	}
 }
 
-// NewParser returns a new instance of Parser.
-func NewParser(r io.Reader) *Parser {
-	return &Parser{s: NewScanner(r)}
+func (f *Factor) Eval(ctx Context) float64 {
+	b := f.Base.Eval(ctx)
+	if f.Exponent != nil {
+		return math.Pow(b, f.Exponent.Eval(ctx))
+	}
+	return b
 }
 
-// scan returns the next token from the underlying scanner.
-// If a token has been unscanned then read that instead.
-func (p *Parser) scan() (tok Token, lit string) {
-	// If we have a token on the buffer, then return it.
-	if p.buf.n != 0 {
-		p.buf.n = 0
-		return p.buf.tok, p.buf.lit
+func (t *Term) Eval(ctx Context) float64 {
+	n := t.Left.Eval(ctx)
+	for _, r := range t.Right {
+		n = r.Operator.Eval(n, r.Factor.Eval(ctx))
 	}
-
-	// Otherwise read the next token from the scanner.
-	tok, lit = p.s.Scan()
-
-	// Save it to the buffer in case we unscan later.
-	p.buf.tok, p.buf.lit = tok, lit
-
-	return
+	return n
 }
 
-// unscan pushes the previously read token back onto the buffer.
-func (p *Parser) unscan() { p.buf.n = 1 }
-
-// scanIgnoreWhitespace scans the next non-whitespace token.
-func (p *Parser) scanIgnoreWhitespace() (tok Token, lit string) {
-	tok, lit = p.scan()
-	if tok == WS {
-		tok, lit = p.scan()
+func (e *Expression) Eval(ctx Context) float64 {
+	l := e.Left.Eval(ctx)
+	for _, r := range e.Right {
+		l = r.Operator.Eval(l, r.Term.Eval(ctx))
 	}
-	return
+	return l
 }
 
-type Props struct {
-	Count uint
-	Size  uint
-}
+type Context map[string]float64
 
-func (p *Parser) Parse() (*Props, error) {
-	props := &Props{}
-	tok, lit := p.scanIgnoreWhitespace()
-	if tok == DIE {
-		// no prefixed count found, default to 1
-		props.Count = 1
-	} else if tok == NUM {
-		icount, err := strconv.Atoi(lit)
-		if err != nil {
-			return nil, err
-		}
-		props.Count = uint(icount)
-		// scan next, which should be a notation string
-		p.scanIgnoreWhitespace()
-	} else {
-		return nil, fmt.Errorf("found unexpected %q", lit)
-	}
-	tok, lit = p.scanIgnoreWhitespace()
-	if tok != NUM {
-		return nil, fmt.Errorf("found %q, expected NUM", lit)
-	}
-	isize, err := strconv.Atoi(lit)
-	if err != nil {
-		return nil, err
-	}
-	props.Size = uint(isize)
-	return props, nil
-}
+var (
+	lexer = stateful.MustSimple([]stateful.Rule{
+		{"Ident", `[a-zA-Z]\w*`, nil},
+		{"Number", `(?:\d*\.)?\d+`, nil},
+		{"Int", `\d+`, nil},
+		{"Punct", `[-[!@#$%^&*()+_={}\|:;"'<,>.?/]|]`, nil},
+	})
+	parser = participle.MustBuild(&Notation{},
+		participle.Lexer(lexer),
+		participle.UseLookahead(2),
+	)
+	// parser = participle.MustBuild(&Expression{})
+)
 
 func main() {
-	parser := NewParser(strings.NewReader("3d20+1"))
-	props, err := parser.Parse()
-	fmt.Println(props, err)
+	ctx := kong.Parse(&cli,
+		kong.Description("A basic expression parser and evaluator."),
+		kong.UsageOnError(),
+	)
+
+	expr := &Notation{}
+	err := parser.ParseString("", strings.Join(cli.Expression, " "), expr)
+	ctx.FatalIfErrorf(err)
+
+	if cli.AST {
+		json.NewEncoder(os.Stdout).Encode(expr)
+	} else {
+		// fmt.Println(expr, "=", expr.Eval(cli.Set))
+	}
 }

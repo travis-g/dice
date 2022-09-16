@@ -57,7 +57,7 @@ func (d *Die) Roll(ctx context.Context) error {
 	}
 
 	// Check if rolled too many times already
-	var maxRolls = int64(MaxRerolls)
+	var maxRolls = int64(MaxRolls)
 	if ctxMaxRolls, ok := ctx.Value(CtxKeyMaxRolls).(int64); ok {
 		maxRolls = ctxMaxRolls
 	}
@@ -112,7 +112,7 @@ func (d *Die) FullRoll(ctx context.Context) error {
 	}
 
 	// Check if rolled too many times already
-	var maxRolls = int64(MaxRerolls)
+	var maxRolls = int64(MaxRolls)
 	if ctxMaxRolls, ok := ctx.Value(CtxKeyMaxRolls).(int64); ok {
 		maxRolls = ctxMaxRolls
 	}

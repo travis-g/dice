@@ -16,8 +16,6 @@ var (
 
 // DiceFunctions are functions usable in dice arithmetic operations, such as
 // round, min, and max.
-//
-// TODO: adv() and dis()
 var DiceFunctions = map[string]eval.ExpressionFunction{
 	"abs":   absExpressionFunction,
 	"ceil":  ceilExpressionFunction,

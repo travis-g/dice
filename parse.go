@@ -12,7 +12,7 @@ import (
 var (
 	// DiceNotationPattern is the base XdY notation pattern for matching dice
 	// strings.
-	DiceNotationPattern = `(?P<count>\d+)?d(?P<size>\d{1,}|f|F)`
+	DiceNotationPattern = `(?i)(?P<count>\d+)?d(?P<size>\d{1,}|f|F)`
 
 	// DiceNotationRegex is the compiled RegEx for parsing supported dice
 	// notations.
@@ -34,11 +34,11 @@ var DiceWithModifiersExpressionRegex = regexp.MustCompile(
 
 // Modifier regexes.
 var (
-	rerollRegex   = regexp.MustCompile(`r(?P<once>o)?` + ComparePointPattern + `?`)
-	sortRegex     = regexp.MustCompile(`s(?P<sort>[ad])?`)
-	dropKeepRegex = regexp.MustCompile(`(?P<op>[dk][lh]?)(?P<num>\d+)`)
-	criticalRegex = regexp.MustCompile(`c(?P<kind>[sf])` + ComparePointPattern)
-	explodeRegex  = regexp.MustCompile(`!` + ComparePointPattern)
+	rerollRegex   = regexp.MustCompile(`(?i)r(?P<once>o)?` + ComparePointPattern + `?`)
+	sortRegex     = regexp.MustCompile(`(?i)s(?P<sort>[ad])?`)
+	dropKeepRegex = regexp.MustCompile(`(?i)(?P<op>[dk][lh]?)(?P<num>\d+)`)
+	criticalRegex = regexp.MustCompile(`(?i)c(?P<kind>[sf])` + ComparePointPattern)
+	explodeRegex  = regexp.MustCompile(`(?i)!` + ComparePointPattern + `?`)
 )
 
 // Prefixes that indicate a modifier's start in a string
@@ -49,11 +49,13 @@ const (
 	keepPrefix     = "k"
 	criticalPrefix = "c"
 	explodePrefix  = "!"
+	compoundPrefix = "!!"
 )
 
 // ParseNotation parses the provided notation with updated regular expressions
 // that also extract dice group modifiers.
 func ParseNotation(ctx context.Context, notation string) (RollerProperties, error) {
+
 	props := RollerProperties{
 		DieModifiers:   ModifierList{},
 		GroupModifiers: ModifierList{},
@@ -161,11 +163,22 @@ func ParseNotation(ctx context.Context, notation string) (RollerProperties, erro
 			})
 			modifiers = string(remainingBytes)
 
+		// case strings.HasPrefix(modifiers, compoundPrefix):
+
 		// explode
 		case strings.HasPrefix(modifiers, explodePrefix):
 			remainingBytes := explodeRegex.ReplaceAllFunc([]byte(modifiers), func(matchBytes []byte) []byte {
 				// TODO
-				// captures := getNamedCaptures(explodeRegex, string(matchBytes))
+				captures := FindNamedCaptureGroups(explodeRegex, string(matchBytes))
+				point, _ := strconv.Atoi(captures["point"])
+				// once := captures["once"] == "o"
+				props.DieModifiers = append(props.DieModifiers, &ExplodeModifier{
+					CompareTarget: &CompareTarget{
+						Compare: LookupCompareOp(captures["compare"]),
+						Target:  point,
+					},
+					Once: false,
+				})
 
 				return []byte(nil)
 			})
@@ -174,7 +187,6 @@ func ParseNotation(ctx context.Context, notation string) (RollerProperties, erro
 		default:
 			fmt.Printf("invalid modifiers: %s\n", modifiers)
 			modifiers = ""
-			break
 		}
 	}
 	return props, nil

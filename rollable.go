@@ -99,6 +99,9 @@ func NewRoller(props *RollerProperties) (Roller, error) {
 	return f(props)
 }
 
+type DiceRollSet struct {
+}
+
 // A Group is a slice of rollables.
 type Group []Roller
 
@@ -146,9 +149,7 @@ func (g Group) IsDropped(_ context.Context) bool {
 // Copy returns a copy of the dice within the group
 func (g Group) Copy() []Roller {
 	self := make([]Roller, len(g))
-	for i, k := range g {
-		self[i] = k
-	}
+	copy(self, g)
 	return self
 }
 
@@ -160,11 +161,14 @@ func (g Group) FullRoll(ctx context.Context) (err error) {
 		ctx = context.WithValue(ctx, CtxKeyTotalRolls, atomic.NewUint64(0))
 	}
 
-	for _, dice := range g {
-		err = dice.FullRoll(ctx)
+	// as Groups can extend if exploded, iterate by index until the end
+	i := 0
+	for i < len(g) {
+		err = g[i].FullRoll(ctx)
 		if err != nil {
 			break
 		}
+		i++
 	}
 	return err
 }
@@ -238,10 +242,7 @@ func (g Group) Less(i, j int) bool {
 	// if i's face value is less than j's, sort j after
 	iv, _ := g[i].Value(ctx)
 	jv, _ := g[j].Value(ctx)
-	if iv < jv {
-		return true
-	}
-	return false
+	return iv < jv
 }
 
 // Swap swaps the positions of two Rollers in a Group. This method is not thread
@@ -256,7 +257,6 @@ func (g Group) Swap(i, j int) {
 type RollerGroup struct {
 	Group     `json:"group" mapstructure:"group"`
 	Modifiers ModifierList `json:"modifiers,omitempty" mapstructure:"modifiers"`
-	rolls     int64
 	parent    Roller
 }
 
@@ -339,4 +339,8 @@ func Filter(vs []Roller, f func(Roller) bool) []Roller {
 		}
 	}
 	return rolls
+}
+
+func (d *RollerGroup) Add(r Roller) {
+	d.Group = append(d.Group, r)
 }

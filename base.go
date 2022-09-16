@@ -13,6 +13,9 @@ import (
 	"strings"
 )
 
+// MaxRolls is the maximum number of rolls allowed for a request.
+var MaxRolls = 1000
+
 // Source is the dice package's global RNG source. Source uses the system's
 // native cryptographically secure pseudorandom number generator by default.
 //
@@ -109,4 +112,8 @@ func jsonEncode(in interface{}) []byte {
 		return nil
 	}
 	return buf.Bytes()
+}
+
+func Test() {
+	return
 }

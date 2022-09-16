@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	eval "github.com/Knetic/govaluate"
 	"github.com/travis-g/dice"
@@ -52,16 +53,18 @@ follow order of operations.
 The expression passed must evaluate to a float64 result. A parsable expression
 could be a simple expression or more complex.
 
-    d20
-    2d20dl1+5
-    4d6-3d5+30
-    min(d20,d20)+1
-    floor(max(d20,2d12k1)/2+3)
+	d20
+	2d20dl1+5
+	4d6-3d5+30
+	min(d20,d20)+1
+	floor(max(d20,2d12k1)/2+3)
 
 EvaluateExpression can likely benefit immensely from optimization and a custom parser
 implementation along with more fine-grained unit tests/benchmarks.
 */
 func EvaluateExpression(ctx context.Context, expression string) (*ExpressionResult, error) {
+	ctx, cancel := context.WithTimeout(ctx, time.Second*3)
+	defer cancel()
 	de := &ExpressionResult{
 		Original: expression,
 		Dice:     make([]*dice.RollerGroup, 0),
@@ -74,6 +77,11 @@ func EvaluateExpression(ctx context.Context, expression string) (*ExpressionResu
 	// fully-rolled and expanded counterparts, and save the expanded expression
 	// to the object.
 	rolledBytes := dice.DiceWithModifiersExpressionRegex.ReplaceAllFunc([]byte(de.Original), func(matchBytes []byte) []byte {
+		select {
+		default:
+		case <-ctx.Done():
+			panic(ctx.Err())
+		}
 		props, err := dice.ParseNotation(ctx, string(matchBytes))
 		if err != nil {
 			evalErrors = append(evalErrors, err)
@@ -84,7 +92,11 @@ func EvaluateExpression(ctx context.Context, expression string) (*ExpressionResu
 			evalErrors = append(evalErrors, err)
 			return []byte{}
 		}
-		d.FullRoll(ctx)
+		err = d.FullRoll(ctx)
+		if err != nil {
+			evalErrors = append(evalErrors, err)
+			return []byte{}
+		}
 		// record dice:
 		de.Dice = append(de.Dice, d)
 
@@ -94,6 +106,7 @@ func EvaluateExpression(ctx context.Context, expression string) (*ExpressionResu
 		write(`(`)
 		write(d.Expression())
 		write(`)`)
+		fmt.Println(b.String())
 		return []byte(b.String())
 	})
 	if len(evalErrors) != 0 {
