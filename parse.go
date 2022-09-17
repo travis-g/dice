@@ -94,6 +94,12 @@ func ParseNotation(ctx context.Context, notation string) (RollerProperties, erro
 	// the parsing should be left-to-right, like order of operations, and greedy
 	modifiers := components["modifiers"]
 	for modifiers != "" {
+		// check for context expiry
+		select {
+		default:
+		case <-ctx.Done():
+			panic(ctx.Err())
+		}
 		switch {
 		// rerolls
 		case strings.HasPrefix(modifiers, rerollPrefix):

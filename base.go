@@ -113,7 +113,3 @@ func jsonEncode(in interface{}) []byte {
 	}
 	return buf.Bytes()
 }
-
-func Test() {
-	return
-}

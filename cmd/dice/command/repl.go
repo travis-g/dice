@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/travis-g/dice"
 	"github.com/travis-g/dice/math"
@@ -35,7 +36,9 @@ func REPLCommand(c *cli.Context) error {
 
 		line := scanner.Text()
 		if line != "quit" {
+			ctx, cancel := context.WithTimeout(ctx, time.Second*5)
 			exp, err := math.EvaluateExpression(ctx, line)
+			cancel()
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err)
 				continue

@@ -7,7 +7,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	eval "github.com/Knetic/govaluate"
 	"github.com/travis-g/dice"
@@ -63,8 +62,6 @@ EvaluateExpression can likely benefit immensely from optimization and a custom p
 implementation along with more fine-grained unit tests/benchmarks.
 */
 func EvaluateExpression(ctx context.Context, expression string) (*ExpressionResult, error) {
-	ctx, cancel := context.WithTimeout(ctx, time.Second*3)
-	defer cancel()
 	de := &ExpressionResult{
 		Original: expression,
 		Dice:     make([]*dice.RollerGroup, 0),
@@ -77,6 +74,7 @@ func EvaluateExpression(ctx context.Context, expression string) (*ExpressionResu
 	// fully-rolled and expanded counterparts, and save the expanded expression
 	// to the object.
 	rolledBytes := dice.DiceWithModifiersExpressionRegex.ReplaceAllFunc([]byte(de.Original), func(matchBytes []byte) []byte {
+		// check for context expiry
 		select {
 		default:
 		case <-ctx.Done():
@@ -106,7 +104,6 @@ func EvaluateExpression(ctx context.Context, expression string) (*ExpressionResu
 		write(`(`)
 		write(d.Expression())
 		write(`)`)
-		fmt.Println(b.String())
 		return []byte(b.String())
 	})
 	if len(evalErrors) != 0 {
