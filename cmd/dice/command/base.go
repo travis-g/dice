@@ -18,9 +18,7 @@ func Field(i interface{}, field string) interface{} {
 
 // Output prints an interface based on the desired format.
 func Output(c *cli.Context, i interface{}) (string, error) {
-	if c.String("field") != "" {
-		// TODO(travis-g): output a specific field only
-	}
+	// TODO(travis-g): output a specific field only if c.String("field")
 	data, err := toMapStringInterface(i)
 	if err != nil {
 		return "", err

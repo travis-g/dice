@@ -27,7 +27,7 @@ func REPLCommand(c *cli.Context) error {
 		// context for each interation
 		ctx := dice.NewContextFromContext(context.Background())
 		if interactive {
-			fmt.Fprintf(os.Stderr, replPrompt)
+			fmt.Fprint(os.Stderr, replPrompt)
 		}
 		scanned := scanner.Scan()
 		if !scanned {
@@ -39,12 +39,12 @@ func REPLCommand(c *cli.Context) error {
 			ctx, cancel := context.WithTimeout(ctx, time.Second*5)
 			exp, err := math.EvaluateExpression(ctx, line)
 			cancel()
+			if exp == nil {
+				err = math.ErrNilExpression
+			}
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err)
 				continue
-			}
-			if exp == nil {
-				err = math.ErrNilExpression
 			}
 			out, err := Output(c, exp)
 			if err != nil {
