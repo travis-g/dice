@@ -1,10 +1,8 @@
 package dice
 
 import (
-	"bytes"
 	crypto "crypto/rand"
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"math"
 	"math/big"
@@ -14,7 +12,7 @@ import (
 )
 
 // MaxRolls is the maximum number of rolls allowed for a request.
-var MaxRolls = 1000
+var MaxRolls uint64 = math.MaxUint64
 
 // Source is the dice package's global RNG source. Source uses the system's
 // native cryptographically secure pseudorandom number generator by default.
@@ -77,7 +75,12 @@ func CryptoIntn(max int) (n int, err error) {
 
 // quote returns the input string wrapped within quotation marks.
 func quote(s string) string {
-	return strings.Join([]string{"\"", s, "\""}, "")
+	var b strings.Builder
+	write := b.WriteString
+	write("\"")
+	write(s)
+	write("\"")
+	return b.String()
 }
 
 // expression creates a math expression from an arbitrary set of interfaces,
@@ -100,16 +103,4 @@ func FindNamedCaptureGroups(exp *regexp.Regexp, in string) map[string]string {
 		}
 	}
 	return captures
-}
-
-func jsonEncode(in interface{}) []byte {
-	if in == nil {
-		return nil
-	}
-	var buf bytes.Buffer
-	enc := json.NewEncoder(&buf)
-	if err := enc.Encode(in); err != nil {
-		return nil
-	}
-	return buf.Bytes()
 }
