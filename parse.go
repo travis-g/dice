@@ -90,8 +90,9 @@ func ParseNotation(ctx context.Context, notation string) (RollerProperties, erro
 	// the string.
 	//
 	// There are circumstances where we have to discern potentially ambiguous
-	// modifier sets, like "2d6sdh" (sort, drop highest or sort descending?), so
-	// the parsing should be left-to-right, like order of operations, and greedy
+	// modifier sets, like "2d6sdh" ("sort, drop highest" or "sort descending,
+	// unknown"?), so parsing should be left-to-right as with order of
+	// operations, and greedy
 	modifiers := components["modifiers"]
 	for modifiers != "" {
 		// check for context expiry
