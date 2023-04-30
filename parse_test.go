@@ -69,6 +69,32 @@ func TestParseNotation(t *testing.T) {
 			},
 		},
 		{
+			name:     "keep-implied-1",
+			notation: "2d20k",
+			want: RollerProperties{
+				Type:         TypePolyhedron,
+				Count:        2,
+				Size:         20,
+				DieModifiers: ModifierList{},
+				GroupModifiers: []Modifier{
+					&DropKeepModifier{DropKeepMethodKeep, 1},
+				},
+			},
+		},
+		{
+			name:     "keep-lowest-implied-1",
+			notation: "2d20kl",
+			want: RollerProperties{
+				Type:         TypePolyhedron,
+				Count:        2,
+				Size:         20,
+				DieModifiers: ModifierList{},
+				GroupModifiers: []Modifier{
+					&DropKeepModifier{DropKeepMethodKeepLowest, 1},
+				},
+			},
+		},
+		{
 			name:     "drop-1",
 			notation: "2d20d1",
 			want: RollerProperties{
@@ -78,6 +104,32 @@ func TestParseNotation(t *testing.T) {
 				DieModifiers: ModifierList{},
 				GroupModifiers: []Modifier{
 					&DropKeepModifier{DropKeepMethodDrop, 1},
+				},
+			},
+		},
+		{
+			name:     "drop-implied-1",
+			notation: "2D20d",
+			want: RollerProperties{
+				Type:         TypePolyhedron,
+				Count:        2,
+				Size:         20,
+				DieModifiers: ModifierList{},
+				GroupModifiers: []Modifier{
+					&DropKeepModifier{DropKeepMethodDrop, 1},
+				},
+			},
+		},
+		{
+			name:     "drop-highest-implied-1",
+			notation: "2d20dh",
+			want: RollerProperties{
+				Type:         TypePolyhedron,
+				Count:        2,
+				Size:         20,
+				DieModifiers: ModifierList{},
+				GroupModifiers: []Modifier{
+					&DropKeepModifier{DropKeepMethodDropHighest, 1},
 				},
 			},
 		},
@@ -96,8 +148,21 @@ func TestParseNotation(t *testing.T) {
 			},
 		},
 		{
+			name:     "valid-before-junk",
+			notation: "3d6sabcxyz3",
+			want: RollerProperties{
+				Type:         TypePolyhedron,
+				Count:        3,
+				Size:         6,
+				DieModifiers: ModifierList{},
+				GroupModifiers: ModifierList{
+					&SortModifier{SortDirectionAscending},
+				},
+			},
+		},
+		{
 			name:     "junk",
-			notation: "3d6abcxyz3",
+			notation: "3d6abcxyz3sa",
 			want: RollerProperties{
 				Type:           TypePolyhedron,
 				Count:          3,
