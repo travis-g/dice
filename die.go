@@ -3,8 +3,7 @@ package dice
 import (
 	"context"
 	"fmt"
-
-	"go.uber.org/atomic"
+	"sync/atomic"
 )
 
 // Die represents an internally-typed die. If Result is a non-nil pointer, it
@@ -61,17 +60,13 @@ func (d *Die) Roll(ctx context.Context) error {
 	if ctxMaxRolls, ok := ctx.Value(CtxKeyMaxRolls).(int64); ok {
 		maxRolls = ctxMaxRolls
 	}
-	ctxTotalRolls, ok := ctx.Value(CtxKeyTotalRolls).(*atomic.Uint64)
-	if ok {
-		if ctxTotalRolls.Load() >= uint64(maxRolls) {
-			return ErrMaxRolls
-		}
-	} else {
-		ctxTotalRolls = atomic.NewUint64(0)
-		ctx = context.WithValue(ctx, CtxKeyTotalRolls, ctxTotalRolls)
+
+	if *TotalRolls(ctx) >= uint64(maxRolls) {
+		return ErrMaxRolls
 	}
-	// bump context roll count at the end
-	defer ctxTotalRolls.Inc()
+
+	// bump context roll count
+	atomic.AddUint64(TotalRolls(ctx), 1)
 
 	if d.Size == 0 {
 		d.Result = NewResult(0)
@@ -112,18 +107,14 @@ func (d *Die) FullRoll(ctx context.Context) error {
 	}
 
 	// Check if rolled too many times already
-	var maxRolls = int64(MaxRolls)
-	if ctxMaxRolls, ok := ctx.Value(CtxKeyMaxRolls).(int64); ok {
+	var maxRolls = MaxRolls
+	if ctxMaxRolls, ok := ctx.Value(CtxKeyMaxRolls).(uint64); ok {
+		fmt.Println("max rolls in context")
 		maxRolls = ctxMaxRolls
 	}
-	ctxTotalRolls, ok := ctx.Value(CtxKeyTotalRolls).(*atomic.Uint64)
-	if ok {
-		if ctxTotalRolls.Load() >= uint64(maxRolls) {
-			return ErrMaxRolls
-		}
-	} else {
-		ctxTotalRolls = atomic.NewUint64(0)
-		ctx = context.WithValue(ctx, CtxKeyTotalRolls, ctxTotalRolls)
+
+	if *TotalRolls(ctx) >= uint64(maxRolls) {
+		return ErrMaxRolls
 	}
 
 	if err := d.Roll(ctx); err != nil {

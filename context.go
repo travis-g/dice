@@ -2,8 +2,6 @@ package dice
 
 import (
 	"context"
-
-	"go.uber.org/atomic"
 )
 
 type contextKey struct {
@@ -15,17 +13,31 @@ func (k *contextKey) String() string {
 }
 
 var (
-	CtxKeyRoll       = &contextKey{name: "roll"}
 	CtxKeyTotalRolls = &contextKey{name: "total rolls"}
 	CtxKeyMaxRolls   = &contextKey{name: "max rolls"}
+	CtxKeyParameters = &contextKey{name: "parameters"}
 )
 
-// NewContextFromContext makes a child context with context keys from a given
+// NewContextFromContext makes a child context from a given
 // context.
 func NewContextFromContext(ctx context.Context) context.Context {
-	// ensure context has roll counter
-	if _, ok := ctx.Value(CtxKeyTotalRolls).(*atomic.Uint64); !ok {
-		ctx = context.WithValue(ctx, CtxKeyTotalRolls, atomic.NewUint64(0))
+	// add a roll counter, if one doesn't exist
+	if _, ok := ctx.Value(CtxKeyTotalRolls).(*uint64); !ok {
+		return context.WithValue(ctx, CtxKeyTotalRolls, new(uint64))
 	}
 	return ctx
+}
+
+func TotalRolls(ctx context.Context) *uint64 {
+	if count, ok := ctx.Value(CtxKeyTotalRolls).(*uint64); ok {
+		return count
+	}
+	return new(uint64)
+}
+
+func Parameters(ctx context.Context) map[string]interface{} {
+	if params, ok := ctx.Value(CtxKeyParameters).(map[string]interface{}); ok {
+		return params
+	}
+	return make(map[string]interface{})
 }
