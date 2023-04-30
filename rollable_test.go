@@ -135,3 +135,27 @@ func TestGroup_Expression(t *testing.T) {
 		})
 	}
 }
+
+func TestRollerGroup_FullRoll(t *testing.T) {
+	tests := []struct {
+		name       string
+		d          *RollerGroup
+		wantResult float64
+		wantErr    bool
+	}{
+		{
+			name: "basic",
+			d: MustNewRollerGroup(&RollerProperties{
+				Count: 4,
+				Size:  6,
+			}),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.d.FullRoll(context.Background()); (err != nil) != tt.wantErr {
+				t.Errorf("RollerGroup.FullRoll() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}

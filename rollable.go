@@ -99,6 +99,16 @@ func NewRoller(props *RollerProperties) (Roller, error) {
 	return f(props)
 }
 
+// MustNewRoller creates a new Roller from a properties set using NewRoller and
+// panics if NewRoller returns an error.
+func MustNewRoller(props *RollerProperties) Roller {
+	if r, err := NewRoller(props); err == nil {
+		return r
+	} else {
+		panic(err)
+	}
+}
+
 type DiceRollSet struct {
 }
 
@@ -285,6 +295,16 @@ func NewRollerGroup(props *RollerProperties) (*RollerGroup, error) {
 	}, nil
 }
 
+// MustNewRollerGroup creates a new RollerGroup from properties using
+// NewRollerGroup and panics if the method returns an error.
+func MustNewRollerGroup(props *RollerProperties) *RollerGroup {
+	rg, err := NewRollerGroup(props)
+	if err != nil {
+		panic(err)
+	}
+	return rg
+}
+
 // FullRoll rolls each die embedded in the dice group.
 func (d *RollerGroup) FullRoll(ctx context.Context) error {
 	// ensure context has roll counter
@@ -318,6 +338,11 @@ func (d *RollerGroup) Reroll(ctx context.Context) error {
 	return nil
 }
 
+// Add adds a Roller to the RollerGroup's embedded Group.
+func (d *RollerGroup) Add(r Roller) {
+	d.Group = append(d.Group, r)
+}
+
 // All is a helper function that returns true if all Rollers of a slice match a
 // predicate. All will return false on the first failure.
 func All(vs []Roller, f func(Roller) bool) bool {
@@ -339,8 +364,4 @@ func Filter(vs []Roller, f func(Roller) bool) []Roller {
 		}
 	}
 	return rolls
-}
-
-func (d *RollerGroup) Add(r Roller) {
-	d.Group = append(d.Group, r)
 }
