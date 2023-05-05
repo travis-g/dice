@@ -33,8 +33,6 @@ var groupProperties = []struct {
 },
 }
 
-var ctx = context.Background()
-
 func BenchmarkNewRollerGroup(b *testing.B) {
 	for _, bench := range groupProperties {
 		b.Run(fmt.Sprintf("%s", bench.name), func(b *testing.B) {
@@ -91,7 +89,7 @@ func TestGroup_Total(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			total, err := tt.g.Total(ctx)
+			total, err := tt.g.Total(context.Background())
 			if err != nil {
 				t.Errorf("Got error on %v: %v", tt, err)
 			}
@@ -138,10 +136,10 @@ func TestGroup_Expression(t *testing.T) {
 
 func TestRollerGroup_FullRoll(t *testing.T) {
 	tests := []struct {
-		name       string
-		d          *RollerGroup
-		wantResult float64
-		wantErr    bool
+		name      string
+		d         *RollerGroup
+		wantTotal *float64
+		wantErr   bool
 	}{
 		{
 			name: "basic",
@@ -149,12 +147,28 @@ func TestRollerGroup_FullRoll(t *testing.T) {
 				Count: 4,
 				Size:  6,
 			}),
+			wantTotal: nil,
+			wantErr:   false,
+		},
+		{
+			name: "set dice",
+			d: MustNewRollerGroup(&RollerProperties{
+				Count: 2,
+				Size:  1,
+			}),
+			wantTotal: Ptr(2.0),
+			wantErr:   false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := tt.d.FullRoll(context.Background()); (err != nil) != tt.wantErr {
 				t.Errorf("RollerGroup.FullRoll() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			t.Logf("rolls = %v", tt.d.Group)
+			total, _ := tt.d.Total(context.Background())
+			if tt.wantTotal != nil && total != *tt.wantTotal {
+				t.Errorf("RollerGroup.FullRoll() total = %v, wantTotal %v", total, *tt.wantTotal)
 			}
 		})
 	}

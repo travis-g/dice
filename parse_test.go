@@ -148,6 +148,20 @@ func TestParseNotation(t *testing.T) {
 			},
 		},
 		{
+			name:     "drop-sort",
+			notation: "3d6dsa",
+			want: RollerProperties{
+				Type:         TypePolyhedron,
+				Count:        3,
+				Size:         6,
+				DieModifiers: ModifierList{},
+				GroupModifiers: ModifierList{
+					&DropKeepModifier{DropKeepMethodDrop, 1},
+					&SortModifier{SortDirectionAscending},
+				},
+			},
+		},
+		{
 			name:     "valid-before-junk",
 			notation: "3d6sabcxyz3",
 			want: RollerProperties{

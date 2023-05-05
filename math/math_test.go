@@ -143,10 +143,12 @@ func TestEvaluate(t *testing.T) {
 	}{
 		{"1", 1},
 		{"d1", 1},
+		{"d0", 0},
 	}
 	var de *ExpressionResult
 	for _, tc := range testCases {
 		de, err := EvaluateExpression(ctx, tc.expression)
+		t.Logf("evaluating %s; got %v", tc.expression, de)
 		if err != nil {
 			t.Fatalf("error evaluating \"%s\": %s", tc.expression, err)
 		}
