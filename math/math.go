@@ -107,7 +107,7 @@ func EvaluateExpression(ctx context.Context, expression string) (*ExpressionResu
 		return []byte(b.String())
 	})
 	if len(evalErrors) != 0 {
-		return nil, fmt.Errorf("errors during parsing: %v", evalErrors)
+		return nil, fmt.Errorf("errors during evaluation: %v", evalErrors)
 	}
 	de.Rolled = string(rolledBytes)
 

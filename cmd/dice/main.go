@@ -8,9 +8,14 @@ import (
 	"os"
 	"sort"
 
+	"github.com/travis-g/dice"
 	"github.com/travis-g/dice/cmd/dice/command"
 	"github.com/urfave/cli"
 )
+
+func init() {
+	dice.MaxRolls = 10000
+}
 
 func main() {
 	cmd := cli.NewApp()
@@ -33,6 +38,12 @@ func main() {
 			Usage:  "output specific field (unimplemented)",
 			EnvVar: "FIELD",
 		},
+		// &cli.Uint64Flag{
+		// 	Name:   "max_dice",
+		// 	Value:  10000,
+		// 	Usage:  "maximum dice to roll",
+		// 	EnvVar: "MAX_DICE",
+		// },
 	}
 
 	httpFlags := []cli.Flag{

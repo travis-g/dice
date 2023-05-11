@@ -62,12 +62,12 @@ func (d *Die) Roll(ctx context.Context) error {
 		maxRolls = ctxMaxRolls
 	}
 
-	if *TotalRolls(ctx) >= uint64(maxRolls) {
+	if *CtxTotalRolls(ctx) >= uint64(maxRolls) {
 		return ErrMaxRolls
 	}
 
 	// bump context roll count
-	atomic.AddUint64(TotalRolls(ctx), 1)
+	atomic.AddUint64(CtxTotalRolls(ctx), 1)
 
 	if d.Size == 0 {
 		d.Result = NewResult(0)
@@ -108,12 +108,7 @@ func (d *Die) FullRoll(ctx context.Context) error {
 	}
 
 	// Check if rolled too many times already
-	var maxRolls = MaxRolls
-	if ctxMaxRolls, ok := ctx.Value(CtxKeyMaxRolls).(uint64); ok {
-		maxRolls = ctxMaxRolls
-	}
-
-	if *TotalRolls(ctx) >= uint64(maxRolls) {
+	if *CtxTotalRolls(ctx) >= CtxMaxRolls(ctx) {
 		return ErrMaxRolls
 	}
 
