@@ -1,6 +1,7 @@
 package dice
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"sync/atomic"
@@ -23,8 +24,8 @@ type Die struct {
 
 // NewDie creates a new die off of a properties list. It will tweak the
 // properties list to better suit reuse.
-func NewDie(props *RollerProperties) (Roller, error) {
-	return NewDieWithParent(props, nil)
+func NewDie(props *RollerProperties, parent Roller) (Roller, error) {
+	return NewDieWithParent(props, parent)
 }
 
 // NewDieWithParent creates a new die off of a properties list. It will tweak the
@@ -44,7 +45,7 @@ func NewDieWithParent(props *RollerProperties, parent Roller) (Roller, error) {
 	}
 
 	if parent != nil {
-		parent.Add(die)
+		die.SetParent(parent)
 	}
 	return die, nil
 }
@@ -109,7 +110,6 @@ func (d *Die) FullRoll(ctx context.Context) error {
 	// Check if rolled too many times already
 	var maxRolls = MaxRolls
 	if ctxMaxRolls, ok := ctx.Value(CtxKeyMaxRolls).(uint64); ok {
-		fmt.Println("max rolls in context")
 		maxRolls = ctxMaxRolls
 	}
 
@@ -147,6 +147,7 @@ func (d *Die) Reroll(ctx context.Context) error {
 	}
 
 	d.Result = nil
+	d.Rerolls++
 	// reroll without reapplying all modifiers
 	return d.Roll(ctx)
 }
@@ -200,13 +201,28 @@ func (d *Die) Value(ctx context.Context) (float64, error) {
 
 // Parent returns the Die's parent, which will be nil if an orphan.
 func (d *Die) Parent() Roller {
-	if d == nil {
-		return nil
-	}
 	return d.parent
+}
+
+func (d *Die) SetParent(r Roller) {
+	d.parent = r
 }
 
 // Add causes a panic as a single Die cannot have a descendent.
 func (d *Die) Add(r Roller) {
 	panic("impossible action")
+}
+
+func (d *Die) ToGraphviz() string {
+	if d == nil {
+		return ""
+	}
+
+	var b bytes.Buffer
+	write := fmt.Fprintf
+	write(&b, "\"%p\" [label=\"%v\"];\n", d, d.String())
+	if d.Parent() != nil {
+		fmt.Fprintf(&b, "\"%p\" -> \"%p\" [dir=back style=dotted color=red];\n", d.Parent(), d)
+	}
+	return b.String()
 }

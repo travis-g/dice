@@ -3,10 +3,16 @@ package dice
 import (
 	"context"
 	"fmt"
+	"sort"
 	"testing"
 )
 
 var _ Roller = (*RollerGroup)(nil)
+
+var _ Roller = (*Group)(nil)
+
+// ensure a Group can be sorted.
+var _ sort.Interface = (*Group)(nil)
 
 func newInt(i int) *int {
 	return &i

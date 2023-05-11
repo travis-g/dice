@@ -104,3 +104,8 @@ func FindNamedCaptureGroups(exp *regexp.Regexp, in string) map[string]string {
 	}
 	return captures
 }
+
+// Ptr returns a pointer to the passed value.
+func Ptr[T any](v T) *T {
+	return &v
+}

@@ -34,6 +34,8 @@ func Output(c *cli.Context, i interface{}) (string, error) {
 		return toYaml(data)
 	case "gostring":
 		return toGoString(i)
+	case "gv", "graphviz", "dot":
+		return toGraphviz(i)
 	default:
 		return "", fmt.Errorf("requested format %v unhandled", format)
 	}

@@ -89,3 +89,15 @@ func toYaml(data map[string]interface{}) (string, error) {
 func toGoString(i interface{}) (string, error) {
 	return i.(fmt.GoStringer).GoString(), nil
 }
+
+type graphvizer interface {
+	ToGraphviz() string
+}
+
+func toGraphviz(i interface{}) (string, error) {
+	var b strings.Builder
+	b.WriteString("digraph structs {\nnode [shape=Mrecord];\n")
+	b.WriteString(i.(graphvizer).ToGraphviz())
+	b.WriteString("\n}")
+	return b.String(), nil
+}

@@ -4,6 +4,7 @@ dice.exe
 parser
 parser.exe
 !cmd/parser
+/*.dot
 
 debug
 coverage.out

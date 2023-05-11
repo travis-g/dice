@@ -1,15 +1,11 @@
 package dice
 
 import (
+	"bytes"
 	"context"
 	"fmt"
-	"sort"
 	"strings"
-
-	"go.uber.org/atomic"
 )
-
-var _ Roller = (*Group)(nil)
 
 // Roller must be implemented for an object to be considered rollable.
 // Internally, a Roller and should maintain a "total rolls" count.
@@ -44,6 +40,9 @@ type Roller interface {
 	// Parent returns the parent of the Roller, or nil.
 	Parent() Roller
 
+	// SetParent sets the parent of the Roller.
+	SetParent(Roller)
+
 	// Add associates a Roller as a child.
 	Add(Roller)
 
@@ -51,6 +50,8 @@ type Roller interface {
 	// should return a stringified representation of that can be re-parsed to
 	// yield an equivalent property set.
 	fmt.Stringer
+
+	ToGraphviz() string
 }
 
 // A RollerProperties object is the set of properties (usually extracted from a
@@ -73,7 +74,7 @@ type RollerProperties struct {
 // A RollerFactory is a function that takes a properties object and returns a
 // valid rollable die based off of the properties list. If there is an error
 // creating a die off of the properties list an error should be returned.
-type RollerFactory func(*RollerProperties) (Roller, error)
+type RollerFactory func(*RollerProperties, Roller) (Roller, error)
 
 // RollerFactoryMap is the package-wide mapping of die types and the function to
 // use to create a new die of that type. This map can be modified to create dice
@@ -83,26 +84,31 @@ var RollerFactoryMap = map[DieType]RollerFactory{
 	TypeFudge:      NewDie,
 }
 
-// NewRoller creates a new Die to roll off of a supplied property set. The
+// NewRollerWithParent creates a new Die to roll off of a supplied property set. The
 // property set is modified/linted to better suit defaults in the event a
 // properties list is reused.
 //
 // New dice created with this function are created by the per-DieType factories
 // declared within the package-level RollerFactoryMap.
-func NewRoller(props *RollerProperties) (Roller, error) {
+func NewRollerWithParent(props *RollerProperties, parent Roller) (Roller, error) {
 	// Retrieve the factory function out of the package-wide map and use it to
 	// create the new die.
 	f, ok := RollerFactoryMap[props.Type]
 	if !ok {
 		return nil, fmt.Errorf("no factory for type %s", props.Type)
 	}
-	return f(props)
+	return f(props, parent)
+}
+
+// NewRoller wraps NewRollerWithParent but a parent is not bound to the Roller.
+func NewRoller(props *RollerProperties) (Roller, error) {
+	return NewRollerWithParent(props, nil)
 }
 
 // MustNewRoller creates a new Roller from a properties set using NewRoller and
 // panics if NewRoller returns an error.
 func MustNewRoller(props *RollerProperties) Roller {
-	if r, err := NewRoller(props); err == nil {
+	if r, err := NewRollerWithParent(props, nil); err == nil {
 		return r
 	} else {
 		panic(err)
@@ -167,8 +173,8 @@ func (g Group) Copy() []Roller {
 // object/Roller within the group.
 func (g Group) FullRoll(ctx context.Context) (err error) {
 	// ensure context has roll counter
-	if _, ok := ctx.Value(CtxKeyTotalRolls).(*atomic.Uint64); !ok {
-		ctx = context.WithValue(ctx, CtxKeyTotalRolls, atomic.NewUint64(0))
+	if _, ok := ctx.Value(CtxKeyTotalRolls).(*uint64); !ok {
+		ctx = context.WithValue(ctx, CtxKeyTotalRolls, new(uint64))
 	}
 
 	// as Groups can extend if exploded, iterate by index until the end
@@ -232,12 +238,28 @@ func (g Group) Parent() Roller {
 	return nil
 }
 
+// Parent returns the parent object of the Group, which should be nil.
+func (g Group) SetParent(Roller) {
+	panic("impossible action")
+}
+
 func (g Group) Add(r Roller) {
 	g = append(g, r)
 }
 
-// ensure a Group can be sorted.
-var _ sort.Interface = (*Group)(nil)
+func (g Group) ToGraphviz() string {
+	if len(g) == 0 {
+		return ""
+	}
+
+	var b bytes.Buffer
+	write := fmt.Fprintf
+	for _, die := range g {
+		write(&b, "%s", die.ToGraphviz())
+		write(&b, "\"%p\" -> \"%p\";\n", g, die)
+	}
+	return b.String()
+}
 
 // Len returns the number of elements in a Group.
 func (g Group) Len() int {
@@ -281,18 +303,20 @@ func NewRollerGroup(props *RollerProperties) (*RollerGroup, error) {
 		}, nil
 	}
 	dice := make([]Roller, props.Count)
+
+	rg := &RollerGroup{
+		Group: dice,
+	}
 	for i := range dice {
-		die, err := NewRoller(props)
+		die, err := NewRollerWithParent(props, rg)
 		if err != nil {
 			return nil, err
 		}
 		dice[i] = die
 	}
+	rg.Modifiers = props.GroupModifiers
 
-	return &RollerGroup{
-		Group:     dice,
-		Modifiers: props.GroupModifiers,
-	}, nil
+	return rg, nil
 }
 
 // MustNewRollerGroup creates a new RollerGroup from properties using
@@ -308,8 +332,8 @@ func MustNewRollerGroup(props *RollerProperties) *RollerGroup {
 // FullRoll rolls each die embedded in the dice group.
 func (d *RollerGroup) FullRoll(ctx context.Context) error {
 	// ensure context has roll counter
-	if _, ok := ctx.Value(CtxKeyTotalRolls).(*atomic.Uint64); !ok {
-		ctx = context.WithValue(ctx, CtxKeyTotalRolls, atomic.NewUint64(0))
+	if _, ok := ctx.Value(CtxKeyTotalRolls).(*uint64); !ok {
+		ctx = context.WithValue(ctx, CtxKeyTotalRolls, new(uint64))
 	}
 
 	if err := d.Group.FullRoll(ctx); err != nil {
@@ -338,9 +362,22 @@ func (d *RollerGroup) Reroll(ctx context.Context) error {
 	return nil
 }
 
-// Add adds a Roller to the RollerGroup's embedded Group.
+// Add adds a Roller to the RollerGroup's embedded Group and sets this as the
+// Roller's parent.
 func (d *RollerGroup) Add(r Roller) {
-	d.Group = append(d.Group, r)
+	r.SetParent(d)
+	d.Group.Add(r)
+}
+
+func (d *RollerGroup) ToGraphviz() string {
+	var b bytes.Buffer
+	fmt.Fprintf(&b, "\"%p\" [label=\"%T\"];\n", d, d)
+	fmt.Fprintf(&b, "\"%p\" -> \"%p\"", d, d.Group)
+	fmt.Fprintf(&b, "%s\n", d.Group.ToGraphviz())
+	if d.Parent() != nil {
+		fmt.Fprintf(&b, "\"%p\" -> \"%p\" [dir=back style=dashed color=red];\n", d.Parent(), d)
+	}
+	return b.String()
 }
 
 // All is a helper function that returns true if all Rollers of a slice match a
