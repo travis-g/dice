@@ -80,8 +80,8 @@ type RollerFactory func(*RollerProperties, Roller) (Roller, error)
 // use to create a new die of that type. This map can be modified to create dice
 // using different functions or to implement new die types.
 var RollerFactoryMap = map[DieType]RollerFactory{
-	TypePolyhedron: NewDie,
-	TypeFudge:      NewDie,
+	TypePolyhedron: NewDieWithParent,
+	TypeFudge:      NewDieWithParent,
 }
 
 // NewRollerWithParent creates a new Die to roll off of a supplied property set. The
@@ -113,9 +113,6 @@ func MustNewRoller(props *RollerProperties) Roller {
 	} else {
 		panic(err)
 	}
-}
-
-type DiceRollSet struct {
 }
 
 // A Group is a slice of rollables.

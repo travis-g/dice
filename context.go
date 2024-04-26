@@ -19,7 +19,7 @@ var (
 )
 
 // NewContextFromContext makes a child context from a given context, including
-// setting the context's maximum rolls and adding a roll counter.
+// setting the context's maximum rolls and adding a roll counter if not present.
 func NewContextFromContext(ctx context.Context) context.Context {
 	// ensure a maximum roll value is present
 	if _, ok := ctx.Value(CtxKeyMaxRolls).(uint64); !ok {
@@ -41,6 +41,13 @@ func CtxTotalRolls(ctx context.Context) *uint64 {
 	return new(uint64)
 }
 
+func MustCtxTotalRolls(ctx context.Context) *uint64 {
+	if count, ok := ctx.Value(CtxKeyTotalRolls).(*uint64); ok {
+		return count
+	}
+	panic(ErrContextKeyMissing)
+}
+
 // CtxMaxRolls returns the context's maximum allowed number of rolls, or the
 // default.
 func CtxMaxRolls(ctx context.Context) uint64 {
@@ -50,6 +57,7 @@ func CtxMaxRolls(ctx context.Context) uint64 {
 	return MaxRolls
 }
 
+// CtxParameters returns the context's arbitrary parameters.
 func CtxParameters(ctx context.Context) map[string]interface{} {
 	if params, ok := ctx.Value(CtxKeyParameters).(map[string]interface{}); ok {
 		return params

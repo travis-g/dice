@@ -3,9 +3,9 @@ package dice
 import "errors"
 
 var (
-	// ErrSizeZero is returned when an attempt to create or roll a 0-sized die
-	// is made.
-	ErrSizeZero = errors.New("die cannot have 0 sides")
+	// ErrImpossibleDie is returned when an attempt to create a die with a
+	// negative number of sides is made.
+	ErrImpossibleDie = errors.New("die cannot have negative sides")
 
 	// ErrNilDie is returned when a die's passed reference is nil.
 	ErrNilDie = errors.New("nil die passed")
@@ -36,6 +36,14 @@ var (
 	// evaluation, as no die in the set will ever be able to settle with the
 	// given reroll modifier.
 	ErrImpossibleRoll = errors.New("impossible roll")
+
+	// ErrContextKeyMissing is returned if a context key is not found in a
+	// request context.
+	ErrContextKeyMissing = errors.New("context key missing")
+
+	// ErrMaxDepth is returned if a replacement operation recurses beyond
+	// MaxDepth.
+	ErrMaxDepth = errors.New("max replacement depth")
 )
 
 // ErrNotImplemented is an error returned when a feature is not yet implemented.

@@ -7,6 +7,10 @@ import (
 )
 
 func TestParseNotation(t *testing.T) {
+	ctx := context.WithValue(context.Background(), CtxKeyParameters, map[string]interface{}{
+		"foo": "3",
+		"bar": "dfoo",
+	})
 	tests := []struct {
 		name     string
 		notation string
@@ -188,7 +192,7 @@ func TestParseNotation(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ParseNotation(context.Background(), tt.notation)
+			got, err := ParseNotation(ctx, tt.notation)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ParseNotation() error = %v, wantErr %v", err, tt.wantErr)
 				return

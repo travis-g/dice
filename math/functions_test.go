@@ -1,7 +1,10 @@
 package math
 
 import (
+	"context"
 	"testing"
+
+	"github.com/travis-g/dice"
 )
 
 func TestDiceFunctions(t *testing.T) {
@@ -24,6 +27,10 @@ func TestDiceFunctions(t *testing.T) {
 	}
 	var de *ExpressionResult
 	for _, tc := range testCases {
+		ctx := context.WithValue(context.Background(), dice.CtxKeyParameters, map[string]interface{}{
+			"foo": "3",
+			"bar": "dfoo",
+		})
 		de, err := EvaluateExpression(ctx, tc.expression)
 		if err != nil {
 			t.Fatalf("error evaluating %s: %s", tc.expression, err)

@@ -68,12 +68,30 @@ func EvaluateExpression(ctx context.Context, expression string) (*ExpressionResu
 	}
 
 	var evalErrors = []error{}
+	expression = strings.ToLower(expression)
+
+	params := dice.CtxParameters(ctx)
+	if len(params) > 0 {
+		// TODO: better nesting failout is necessary
+		for i := 0; i < dice.MaxDepth; i++ {
+			replaced := expression
+			for old, new := range params {
+				// HACK: lowercase these strings beforehand
+				replaced = strings.ReplaceAll(replaced, strings.ToLower(old), strings.ToLower(new.(string)))
+			}
+
+			if replaced == expression {
+				break
+			}
+			expression = replaced
+		}
+	}
 
 	// systematically parse the DiceExpression for dice notation substrings,
 	// evaluate and expand the rolls, replace the notation strings with their
 	// fully-rolled and expanded counterparts, and save the expanded expression
 	// to the object.
-	rolledBytes := dice.DiceWithModifiersExpressionRegex.ReplaceAllFunc([]byte(de.Original), func(matchBytes []byte) []byte {
+	rolledBytes := dice.DiceWithModifiersExpressionRegex.ReplaceAllFunc([]byte(expression), func(matchBytes []byte) []byte {
 		// check for context expiry
 		select {
 		default:

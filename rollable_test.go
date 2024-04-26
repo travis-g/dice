@@ -147,6 +147,33 @@ func TestRollerGroup_FullRoll(t *testing.T) {
 		wantTotal *float64
 		wantErr   bool
 	}{
+		// {
+		// 	name: "negative-sided",
+		// 	d: MustNewRollerGroup(&RollerProperties{
+		// 		Count: 4,
+		// 		Size:  -1,
+		// 	}),
+		// 	wantTotal: nil,
+		// 	wantErr:   true,
+		// },
+		{
+			name: "zero-sided",
+			d: MustNewRollerGroup(&RollerProperties{
+				Count: 4,
+				Size:  0,
+			}),
+			wantTotal: Ptr(0.0),
+			wantErr:   false,
+		},
+		{
+			name: "one-sided",
+			d: MustNewRollerGroup(&RollerProperties{
+				Count: 4,
+				Size:  1,
+			}),
+			wantTotal: Ptr(4.0),
+			wantErr:   false,
+		},
 		{
 			name: "basic",
 			d: MustNewRollerGroup(&RollerProperties{

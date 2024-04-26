@@ -24,13 +24,27 @@ type Die struct {
 
 // NewDie creates a new die off of a properties list. It will tweak the
 // properties list to better suit reuse.
-func NewDie(props *RollerProperties, parent Roller) (Roller, error) {
-	return NewDieWithParent(props, parent)
+func NewDie(props *RollerProperties) (Roller, error) {
+	return NewDieWithParent(props, nil)
+}
+
+// MustNewDie creates a new die off of a properties list. It will tweak the
+// properties list to better suit reuse. Panics on a non-nil error.
+func MustNewDie(props *RollerProperties) Roller {
+	if r, err := NewDieWithParent(props, nil); err == nil {
+		return r
+	} else {
+		panic(err)
+	}
 }
 
 // NewDieWithParent creates a new die off of a properties list. It will tweak the
 // properties list to better suit reuse.
 func NewDieWithParent(props *RollerProperties, parent Roller) (Roller, error) {
+	if props.Size < 0 {
+		return nil, ErrImpossibleDie
+	}
+
 	// If the property set was for a default fudge die set, set a default size
 	// of 1.
 	if props.Type == TypeFudge && props.Size == 0 {

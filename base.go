@@ -14,6 +14,9 @@ import (
 // MaxRolls is the maximum number of rolls allowed for a request.
 var MaxRolls uint64 = math.MaxUint64
 
+// MaxDepth is the maximum number of replacement iterations allowed for a parse.
+var MaxDepth int = 3
+
 // Source is the dice package's global RNG source. Source uses the system's
 // native cryptographically secure pseudorandom number generator by default.
 //
