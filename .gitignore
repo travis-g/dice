@@ -1,10 +1,10 @@
 dice
 dice.exe
 !cmd/dice
-parser
-parser.exe
-!cmd/parser
 /*.dot
+
+parser/parser
+parser/parser.exe
 
 debug
 coverage.out

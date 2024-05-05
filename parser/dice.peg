@@ -1,0 +1,126 @@
+{
+package main
+}
+
+Root <- Expression
+
+Expression <- _ l:Factor r:(_ Operator _ Factor)* {
+    r2 := castAnySlice(r)
+    r3 := make([]OpFactor, len(r2))
+    for i, v := range r2 {
+        y := castAnySlice(v)
+        x := OpFactor{
+            op: y[1].(string),
+            factor: y[3],
+        }
+        r3[i] = x
+    }
+    return Expression{
+        l: l,
+        r: r3,
+    }, nil
+}
+
+Factor <-
+    Dice
+    / Float
+    / l:"(" _ expr:Expression _ r:")" {
+        return expr, nil
+    }
+
+Function <-
+    f:[a-z]+ "(" _ expr:Expression _ ")" {
+        return string(c.text), nil
+    }
+    / f:[a-z]+ "(" _ expr1:Expression _ "," _ expr2:Expression _ ")" {
+        return string(c.text), nil
+    }
+
+Dice <- die:DieCore modifiers:Modifier* {
+    m2 := castAnySlice(modifiers)
+    mods := make([]string, len(m2))
+    for i, v := range m2 {
+        typeOf(v)
+        mods[i] = v.(string)
+    }
+    return Dice{
+        die: die.(string),
+        modifiers: mods,
+    }, nil
+}
+
+DieCore <- count:Integer? "d" sides:("F" / Integer) {
+    return string(c.text), nil
+}
+
+Modifier <-
+    ExplodeModifier
+    / DropModifier
+    / KeepModifier
+    / RerollModifier
+    / SortModifier
+
+ExplodeModifier <- "!" compounding:"!"? penetrating:"p"? cp:ComparePoint? {
+    return string(c.text), nil
+}
+
+DropModifier <- "d" method:[lh]? qty:Integer? {
+    return string(c.text), nil
+}
+
+KeepModifier <- "k" method:[lh]? qty:Integer? {
+    return string(c.text), nil
+}
+
+SortModifier <- "s" dir:("a" / "d")? {
+    return string(c.text), nil
+}
+
+RerollModifier <- "r" once:"o"? cp:ComparePoint? {
+    return string(c.text), nil
+}
+
+ComparePoint <- op:CompareOperator? value:Number {
+    return string(c.text), nil
+}
+
+CompareOperator <- ("=" / ">" / "<") {
+    return string(c.text), nil
+}
+
+Float <- "-"? Number ([.] Number)? {
+    return strconv.ParseFloat(string(c.text), 64)
+}
+
+// Doesn't support signed integers >= 0
+Integer <- "-"? [0-9]+ {
+    return strconv.Atoi(string(c.text))
+}
+
+IntegerOrExpression <- Integer / l:"(" _ expr:(Integer (_ Operator _ Integer)*) _ r:")"
+
+Number <- [0-9]+ {
+    return strconv.Atoi(string(c.text))
+}
+
+Operator
+    <- "**" { return string("^"), nil }
+    / ("*" / "^" / "%" / "/" / ">>" / "<<" / "+" / "-" ) {
+        return string(c.text), nil
+    }
+
+Query <- "?{" _ text:[^}]* _ "}"
+
+Comment <- ("//" / "#") comment:(!EOL .)*
+
+Terminator <- ";"
+
+Whitespace "whitespace" <- [ \t\n\r]*
+
+_ <- Whitespace
+
+__ <- (Whitespace / Comment)*
+
+EOL <- [\n\r]
+
+END <- !.
