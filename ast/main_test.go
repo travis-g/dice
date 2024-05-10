@@ -37,6 +37,8 @@ var benchmarkCases = []ExpressionTestCase{
 	{"1+1", ptr(2.0), false},
 	{"3+5*2", ptr(13.0), false},
 	{"(3+5)*2", ptr(16.0), false},
+	{"?{foo}", nil, false},
+	{"?{bar|1}", nil, false},
 }
 
 var moreCases = []ExpressionTestCase{
@@ -65,7 +67,9 @@ var moreCases = []ExpressionTestCase{
 	{".1", ptr(0.1), false},
 	{"0+.1", ptr(0.1), false},
 	{"0-.1", ptr(-0.9), false},
-	{"?{foo}", nil, false},
+	{"?{foo|a,1}", nil, false},
+	{"1+?{foo|a,1}", nil, false},
+	{"?{foo|a,1|b, 2}", nil, false},
 	{"1+-1", ptr(0.0), false},
 	{"1+(-1)", ptr(0.0), false},
 	{"1--1", ptr(2.0), false},
