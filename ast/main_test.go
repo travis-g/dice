@@ -9,13 +9,14 @@ var global any
 
 type ExpressionTestCase struct {
 	expression string
-	// if expression result is nondeterministic result should be nil
+	// if expression's mathematic result is deterministic result is a pointer to
+	// the evaluated expression's result, ex. "1+1" -> `ptr(2.0)`.
 	result  *float64
 	wantErr bool
 }
 
 // Deterministic returns whether a test case has a defined result, indicating
-// all evaluations of the expression should result in the same value.
+// any evaluation of the expression should result in the same value.
 func (e *ExpressionTestCase) Deterministic() bool {
 	return e.result != nil
 }
@@ -30,9 +31,11 @@ var benchmarkCases = []ExpressionTestCase{
 	{"1d20", nil, false},
 	{"d20", nil, false},
 	{"dF", nil, false},
+	{"1d20 + 1", nil, false},
 	{"1d20+1", nil, false},
 	{"1+1d20", nil, false},
 	{"1+1", ptr(2.0), false},
+	{"3+5*2", ptr(13.0), false},
 	{"3+5*2", ptr(13.0), false},
 	{"(3+5)*2", ptr(16.0), false},
 }

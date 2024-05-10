@@ -15,7 +15,7 @@ type Root struct {
 }
 
 type Expr struct {
-	L *Factor     `@@`
+	L *Factor     `@@ " "?`
 	R []*OpFactor `@@*`
 }
 
@@ -25,10 +25,10 @@ type OpFactor struct {
 }
 
 type Factor struct {
-	Number float64 `@Float | @SignedInt | @Uint`
-	Dice   *Dice   `| @Notation`
-	Expr   *Expr   `| "(" @@ ")"`
-	Query  *Query  `| "?{" @@ "}"`
+	Number float64 `@SignedInt | @Float | @Uint |`
+	Dice   *Dice   `@Notation |`
+	Expr   *Expr   `"(" @@ ")" |`
+	Query  *Query  `"?{" @@ "}"`
 }
 
 type Query struct {
@@ -57,13 +57,13 @@ const (
 var rules = lexer.Rules{
 	"Root": {
 		{Name: "Whitespace", Pattern: `[ \t]+`, Action: nil},
-		{Name: "Expr", Pattern: `\(`, Action: lexer.Push("Expr")},
 		{Name: "Notation", Pattern: `(?i)\d* *d(\d+|F)([a-z]\d)*(\[[^\]]+])?`, Action: nil}, // TODO: stateful
-		{Name: "CommentStart", Pattern: `\/\/|\|#[^\n]*`, Action: nil},                      // TODO: stateful
+		{Name: "Expr", Pattern: `\(`, Action: lexer.Push("Expr")},
+		{Name: "CommentStart", Pattern: `\/\/|\|#[^\n]*`, Action: nil}, // TODO: stateful
+		{Name: "Operator", Pattern: `\*\*|[-\*^%/+]|<<|>>`, Action: nil},
 		{Name: "Float", Pattern: `-?\d*\.\d`, Action: nil},
 		lexer.Include("SignedInt"),
 		lexer.Include("Uint"),
-		{Name: "Operator", Pattern: `\*\*|-|\*|^|%|/|\+|<<|>>`, Action: nil},
 		{Name: "Query", Pattern: `\?{`, Action: lexer.Push("Query")},
 		{Name: "Ident", Pattern: `[a-zA-Z][a-zA-Z\d]*`, Action: nil},
 		{Name: "EOL", Pattern: `[\n\r]+`, Action: nil},
@@ -121,8 +121,8 @@ var Lexer = lexer.MustStateful(rules)
 
 var parser = participle.MustBuild[Root](
 	participle.UseLookahead(3),
-	participle.Lexer(Lexer),
 	participle.Elide("Whitespace"),
+	participle.Lexer(Lexer),
 )
 
 func ParseString(expression string, trace bool) (*Root, error) {
