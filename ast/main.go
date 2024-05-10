@@ -70,8 +70,8 @@ var rules = lexer.Rules{
 		{Name: "Char", Pattern: `\$|[^$]+`, Action: nil},
 	},
 	"Expr": {
-		lexer.Include("Root"),
 		{Name: "ExprEnd", Pattern: `\)`, Action: lexer.Pop()},
+		lexer.Include("Root"),
 	},
 	"InlineExpr": { // TODO
 		{Name: "InlineExpr", Pattern: `\[\[`, Action: lexer.Push("InlineExpr")},
