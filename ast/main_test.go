@@ -77,11 +77,17 @@ var moreCases = []ExpressionTestCase{
 	{"1- -1", ptr(2.0), false},
 	{"-.3", ptr(-0.3), false},
 	{"+.3", ptr(0.3), false},
+	{"1 // comment", ptr(1.0), false},
+	{"1// comment", ptr(1.0), false},
+	{"1//comment", ptr(1.0), false},
+	{"# comment", nil, true},
+	{"// comment", nil, true},
+	{`\ comment`, nil, true},
+	{` \ comment`, nil, true},
 
 	// TODO: fix these cases
 	{"\nd20", nil, true},
 	{"d20\n", nil, true},
-	{"1 // comment", ptr(1.0), true},
 	{"// comment\n1", ptr(1.0), true},
 	{"1[foo]", ptr(1.0), true},
 
@@ -90,10 +96,6 @@ var moreCases = []ExpressionTestCase{
 	{"1+*1", nil, true},
 	{"1=1", nil, true},
 	{"\n", nil, true},
-	{"# comment", nil, true},
-	{"// comment", nil, true},
-	{`\ comment`, nil, true},
-	{` \ comment`, nil, true},
 }
 
 var expressionParseCases = append(benchmarkCases, moreCases...)

@@ -11,7 +11,8 @@ import (
 )
 
 type Root struct {
-	Expr *Expr `@@`
+	Expr    *Expr  `@@`
+	Comment string `@CommentStart*`
 }
 
 type Expr struct {
@@ -59,7 +60,7 @@ var rules = lexer.Rules{
 		{Name: "Whitespace", Pattern: `[ \t]+`, Action: nil},
 		{Name: "Notation", Pattern: `(?i)\d* *d(\d+|F)([a-z]\d)*(\[[^\]]+])?`, Action: nil}, // TODO: stateful
 		{Name: "Expr", Pattern: `\(`, Action: lexer.Push("Expr")},
-		{Name: "CommentStart", Pattern: `\/\/|\|#[^\n]*`, Action: nil}, // TODO: stateful
+		{Name: "CommentStart", Pattern: `(//|\\|#)[^$]*`, Action: nil}, // TODO: stateful
 		{Name: "Operator", Pattern: `\*\*|[-+\*^%/]|<<|>>`, Action: nil},
 		{Name: "Float", Pattern: `[-+]?\d*\.\d+`, Action: nil},
 		{Name: "Int", Pattern: `[-+]?\d+`, Action: nil},
