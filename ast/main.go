@@ -25,11 +25,10 @@ type OpFactor struct {
 }
 
 type Factor struct {
-	Sign   string  `@("-" | "+")?`
-	Number float64 `@(Uint | Float) |`
-	Dice   *Dice   `@Notation |`
-	Expr   *Expr   `"(" @@ ")" |`
-	Query  *Query  `"?{" @@ "}"`
+	Number *float64 `@(("-" | "+")? (Int | Float)) |`
+	Dice   *Dice    `@Notation |`
+	Expr   *Expr    `"(" @@ ")" |`
+	Query  *Query   `"?{" @@ "}"`
 }
 
 type Query struct {
@@ -61,10 +60,9 @@ var rules = lexer.Rules{
 		{Name: "Notation", Pattern: `(?i)\d* *d(\d+|F)([a-z]\d)*(\[[^\]]+])?`, Action: nil}, // TODO: stateful
 		{Name: "Expr", Pattern: `\(`, Action: lexer.Push("Expr")},
 		{Name: "CommentStart", Pattern: `\/\/|\|#[^\n]*`, Action: nil}, // TODO: stateful
-		{Name: "Operator", Pattern: `\*\*|[-+]|[\*^%/]|<<|>>`, Action: nil},
-		{Name: "Float", Pattern: `\d*\.\d`, Action: nil},
-		lexer.Include("SignedInt"),
-		lexer.Include("Uint"),
+		{Name: "Operator", Pattern: `\*\*|[-+\*^%/]|<<|>>`, Action: nil},
+		{Name: "Float", Pattern: `[-+]?\d*\.\d+`, Action: nil},
+		{Name: "Int", Pattern: `[-+]?\d+`, Action: nil},
 		{Name: "Query", Pattern: `\?{`, Action: lexer.Push("Query")},
 		{Name: "Ident", Pattern: `[a-zA-Z][a-zA-Z\d]*`, Action: nil},
 		{Name: "EOL", Pattern: `[\n\r]+`, Action: nil},
