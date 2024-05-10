@@ -15,7 +15,7 @@ type Root struct {
 }
 
 type Expr struct {
-	L *Factor     `@@ " "?`
+	L *Factor     `@@`
 	R []*OpFactor `@@*`
 }
 
