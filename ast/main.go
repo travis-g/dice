@@ -25,7 +25,8 @@ type OpFactor struct {
 }
 
 type Factor struct {
-	Number float64 `@SignedInt | @Float | @Uint |`
+	Sign   string  `@("-" | "+")?`
+	Number float64 `@(Uint | Float) |`
 	Dice   *Dice   `@Notation |`
 	Expr   *Expr   `"(" @@ ")" |`
 	Query  *Query  `"?{" @@ "}"`
@@ -60,8 +61,8 @@ var rules = lexer.Rules{
 		{Name: "Notation", Pattern: `(?i)\d* *d(\d+|F)([a-z]\d)*(\[[^\]]+])?`, Action: nil}, // TODO: stateful
 		{Name: "Expr", Pattern: `\(`, Action: lexer.Push("Expr")},
 		{Name: "CommentStart", Pattern: `\/\/|\|#[^\n]*`, Action: nil}, // TODO: stateful
-		{Name: "Operator", Pattern: `\*\*|[-\*^%/+]|<<|>>`, Action: nil},
-		{Name: "Float", Pattern: `-?\d*\.\d`, Action: nil},
+		{Name: "Operator", Pattern: `\*\*|[-+]|[\*^%/]|<<|>>`, Action: nil},
+		{Name: "Float", Pattern: `\d*\.\d`, Action: nil},
 		lexer.Include("SignedInt"),
 		lexer.Include("Uint"),
 		{Name: "Query", Pattern: `\?{`, Action: lexer.Push("Query")},
@@ -74,8 +75,8 @@ var rules = lexer.Rules{
 		lexer.Include("Root"),
 	},
 	"InlineExpr": { // TODO
-		{Name: "InlineExpr", Pattern: `\[\[`, Action: lexer.Push("InlineExpr")},
 		{Name: "InlineExprEnd", Pattern: `]]`, Action: lexer.Pop()},
+		{Name: "InlineExpr", Pattern: `\[\[`, Action: lexer.Push("InlineExpr")},
 		// lexer.Include("Expr"),
 	},
 	"Notation": { // TODO
