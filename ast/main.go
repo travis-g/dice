@@ -26,18 +26,35 @@ type OpFactor struct {
 }
 
 type Factor struct {
-	Number *float64 `@(("-" | "+")? (Int | Float)) |`
-	Dice   *Dice    `@Notation |`
-	Expr   *Expr    `"(" @@ ")" |`
-	Query  *Query   `"?{" @@ "}"`
+	Number float64 `@(("-" | "+")? (Int | Float))`
+	Dice   *Dice   `| @Notation`
+	Func   *Func   `| @@`
+	Expr   *Expr   `| "(" @@ ")"`
+	Query  *Query  `| "?{" @@ "}"`
+}
+
+type Func struct {
+	Name string `@("round"|"min"|"max")`
+	Args Args   `"(" @@ ")"`
+}
+
+type Args struct {
+	L *Factor   `@@`
+	R []*Factor `("," @@)*`
 }
 
 type Query struct {
-	Name string `@QueryName`
+	Name string `@QueryText` // FIXME
+	// Options []*LabelOption `("|" @@)*`
+}
+
+type LabelOption struct {
+	Label  string `(@QueryText ",")?`
+	Option string `@QueryText`
 }
 
 type Dice struct {
-	X         string `@@`
+	X         string `@@ " *"`
 	Y         string `"d" @@`
 	Modifiers string `@Char?`
 	Label     string `("[" @~"]" "]")?`
@@ -58,14 +75,14 @@ const (
 var rules = lexer.Rules{
 	"Root": {
 		{Name: "Whitespace", Pattern: `[ \t]+`, Action: nil},
-		{Name: "Notation", Pattern: `(?i)\d* *d(\d+|F)([a-z]\d)*(\[[^\]]+])?`, Action: nil}, // TODO: stateful
+		{Name: "Notation", Pattern: `(?i)\d* *d(\d+|F)([a-z!=<>]+\d*)*(\[[^\]]+])?`, Action: nil}, // TODO: stateful
 		{Name: "Expr", Pattern: `\(`, Action: lexer.Push("Expr")},
+		{Name: "Ident", Pattern: `[a-zA-Z]{3+}`, Action: nil},
 		{Name: "CommentStart", Pattern: `(//|\\|#)[^$]*`, Action: nil}, // TODO: stateful
 		{Name: "Operator", Pattern: `\*\*|[-+\*^%/]|<<|>>`, Action: nil},
 		{Name: "Float", Pattern: `[-+]?\d*\.\d+`, Action: nil},
 		{Name: "Int", Pattern: `[-+]?\d+`, Action: nil},
 		{Name: "Query", Pattern: `\?{`, Action: lexer.Push("Query")},
-		{Name: "Ident", Pattern: `[a-zA-Z][a-zA-Z\d]*`, Action: nil},
 		{Name: "EOL", Pattern: `[\n\r]+`, Action: nil},
 		{Name: "Char", Pattern: `\$|[^$]+`, Action: nil},
 	},
@@ -83,29 +100,29 @@ var rules = lexer.Rules{
 		{Name: "Size", Pattern: `\d+|[fF]`, Action: nil},
 	},
 	"Modifiers": {
-		{"Drop", `d[lh]?`, nil},
-		{"Keep", `k[lh]?`, nil},
-		{"Reroll", `ro?`, nil},
-		{"CriticalSuccess", `cs`, nil},
-		{"CriticalFailure", `cf`, nil},
-		{"Sort", `s[ad]?`, nil},
+		{"Drop", `d[lh]?`, lexer.Push("ModifierComparePoint")},
+		{"Keep", `k[lh]?`, lexer.Push("ModifierComparePoint")},
+		{"Reroll", `ro?`, lexer.Push("ModifierComparePoint")},
+		{"CriticalSuccess", `cs`, lexer.Push("ModifierComparePoint")},
+		{"CriticalFailure", `cf`, lexer.Push("ModifierComparePoint")},
+		{"Sort", `s[ad]?`, lexer.Push("ModifierComparePoint")},
+		{"Explode", `![!p]?`, lexer.Push("ModifierComparePoint")},
 	},
-	"Comparison": {
-		{"ComparisonOperator", `(<|>|=)`, nil},
+	"ModifierComparePoint": {
+		{"ComparePointOp", `[=<>]`, nil},
+		{"ComparePointValue", `\d+`, lexer.Pop()},
 	},
-	"Uint": {
-		{"Uint", `\d+`, nil},
-	},
-	"SignedInt": {
-		{Name: "SignedInt", Pattern: `[-+]\d+`, Action: nil},
+	"GroupComparison": {
+		{"GroupComparisonOperator", `(<|>|=)`, nil},
+		{"GroupComparisonPoint", `\d+`, lexer.Pop()}, // Float?
 	},
 	"RollGroup": { // TODO
 		{Name: "RollGroupEnd", Pattern: `}`, Action: lexer.Pop()},
 	},
-	"Query": {
+	"Query": { // FIXME
+		{Name: "QueryText", Pattern: `[^}]+`, Action: nil},
+		// {Name: "QueryText", Pattern: `[^,|}]+`, Action: nil},
 		{Name: "QueryEnd", Pattern: `}`, Action: lexer.Pop()},
-		{Name: "QueryName", Pattern: `[^}]+`, Action: nil},
-		// {Name: "QueryChoice", Pattern: `[^|}]+`, Action: nil},
 	},
 	"Label": {
 		{Name: "LabelEnd", Pattern: `]`, Action: lexer.Pop()},
