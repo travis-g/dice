@@ -12,7 +12,7 @@ import (
 
 type Root struct {
 	Expr    *Expr  `@@`
-	Comment string `@CommentStart*`
+	Comment string `(("//" | "\\" | "#") @CommentText?)?`
 }
 
 type Expr struct {
@@ -26,11 +26,11 @@ type OpFactor struct {
 }
 
 type Factor struct {
-	Number *float64 `@(("-" | "+")? (Int | Float))`
-	Dice   *Dice    `| @SimpleNotation`
-	Func   *Func    `| @@`
-	Expr   *Expr    `| "(" @@ ")"`
-	Query  *Query   `| "?{" @@ "}"`
+	Number  *float64 `@(("-" | "+")? (Int | Float))`
+	Dice    *Dice    `| @SimpleNotation`
+	Func    *Func    `| @@`
+	Subexpr *Expr    `| "(" @@ ")"`
+	Query   *Query   `| "?{" @@ "}"`
 }
 
 type Func struct {
@@ -43,18 +43,18 @@ type Args struct {
 }
 
 type Query struct {
-	Name string `@QueryText` // FIXME
-	// Options []*LabelOption `("|" @@)*`
+	Name    string         `@QueryText` // FIXME
+	Options []*QueryOption `("|" @@)*`
 }
 
-type LabelOption struct {
-	Label  string `(@QueryText ",")?`
-	Option string `@QueryText`
+type QueryOption struct {
+	OptionLabel string `(@QueryText ",")?`
+	OptionValue string `@QueryText`
 }
 
 type Dice struct {
 	// FIXME
-	X         float64 `@@ " *"`
+	X         float64 `@@`
 	Y         string  `"d" @@`
 	Modifiers string  `@Char?`
 	Label     string  `("[" @~"]" "]")?`
@@ -74,15 +74,16 @@ const (
 // The lexer's state machine rules
 var rules = lexer.Rules{
 	"Root": {
-		{Name: "Whitespace", Pattern: `[ \t]+`, Action: nil},
 		{Name: "SimpleNotation", Pattern: `(?i)\d* *d(\d+|F)([a-z!=<>]+\d*)*(\[[^\]]+])?`, Action: nil}, // TODO: stateful
+		{Name: "InlineWhitespace", Pattern: `[ \t]+`, Action: nil},
+		{Name: "Whitespace", Pattern: `[ \t\n\r]+`, Action: nil},
 		{Name: "Ident", Pattern: `[a-zA-Z]{3,}`, Action: nil},
 		{Name: "Expr", Pattern: `\(`, Action: lexer.Push("Expr")},
-		{Name: "CommentStart", Pattern: `(//|\\|#)[^$]*`, Action: nil}, // TODO: stateful
+		{Name: "CommentStart", Pattern: `(//|\\|#)`, Action: lexer.Push("Comment")},
 		{Name: "Operator", Pattern: `\*\*|[-+\*^%/]|<<|>>`, Action: nil},
 		{Name: "Float", Pattern: `[-+]?\d*\.\d+`, Action: nil},
 		{Name: "Int", Pattern: `[-+]?\d+`, Action: nil},
-		{Name: "Query", Pattern: `\?{`, Action: lexer.Push("Query")},
+		{Name: "QueryStart", Pattern: `\?{`, Action: lexer.Push("Query")},
 		{Name: "EOL", Pattern: `[\n\r]+`, Action: nil},
 		{Name: "Comma", Pattern: `,`, Action: nil},
 		{Name: "Char", Pattern: `\$|[^$]+`, Action: nil},
@@ -90,11 +91,15 @@ var rules = lexer.Rules{
 	"Expr": {
 		{Name: "ExprEnd", Pattern: `\)`, Action: lexer.Pop()},
 		lexer.Include("Root"),
+		lexer.Return(),
 	},
 	"InlineExpr": { // TODO
+		// {Name: "InlineExpr", Pattern: `\[\[`, Action: lexer.Push("InlineExpr")},
 		{Name: "InlineExprEnd", Pattern: `]]`, Action: lexer.Pop()},
-		{Name: "InlineExpr", Pattern: `\[\[`, Action: lexer.Push("InlineExpr")},
-		// lexer.Include("Expr"),
+		lexer.Include("Expr"),
+	},
+	"StatefulNotation": {
+		// TODO
 	},
 	"Modifiers": {
 		{"Drop", `d[lh]?`, nil},
@@ -106,6 +111,7 @@ var rules = lexer.Rules{
 		{"Explode", `![!p]?`, nil},
 		{"ComparePointOp", `[=<>]`, nil},
 		{"ComparePointValue", `\d+`, nil},
+		lexer.Return(),
 	},
 	"GroupComparison": {
 		{"GroupComparisonOperator", `(<|>|=)`, nil},
@@ -115,8 +121,8 @@ var rules = lexer.Rules{
 		{Name: "RollGroupEnd", Pattern: `}`, Action: lexer.Pop()},
 	},
 	"Query": { // FIXME
-		{Name: "QueryText", Pattern: `[^}]+`, Action: nil},
-		// {Name: "QueryText", Pattern: `[^,|}]+`, Action: nil},
+		{Name: "QueryText", Pattern: `[^,|}]+`, Action: nil},
+		{Name: "QueryPunctuation", Pattern: `[,|]`, Action: nil},
 		{Name: "QueryEnd", Pattern: `}`, Action: lexer.Pop()},
 	},
 	"Label": {
@@ -124,8 +130,7 @@ var rules = lexer.Rules{
 		{Name: "LabelText", Pattern: `[^\]]+`, Action: nil},
 	},
 	"Comment": {
-		// {EOL},
-		{Name: "Comment", Pattern: `.+`, Action: nil},
+		{Name: "CommentText", Pattern: `.+`},
 	},
 }
 
@@ -133,7 +138,7 @@ var Lexer = lexer.MustStateful(rules)
 
 var parser = participle.MustBuild[Root](
 	participle.UseLookahead(3),
-	participle.Elide("Whitespace"),
+	participle.Elide("InlineWhitespace", "CommentStart", "CommentText"),
 	participle.Lexer(Lexer),
 )
 

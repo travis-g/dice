@@ -29,10 +29,11 @@ func ptr[T any](v T) *T {
 // params are parameters that should be referenced when using test roll queries.
 // These should be set as values in test contexts.
 var params map[string]string = map[string]string{
-	"foo": "1",
+	"foo":     "1",
+	"baz":     "",
+	"quz":     "2+1",
+	"foo bar": "4",
 	// bar: nil
-	"baz": "",
-	"quz": "2+1",
 }
 
 var benchmarkCases = []ExpressionTestCase{
@@ -111,6 +112,7 @@ var moreCases = []ExpressionTestCase{
 	{"?{foo|a,1|b, 2}", nil, false},
 	{"?{baz|1|2}", nil, false},
 	{"?{qux}", ptr(3.0), false},
+	{"?{foo bar}", ptr(4.0), false},
 	{"1+-1", ptr(0.0), false},
 	{"1+(-1)", ptr(0.0), false},
 	{"1--1", ptr(2.0), false},
