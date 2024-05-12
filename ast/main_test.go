@@ -119,6 +119,11 @@ var moreCases = []ExpressionTestCase{
 	{"1- -1", ptr(2.0), false},
 	{"-.3", ptr(-0.3), false},
 	{"+.3", ptr(0.3), false},
+	{"min(1,2)", ptr(1.0), false},
+	{"min(1)", nil, false},
+	{"round(1.2)", ptr(1.0), false},
+	{"round(1,2)", nil, false},
+	{"round()", nil, false},
 	{"1 // comment", ptr(1.0), false},
 	{"1// comment", ptr(1.0), false},
 	{"1//comment", ptr(1.0), false},
@@ -129,10 +134,6 @@ var moreCases = []ExpressionTestCase{
 	{` \ comment`, nil, true},
 
 	// TODO: fix these cases
-	{"min(1,2)", ptr(1.0), true},
-	{"min(1)", nil, true},
-	{"round(1.2)", ptr(1.0), true},
-	{"round(1,2)", nil, true},
 	{"1d20d>2", nil, false},
 	{"\nd20", nil, true},
 	{"d20\n", nil, true},
