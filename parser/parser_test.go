@@ -4,12 +4,14 @@ import (
 	"testing"
 )
 
-type ExpressionError struct {
+var unoptimize any
+
+type ExpressionWantError struct {
 	expression string
 	wantErr    bool
 }
 
-var expressionParseCases = []ExpressionError{
+var expressionParseCases = []ExpressionWantError{
 	{"1d20", false},
 	{"d20", false},
 	{"1d20+1", false},
@@ -35,20 +37,22 @@ func TestParse(t *testing.T) {
 				t.Errorf("Parse() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			_ = got
+			unoptimize = got.(Expression)
 		})
 	}
 }
 
-func BenchmarkParseReader(b *testing.B) {
+func BenchmarkParse(b *testing.B) {
 	for _, tt := range expressionParseCases {
 		b.Run("", func(b *testing.B) {
-			got, err := Parse(tt.expression, []byte(tt.expression))
-			if (err != nil) != tt.wantErr {
-				b.Errorf("ParseReader() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			for n := 0; n < b.N; n++ {
+				i, err := Parse(tt.expression, []byte(tt.expression))
+				if (err != nil) != tt.wantErr {
+					b.Errorf("Parse() error = %v, wantErr %v", err, tt.wantErr)
+					return
+				}
+				unoptimize = i
 			}
-			_ = got
 		})
 	}
 }

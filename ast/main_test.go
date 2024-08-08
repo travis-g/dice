@@ -21,11 +21,6 @@ func (e *ExpressionTestCase) Deterministic() bool {
 	return e.result != nil
 }
 
-// ptr returns the pointer to the passed value.
-func ptr[T any](v T) *T {
-	return &v
-}
-
 // params are parameters that should be referenced when using test roll queries.
 // These should be set as values in test contexts.
 var params map[string]string = map[string]string{
@@ -150,7 +145,7 @@ var moreCases = []ExpressionTestCase{
 	{"[[[[2]]d1]]+1", ptr(3.0), true},
 	// {"[[[[2]]d1]]", nil, true}, // TBD
 
-	// should fail
+	// should fail always
 	{"1+--1", nil, true},
 	{"1+*1", nil, true},
 	{"1=1", nil, true},

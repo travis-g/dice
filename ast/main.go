@@ -26,11 +26,12 @@ type OpFactor struct {
 }
 
 type Factor struct {
-	Number  *float64 `@(("-" | "+")? (Int | Float))`
-	Dice    *Dice    `| @SimpleNotation`
-	Func    *Func    `| @@`
-	Subexpr *Expr    `| "(" @@ ")"`
-	Query   *Query   `| "?{" @@ "}"`
+	Subexpr *Expr    `( "(" @@ ")"`
+	Number  *float64 `| @(("-" | "+")? (Int | Float))`
+	Query   *Query   `| "?{" @@ "}" )`
+	// Stuff   *Dice    `| "d" @(Int | "F")`
+	Dice *Dice `| @SimpleNotation`
+	Func *Func `| @@`
 }
 
 type Func struct {
@@ -54,22 +55,16 @@ type QueryOption struct {
 
 type Dice struct {
 	// FIXME
-	X         float64 `@@`
-	Y         string  `"d" @@`
-	Modifiers string  `@Char?`
-	Label     string  `("[" @~"]" "]")?`
+	Count     *int   `@@`
+	Size      *int   `"d" ( @@`
+	Fate      string `| "F" )`
+	Modifiers string `@Char?`
+	Label     string `("[" @~"]" "]")?`
 }
 
 func (d *Dice) Capture(values []string) error {
 	return d.ParseNotation(values[0])
 }
-
-type RegexPattern string
-
-const (
-	RegexComparePoint    = `(=|<|>)`
-	RegexModifierExplode = `![!p]?` + RegexComparePoint + `?`
-)
 
 // The lexer's state machine rules
 var rules = lexer.Rules{
@@ -80,10 +75,11 @@ var rules = lexer.Rules{
 		{Name: "Ident", Pattern: `[a-zA-Z]{3,}`, Action: nil},
 		{Name: "Expr", Pattern: `\(`, Action: lexer.Push("Expr")},
 		{Name: "CommentStart", Pattern: `(//|\\|#)`, Action: lexer.Push("Comment")},
+		{Name: "QueryStart", Pattern: `\?{`, Action: lexer.Push("Query")},
+		{Name: "LabelStart", Pattern: `\[`, Action: nil}, // FIXME
 		{Name: "Operator", Pattern: `\*\*|[-+\*^%/]|<<|>>`, Action: nil},
 		{Name: "Float", Pattern: `[-+]?\d*\.\d+`, Action: nil},
 		{Name: "Int", Pattern: `[-+]?\d+`, Action: nil},
-		{Name: "QueryStart", Pattern: `\?{`, Action: lexer.Push("Query")},
 		{Name: "EOL", Pattern: `[\n\r]+`, Action: nil},
 		{Name: "Comma", Pattern: `,`, Action: nil},
 		{Name: "Char", Pattern: `\$|[^$]+`, Action: nil},
@@ -161,4 +157,9 @@ func main() {
 	if err := json.NewEncoder(os.Stdout).Encode(expr); err != nil {
 		panic(err)
 	}
+}
+
+// ptr returns the pointer to the passed value.
+func ptr[T any](v T) *T {
+	return &v
 }

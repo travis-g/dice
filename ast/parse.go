@@ -14,11 +14,16 @@ func (d *Dice) ParseNotation(notation string) error {
 		if err != nil {
 			return err
 		}
-		d.X = float64(c)
+		d.Count = ptr(c)
 	} else {
-		d.X = 1
+		d.Count = ptr(1)
 	}
-	d.Y = components["size"]
+	if s, err := strconv.Atoi(components["size"]); err != nil {
+		d.Size = ptr(s)
+	} else if components["size"] == "F" {
+		// TODO
+		d.Size = ptr(1)
+	}
 	d.Modifiers = components["modifiers"]
 	return nil
 }
