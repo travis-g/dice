@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"testing"
 )
 
@@ -9,26 +10,17 @@ var global any
 
 type ExpressionTestCase struct {
 	expression string
-	// if expression's mathematic result is deterministic result is a pointer to
-	// the evaluated expression's result, ex. "1+1" -> `ptr(2.0)`.
-	result  *float64
-	wantErr bool
+	// if expression's mathematic result is deterministic then result is a
+	// pointer to the evaluated expression's result, ex. "1+1" => `ptr(2.0)`.
+	result *float64
+	// test cases include whether the parsing of the string should fail
+	wantParseErr bool
 }
 
 // Deterministic returns whether a test case has a defined result, indicating
 // any evaluation of the expression should result in the same value.
 func (e *ExpressionTestCase) Deterministic() bool {
 	return e.result != nil
-}
-
-// params are parameters that should be referenced when using test roll queries.
-// These should be set as values in test contexts.
-var params map[string]string = map[string]string{
-	"foo":     "1",
-	"baz":     "",
-	"quz":     "2+1",
-	"foo bar": "4",
-	// bar: nil
 }
 
 var benchmarkCases = []ExpressionTestCase{
@@ -71,14 +63,15 @@ var moreCases = []ExpressionTestCase{
 	{"1d20r", nil, false},
 	{"1d20sa", nil, false},
 	{"1d20sd", nil, false},
-	{"1d20ssd", nil, false},
-	{"1d20sad", nil, false}, // sort + drop
+	{"1d20ssd", nil, false},      // double sort
+	{"1d20sad", ptr(0.0), false}, // sort + drop
 	{"1d20cf", nil, false},
 	{"1d20cs", nil, false},
 	{"1d20cs>2", nil, false},
 	{"1d20!p", nil, false},
 	{"1d20!p>8", nil, false},
 	{"1d20!!", nil, false},
+	{"1d20!!>8", nil, false},
 	{"1d20r1r2", nil, false},
 	{"1d20r1r2>4", nil, false},
 	{"1d20r1r2>0", ptr(1.0), false},
@@ -96,27 +89,29 @@ var moreCases = []ExpressionTestCase{
 	{"10-3+2", ptr(9.0), false},
 	{"1/2", ptr(0.5), false},
 	{"1.5*2", ptr(3.0), false},
-	{"3%2", ptr(1.0), false},
+	{"5%2", ptr(1.0), false},
 	{"3^3", ptr(9.0), false},
 	{"1.1", ptr(1.1), false},
 	{".1", ptr(0.1), false},
 	{"0+.1", ptr(0.1), false},
 	{"0-.1", ptr(-0.1), false},
 	{"?{foo|a,1}", nil, false},
-	{"1+?{foo|a,1}", nil, false},
 	{"?{foo|a,1|b, 2}", nil, false},
 	{"?{baz|1|2}", nil, false},
 	{"?{qux}", ptr(3.0), false},
 	{"?{foo bar}", ptr(4.0), false},
+	{"1+?{foo|a,1}", nil, false},
 	{"1+-1", ptr(0.0), false},
 	{"1+(-1)", ptr(0.0), false},
 	{"1--1", ptr(2.0), false},
+	{"1- -1", ptr(2.0), false},
 	{"1-+1", ptr(0.0), false},
 	{"1*+2", ptr(2.0), false},
-	{"1- -1", ptr(2.0), false},
 	{"-.3", ptr(-0.3), false},
 	{"+.3", ptr(0.3), false},
 	{"min(1,2)", ptr(1.0), false},
+	{"min(1, 2)", ptr(1.0), false},
+	{"min(1, 2 )", ptr(1.0), false},
 	{"min(1)", nil, false},
 	{"round(1.2)", ptr(1.0), false},
 	{"round(1,2)", nil, false},
@@ -124,16 +119,17 @@ var moreCases = []ExpressionTestCase{
 	{"1 // comment", ptr(1.0), false},
 	{"1// comment", ptr(1.0), false},
 	{"1//comment", ptr(1.0), false},
-	// Fail comments-only
-	{"# comment", nil, true},
-	{"// comment", nil, true},
-	{`\ comment`, nil, true},
-	{` \ comment`, nil, true},
+	{"?{undefined}", nil, false},
+	{"((((((1))))))", ptr(1.0), false},
+
+	// Comments-only rolls must still parse
+	{"# comment", nil, false},
+	{"// comment", nil, false},
+	{`\ comment`, nil, false},
+	{` \ comment`, nil, false},
 
 	// TODO: fix these cases
 	{"1d20d>2", nil, false},
-	{"\nd20", nil, true},
-	{"d20\n", nil, true},
 	{"// comment\n1", ptr(1.0), true},
 	{"1[foo]", ptr(1.0), true},
 	{"(3)d(1)", ptr(3.0), true},
@@ -143,6 +139,7 @@ var moreCases = []ExpressionTestCase{
 	{"{1,1}d1>=2", ptr(0.0), true},
 	{"{1,3}d1>=2", ptr(1.0), true},
 	{"[[[[2]]d1]]+1", ptr(3.0), true},
+	{"d20\n", nil, true},
 	// {"[[[[2]]d1]]", nil, true}, // TBD
 
 	// should fail always
@@ -150,31 +147,82 @@ var moreCases = []ExpressionTestCase{
 	{"1+*1", nil, true},
 	{"1=1", nil, true},
 	{"1+=1", nil, true},
+	{"\nd20", nil, true},
 	{"\n", nil, true},
 }
 
 var expressionParseCases = append(benchmarkCases, moreCases...)
 
-func TestParse(t *testing.T) {
+type ASTTestCase struct {
+	expression string
+	ast        *Root
+	wantErr    bool
+}
+
+// params are parameters referenced when using test roll queries. These should
+// be passed into test contexts.
+var params map[string]string = map[string]string{
+	"foo":     "1",
+	"baz":     "",
+	"quz":     "2+1",
+	"foo bar": "4",
+	// undefined: nil
+}
+
+var astCases = []ASTTestCase{
+	{"", nil, true},
+	{"1", &Root{Expr: &Expr{L: &Factor{Number: ptr(1.0)}}}, false},
+	{"1d20", &Root{Expr: &Expr{L: &Factor{Dice: &Dice{Count: ptr(1), Size: ptr(20)}}}}, false},
+	{"d20", &Root{Expr: &Expr{L: &Factor{Dice: &Dice{Count: ptr(1), Size: ptr(20)}}}}, false},
+	{"1d20+1", &Root{Expr: &Expr{L: &Factor{Dice: &Dice{Count: ptr(1), Size: ptr(20)}}, R: []*OpFactor{{Op: "+", Factor: &Factor{Number: ptr(1.0)}}}}}, false},
+	{"1 //test", &Root{Expr: &Expr{L: &Factor{Number: ptr(1.0)}}, Comment: ptr("test")}, false},
+	{"1 // te st ", &Root{Expr: &Expr{L: &Factor{Number: ptr(1.0)}}, Comment: ptr("te st ")}, false},
+	{"0+.1", &Root{Expr: &Expr{L: &Factor{Number: ptr(0.0)}, R: []*OpFactor{{Op: "+", Factor: &Factor{Number: ptr(0.1)}}}}}, false},
+	{"1--1", &Root{Expr: &Expr{L: &Factor{Number: ptr(1.0)}, R: []*OpFactor{{Op: "-", Factor: &Factor{Number: ptr(-1.0)}}}}}, false},
+	// TODO: more cases. ensure that defaults are tested as well
+}
+
+func TestParseString(t *testing.T) {
+	t.Parallel()
+
+	// test that given expressions can be parsed or error out as expected
 	for _, tt := range expressionParseCases {
+		t.Run(tt.expression, func(t *testing.T) {
+			got, err := ParseString(tt.expression, false)
+			// TODO: confirm that err is desired type
+			if (err != nil) != tt.wantParseErr {
+				t.Errorf("error = %v, wantErr %v", err, tt.wantParseErr)
+				return
+			}
+			global = got
+		})
+	}
+
+	// test that expected ASTs are created from specific expressions
+	for _, tt := range astCases {
 		t.Run(tt.expression, func(t *testing.T) {
 			got, err := ParseString(tt.expression, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+			if !deepEqual(got, tt.ast) {
+				gotBytes, _ := json.Marshal(got)
+				astBytes, _ := json.Marshal(tt.ast)
+				t.Errorf("got = %v, want %v", string(gotBytes), string(astBytes))
+			}
 			global = got
 		})
 	}
 }
 
-func BenchmarkParse(b *testing.B) {
+func BenchmarkParseString(b *testing.B) {
 	for _, tt := range benchmarkCases {
 		b.Run(tt.expression, func(b *testing.B) {
 			for n := 0; n < b.N; n++ {
 				got, err := ParseString(tt.expression, false)
-				if (err != nil) != tt.wantErr {
-					b.Errorf("error = %v, wantErr %v", err, tt.wantErr)
+				if (err != nil) != tt.wantParseErr {
+					b.Errorf("error = %v, wantErr %v", err, tt.wantParseErr)
 					return
 				}
 				global = got
