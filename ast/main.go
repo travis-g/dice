@@ -199,10 +199,21 @@ func ParseString(expression string, trace bool) (*Root, error) {
 	}
 	if trace {
 		return Parser.ParseString(expression, expression,
-			participle.Trace(os.Stdout))
+			participle.Trace(os.Stderr))
 	} else {
 		return Parser.ParseString(expression, expression)
 	}
+}
+
+var (
+	trace   *bool
+	diagram *bool
+)
+
+func init() {
+	// define CLI flags only once
+	trace = flag.Bool("trace", false, "trace the parser to stderr")
+	diagram = flag.Bool("diagram", false, "output parser diagram code")
 }
 
 func main() {
@@ -213,7 +224,8 @@ func main() {
 		fmt.Fprintf(os.Stdout, Parser.String())
 		return
 	}
-	expr, err := ParseString(flag.Arg(0), *debug)
+
+	expr, err := ParseString(flag.Arg(0), *trace)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 	}
