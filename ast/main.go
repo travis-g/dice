@@ -1,3 +1,8 @@
+/*
+AST parses a dice roll expression into an abstract syntax tree.
+
+See https://github.com/alecthomas/participle
+*/
 package main
 
 import (
@@ -7,6 +12,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
@@ -17,9 +23,7 @@ var (
 	ErrorEmptyExpression = errors.New("empty expression")
 )
 
-// See https://github.com/alecthomas/participle
-
-// The root of any individual expression
+// A Root is the top level AST node of any individual dice roll expression.
 type Root struct {
 	Expr    *Expr   `@@?`
 	Comment *string `(("//" | "\\" | "#") @CommentText?)?`
@@ -36,11 +40,14 @@ type OpFactor struct {
 }
 
 type Factor struct {
-	Subexpr *Expr    `( "(" @@ ")"`
-	Number  *float64 `| @(("-" | "+")? (Int | Float))`
-	Query   *Query   `| "?{" @@ "}" )`
-	Dice    *Dice    `| @SimpleNotation`
-	Func    *Func    `| @@`
+	Subexpr       *Expr          `( "(" @@ ")"`
+	Query         *Query         `| "?{" @@ "}" )`
+	Number        *float64       `| @(("-" | "+")? (Int | Float))`
+	Dice          *Dice          `| ( @SimpleNotation`
+	Modifiers     []*Modifier    `@@*`
+	GroupModifier *GroupModifier `@@?`
+	Label         string         `("[" @~"]" "]")? )`
+	Func          *Func          `| @@`
 }
 
 type Func struct {
@@ -63,11 +70,9 @@ type QueryOption struct {
 }
 
 type Dice struct {
-	Count     *int   `@Uint?`
-	Size      *int   `("d"|"D") ( @Uint`
-	Fudge     bool   `| @("F"|"f") )`
-	Modifiers string `@Char?`
-	Label     string `("[" @~"]" "]")?`
+	Count *int `@Uint? ("d"|"D")`
+	Size  *int `( @Uint`
+	Fudge bool `| @("F"|"f") )`
 }
 
 type Quantity struct {
@@ -77,9 +82,15 @@ type Quantity struct {
 }
 
 type Modifier struct {
+	// FIXME: not all types can have a comparison operator and/or value
 	Type      string `@(Drop | Keep | Reroll | CriticalSuccess | CriticalFailure | Sort | Explode)`
-	CompareOp string `@ComparePointOp?`
-	Value     int    `@Uint?`
+	CompareOp string `@ComparisonOp?`
+	Value     int    `@ComparisonValue?`
+}
+
+type GroupModifier struct {
+	CompareOp string `@ComparisonOp`
+	Value     int    `@ComparisonValue`
 }
 
 func (d *Dice) Capture(values []string) error {
@@ -102,9 +113,6 @@ func (d *Dice) Capture(values []string) error {
 		d.Fudge = true
 		d.Size = ptr(1)
 	}
-	d.Modifiers = components["modifiers"]
-	// FIXME: parse Label
-	d.Label = ""
 	return nil
 }
 
@@ -112,24 +120,27 @@ func (d *Dice) Capture(values []string) error {
 // appear.
 var rules = lexer.Rules{
 	"Root": {
-		{Name: "SimpleNotation", Pattern: `\d* *[dD](\d+|F|f)([a-zA-Z!=<>]+\d*)*(\[[^\]]+])?`}, // TODO: stateful
+		{Name: "SimpleNotation", Pattern: `\d* *[dD](\d+|F|f)`, Action: lexer.Push("Modifiers")},
 		{Name: "InlineWhitespace", Pattern: `[ \t]+`},
 		{Name: "EOL", Pattern: `[\n\r]+`},
 		{Name: "Whitespace", Pattern: `[ \t\n\r]+`},
-		{Name: "Ident", Pattern: `[a-zA-Z]{3,}`},
 		{Name: "Expr", Pattern: `\(`, Action: lexer.Push("Expr")},
-		{Name: "CommentStart", Pattern: `(//|\\|#)`, Action: lexer.Push("Comment")},
+		{Name: "Comment", Pattern: `(//|\\|#)`, Action: lexer.Push("Comment")},
 		{Name: "Operator", Pattern: `\*\*|[-+*^%/]|<<|>>`},
+		lexer.Include("Numbers"),
+		{Name: "Ident", Pattern: `[a-zA-Z]{3,}`},
+		{Name: "Comma", Pattern: `,`},
+		{Name: "Query", Pattern: `\?{`, Action: lexer.Push("Query")},
+		{Name: "RollGroup", Pattern: `{`, Action: lexer.Push("RollGroup")},
+		{Name: "InlineExpr", Pattern: `\[\[`, Action: lexer.Push("InlineExpr")},
+		{Name: "Label", Pattern: `\[`, Action: lexer.Push("Label")},
+		{Name: "Char", Pattern: `\$|[^$]+`},
+		{Name: "End", Pattern: `$`},
+	},
+	"Numbers": {
 		{Name: "Float", Pattern: `[-+]?\d*\.\d+`},
 		{Name: "Int", Pattern: `[-+]?\d+`},
 		{Name: "Uint", Pattern: `\d+`},
-		{Name: "Comma", Pattern: `,`},
-		{Name: "QueryStart", Pattern: `\?{`, Action: lexer.Push("Query")},
-		{Name: "RollGroupStart", Pattern: `{`, Action: lexer.Push("RollGroup")},
-		{Name: "InlineExprStart", Pattern: `\[\[`, Action: lexer.Push("InlineExpr")},
-		{Name: "LabelStart", Pattern: `\[`, Action: lexer.Push("Label")},
-		{Name: "Char", Pattern: `\$|[^$]+`},
-		{Name: "End", Pattern: `$`},
 	},
 	"Expr": {
 		{Name: "ExprEnd", Pattern: `\)`, Action: lexer.Pop()},
@@ -142,42 +153,46 @@ var rules = lexer.Rules{
 		lexer.Return(),
 	},
 	"StatefulNotation": {
-		// TODO
+		{Name: "Uint", Pattern: `\d+`},
+		{Name: "Fudge", Pattern: `[Ff]`},
 	},
 	"Modifiers": {
-		{Name: "Drop", Pattern: `d[lh]?`},
-		{Name: "Keep", Pattern: `k[lh]?`},
-		{Name: "Reroll", Pattern: `ro?`},
-		{Name: "CriticalSuccess", Pattern: `cs`},
-		{Name: "CriticalFailure", Pattern: `cf`},
+		{Name: "Drop", Pattern: `d[lh]?`, Action: lexer.Push("ModifierValue")},
+		{Name: "Keep", Pattern: `k[lh]?`, Action: lexer.Push("ModifierValue")},
+		{Name: "Reroll", Pattern: `ro?`, Action: lexer.Push("Comparison")},
 		{Name: "Sort", Pattern: `s[ad]?`},
-		{Name: "Explode", Pattern: `![!p]?`},
-		{Name: "ComparePointOp", Pattern: `[<>]`},
-		{Name: "ComparePointValue", Pattern: `\d+`},
+		{Name: "CriticalSuccess", Pattern: `cs`, Action: lexer.Push("Comparison")},
+		{Name: "CriticalFailure", Pattern: `cf`, Action: lexer.Push("Comparison")},
+		{Name: "Explode", Pattern: `![!p]?`, Action: lexer.Push("Comparison")},
+		lexer.Include("Comparison"), // GroupModifier
+		lexer.Return(),
+	},
+	"Comparison": {
+		{Name: "ComparisonOp", Pattern: `[<>]`, Action: lexer.Push("ModifierValue")},
+		{Name: "ComparisonValue", Pattern: `-?\d+`, Action: lexer.Pop()},
+	},
+	"ModifierValue": {
+		{Name: "ComparisonValue", Pattern: `-?\d+`, Action: lexer.Pop()},
 		lexer.Return(),
 	},
 	"GroupComparison": {
-		{Name: "GroupComparisonOperator", Pattern: `[<>=]`},
-		{Name: "GroupComparisonPoint", Pattern: `\d+`, Action: lexer.Pop()}, // Float?
-		lexer.Return(),
+		{Name: "GroupComparisonOp", Pattern: `[<>=]`},
+		{Name: "GroupComparisonValue", Pattern: `-?\d+`, Action: lexer.Pop()}, // Float?
 	},
 	"RollGroup": {
 		// TODO
 		{Name: "RollGroupEnd", Pattern: `}`, Action: lexer.Pop()},
-		lexer.Return(),
 	},
 	"Query": {
+		{Name: "QueryEnd", Pattern: `}`, Action: lexer.Pop()},
 		{Name: "InlineWhitespace", Pattern: `[ \t]+`},
 		{Name: "QueryText", Pattern: `[^,|}]+`},
 		{Name: "QueryPunctuation", Pattern: `[,|]`},
-		{Name: "QueryEnd", Pattern: `}`, Action: lexer.Pop()},
-		lexer.Return(),
 	},
 	"Label": {
+		{Name: "LabelEnd", Pattern: `]`, Action: lexer.Pop()},
 		{Name: "InlineWhitespace", Pattern: `[ \t]+`},
 		{Name: "LabelText", Pattern: `[^\]]+`},
-		{Name: "LabelEnd", Pattern: `]`, Action: lexer.Pop()},
-		lexer.Return(),
 	},
 	"Comment": {
 		{Name: "InlineWhitespace", Pattern: `[ \t]+`},
@@ -189,10 +204,20 @@ var rules = lexer.Rules{
 var Lexer = lexer.MustStateful(rules)
 
 var Parser = participle.MustBuild[Root](
-	participle.Elide("Whitespace", "InlineWhitespace", "CommentStart"),
 	participle.Lexer(Lexer),
+	participle.Elide("Whitespace", "InlineWhitespace", "Comment"),
+	participle.UseLookahead(2),
 )
 
+// Sanitize is a helper to remove odd formatting from an expression, such as
+// leading and trailing whitespace.
+func Sanitize(expression string) (sanitized string) {
+	sanitized = strings.Trim(expression, " \n\t\r")
+	return
+}
+
+// ParseString is a wrapper to parse an expression. Expression strings are
+// assumed to be sanitized or linted before being parsed.
 func ParseString(expression string, trace bool) (*Root, error) {
 	if expression == "" {
 		return nil, ErrorEmptyExpression
@@ -217,8 +242,6 @@ func init() {
 }
 
 func main() {
-	debug := flag.Bool("debug", false, "run parser in debug mode")
-	diagram := flag.Bool("diagram", false, "print parser diagram")
 	flag.Parse()
 	if *diagram {
 		fmt.Fprintf(os.Stdout, Parser.String())

@@ -40,12 +40,16 @@ var benchmarkCases = []ExpressionTestCase{
 	{"3d6", nil, false},
 	{"3d6s", nil, false},
 	{"?{foo}", ptr(1.0), false},
-	{"?{bar|1}", ptr(1.0), false},
+	{"?{undefined|1}", ptr(1.0), false},
 	{"foo", nil, true},
 }
 
+// More test cases. Many of these should parse correctly, but may throw errors
+// if evaluated.
 var moreCases = []ExpressionTestCase{
 	{"D20", nil, false},
+	{"df", nil, false},
+	{"Df", nil, false},
 	{"d0", ptr(0.0), false},
 	{"d1", ptr(1.0), false},
 	{" d20 ", nil, false},
@@ -120,36 +124,50 @@ var moreCases = []ExpressionTestCase{
 	{"1 // comment", ptr(1.0), false},
 	{"1// comment", ptr(1.0), false},
 	{"1//comment", ptr(1.0), false},
+	{"1//comment ", ptr(1.0), false},
 	{"?{undefined}", nil, false},
 	{"((((((1))))))", ptr(1.0), false},
 
-	// Comments-only rolls must still parse
+	// comment-only rolls must still parse
 	{"# comment", nil, false},
 	{"// comment", nil, false},
 	{`\ comment`, nil, false},
 	{` \ comment`, nil, false},
-
-	// TODO: fix these cases
-	{"1d20d>2", nil, false},
-	{"// comment\n1", ptr(1.0), true},
-	{"1[foo]", ptr(1.0), true},
-	{"(3)d(1)", ptr(3.0), true},
-	{"(3)d(1)k2", ptr(2.0), true},
-	{"{3,4}k1", ptr(4.0), true},
-	{"{3,4}>=2", ptr(2.0), true},
-	{"{1,1}d1>=2", ptr(0.0), true},
-	{"{1,3}d1>=2", ptr(1.0), true},
-	{"[[[[2]]d1]]+1", ptr(3.0), true},
-	{"d20\n", nil, true},
-	// {"[[[[2]]d1]]", nil, true}, // TBD
 
 	// should fail always
 	{"1+--1", nil, true},
 	{"1+*1", nil, true},
 	{"1=1", nil, true},
 	{"1+=1", nil, true},
+	{"1+(1", nil, true},
+	{"1+)1", nil, true},
+	{"1(2)", nil, true},
+	// unsanitized rolls
 	{"\nd20", nil, true},
 	{"\n", nil, true},
+	{"d20\n", nil, true},
+
+	// TODO: fix these cases
+	{"1d20d>2", nil, false},           // FIXME: no comparisons on drop/keep modifiers
+	{"// comment\n1", ptr(1.0), true}, // FIXME: support single multiline roll
+	{"1[foo]", ptr(1.0), true},        // FIXME: allow labels on Numbers
+
+	// TODO: future features
+	// computed dice
+	{"d(1)", ptr(1.0), true},
+	{"(3)d1", ptr(3.0), true},
+	{"(3)d(1)", ptr(3.0), true},
+	{"(3d1)d1", ptr(3.0), true},
+	{"(3)d(1)k2", ptr(2.0), true},
+	// dice groups
+	{"{3,4}k1", ptr(4.0), true},
+	{"{3,4}>=2", ptr(2.0), true},
+	{"{3,4}s", ptr(7.0), true},
+	{"{1,1}d1>=2", ptr(0.0), true},
+	{"{1,3}d1>=2", ptr(1.0), true},
+	// inline group
+	{"[[[[2]]d1]]+1", nil, true},
+	// {"[[[[2]]d1]]", nil, true}, // TBD
 }
 
 var expressionParseCases = append(benchmarkCases, moreCases...)
@@ -164,13 +182,13 @@ type ASTTestCase struct {
 // be passed into test contexts.
 var params map[string]string = map[string]string{
 	"foo":     "1",
+	"bar":     "2+1",
 	"baz":     "",
-	"quz":     "2+1",
 	"foo bar": "4",
-	// undefined: nil
 }
 
 var astCases = []ASTTestCase{
+	// TODO: ensure that defaults are tested as well
 	{"", nil, true},
 	{"1", &Root{Expr: &Expr{L: &Factor{Number: ptr(1.0)}}}, false},
 	{"1d20", &Root{Expr: &Expr{L: &Factor{Dice: &Dice{Count: ptr(1), Size: ptr(20)}}}}, false},
@@ -180,7 +198,9 @@ var astCases = []ASTTestCase{
 	{"1 // te st ", &Root{Expr: &Expr{L: &Factor{Number: ptr(1.0)}}, Comment: ptr("te st ")}, false},
 	{"0+.1", &Root{Expr: &Expr{L: &Factor{Number: ptr(0.0)}, R: []*OpFactor{{Op: "+", Factor: &Factor{Number: ptr(0.1)}}}}}, false},
 	{"1--1", &Root{Expr: &Expr{L: &Factor{Number: ptr(1.0)}, R: []*OpFactor{{Op: "-", Factor: &Factor{Number: ptr(-1.0)}}}}}, false},
-	// TODO: more cases. ensure that defaults are tested as well
+	{"1d20[foo]", &Root{Expr: &Expr{L: &Factor{Dice: &Dice{Count: ptr(1), Size: ptr(20)}, Label: "foo"}}}, false},
+
+	// TODO: fix these cases
 }
 
 func TestParseString(t *testing.T) {
