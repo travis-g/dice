@@ -17,3 +17,8 @@ coverage.out
 .AppleDouble
 .LSOverride
 ._*
+
+# parser railroad diagrams
+ast/*.html
+ast/*.js
+ast/*.css
