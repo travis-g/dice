@@ -3,6 +3,8 @@ fmt:
 	gofmt -s -w .
 
 build: fmt test
+	@echo "==> Building the parser..."
+	go build -ldflags="-s -w" ./ast
 	@echo "==> Building library..."
 	go build -ldflags="-s -w" ./...
 	@echo "==> Building the CLI..."
@@ -22,15 +24,19 @@ bench: test
 
 cover:
 	@echo "==> Calculating coverage..."
-	@go test -coverprofile=coverage.out . ./math
+	@go test -coverprofile=coverage.out . ./math ./ast
 	@go tool cover -func=coverage.out | grep -vE "^total" | sort -k3,3n
 	@go tool cover -html=coverage.out
 
 clean:
-	@rm -f dice dice.exe parser parser.exe coverage.out
+	@rm -f dice dice.exe parser parser.exe coverage.out ast ast.exe
 
 godoc:
 	@echo "==> View godoc at http://localhost:8080/pkg/github.com/travis-g/dice/"
 	@godoc -http ":8080"
+
+ast: fmt test
+	@echo "==> Building AST package"
+	@cd ast/ && go build && ./ast -diagram | railroad -o index.html -w && python -m http.server 8000
 
 .PHONY: clean build godoc
