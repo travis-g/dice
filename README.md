@@ -27,7 +27,7 @@ To fetch the source and dependencies and place everything in your [GOPATH][gopat
 go get -u github.com/travis-g/dice/...
 ```
 
-The actual `main` package is defined in `cmd/dice`. To test everything and build the CLI:
+The `main` package is defined in `cmd/dice`. To test everything and build the CLI:
 
 ```sh
 make build
@@ -48,10 +48,3 @@ See the `Makefile` for more.
 [godoc]: https://godoc.org/github.com/travis-g/dice
 [golang]: https://golang.org/
 [gopath]: https://golang.org/doc/code.html#GOPATH
-
-[tex-1dX]: https://chart.googleapis.com/chart?cht=tx&chf=bg,s,00000000&chl=%5Ctext%7B1d%7DX
-[tex-A]: https://chart.googleapis.com/chart?cht=tx&chf=bg,s,00000000&chl=A
-[tex-AdX+B]: https://chart.googleapis.com/chart?cht=tx&chf=bg,s,00000000&chl=A%5Ctext%7Bd%7DX%20%5Cpm%20B
-[tex-B]: https://chart.googleapis.com/chart?cht=tx&chf=bg,s,00000000&chl=B
-[tex-dX]: https://chart.googleapis.com/chart?cht=tx&chf=bg,s,00000000&chl=%5Ctext%7Bd%7DX
-[tex-X]: https://chart.googleapis.com/chart?cht=tx&chf=bg,s,00000000&chl=X
