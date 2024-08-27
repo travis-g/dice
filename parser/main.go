@@ -1,3 +1,11 @@
+/*
+Parser is an experiment to define grammar for dice roll expressions using a
+parsing expression grammar (PEG) approach. The PEG is generated using pigeon:
+
+	pigeon -o parser.go dice.peg
+
+See https://github.com/mna/pigeon/
+*/
 package main
 
 import (
