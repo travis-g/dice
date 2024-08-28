@@ -2,11 +2,10 @@ package main
 
 import (
 	"encoding/json"
-	"os"
 	"testing"
 )
 
-// global variable to prevent compiler optimizations
+// write-only global variable to prevent compiler optimizations
 var global any
 
 type ExpressionTestCase struct {
@@ -45,8 +44,10 @@ var benchmarkCases = []ExpressionTestCase{
 }
 
 // More test cases. Many of these should parse correctly, but may throw errors
-// if evaluated.
+// when evaluated.
 var moreCases = []ExpressionTestCase{
+	// TODO: break these into more case "sets" for maintainability, ex. case
+	// sensitivity set vs. future features set vs. eval error set
 	{"D20", nil, false},
 	{"df", nil, false},
 	{"Df", nil, false},
@@ -58,6 +59,7 @@ var moreCases = []ExpressionTestCase{
 	{"1d 20", nil, true},
 	{"0d20", ptr(0.0), false},
 	{"(0d20)", ptr(0.0), false},
+	{"1d20k", nil, false},
 	{"1d20d1", ptr(0.0), false},
 	{"1d20d", ptr(0.0), false},
 	{"1dFd", ptr(0.0), false},
@@ -68,6 +70,10 @@ var moreCases = []ExpressionTestCase{
 	{"1d20r", nil, false},
 	{"1d20sa", nil, false},
 	{"1d20sd", nil, false},
+	{"1d20R", nil, false}, // case insensitivity tests
+	{"1d20Sa", nil, false},
+	{"1d20Sd", nil, false},
+	{"1d20sD", nil, false},
 	{"1d20ssd", nil, false},      // double sort
 	{"1d20sad", ptr(0.0), false}, // sort + drop
 	{"1d20cf", nil, false},
@@ -78,8 +84,13 @@ var moreCases = []ExpressionTestCase{
 	{"1d20!!", nil, false},
 	{"1d20!!>8", nil, false},
 	{"1d20r1r2", nil, false},
+	{"1d20>1", ptr(1.0), false}, // success/failure modifiers
 	{"1d20r1r2>4", nil, false},
 	{"1d20r1r2>0", ptr(1.0), false},
+	{"1d20f>1", ptr(0.0), false},
+	{"3d6f>2<3", nil, false}, // "reversed" success modifiers
+	{"1d20>10f<5", nil, false},
+	{"1d20>1f<20", ptr(0.0), false}, // "Schrödinger's roll"
 	{"1dF>4", ptr(0.0), false},
 	{"2dF>-1", ptr(2.0), false},
 	{"8/2*4", ptr(16.0), false},
@@ -100,41 +111,49 @@ var moreCases = []ExpressionTestCase{
 	{".1", ptr(0.1), false},
 	{"0+.1", ptr(0.1), false},
 	{"0-.1", ptr(-0.1), false},
-	{"?{foo|a,1}", nil, false},
+	{"?{foo|a,1}", nil, false}, // roll queries
 	{"?{foo|a,1|b, 2}", nil, false},
+	{"?{baz|1}", nil, false},
 	{"?{baz|1|2}", nil, false},
-	{"?{qux}", ptr(3.0), false},
+	{"?{bar}", ptr(3.0), false},
 	{"?{foo bar}", ptr(4.0), false},
 	{"1+?{foo|a,1}", nil, false},
 	{"1+-1", ptr(0.0), false},
 	{"1+(-1)", ptr(0.0), false},
+	{"1-+1", ptr(0.0), false},
 	{"1--1", ptr(2.0), false},
 	{"1- -1", ptr(2.0), false},
-	{"1-+1", ptr(0.0), false},
-	{"1*+2", ptr(2.0), false},
+	{"1*+3", ptr(3.0), false},
 	{"-.3", ptr(-0.3), false},
 	{"+.3", ptr(0.3), false},
 	{"min(1,2)", ptr(1.0), false},
 	{"min(1, 2)", ptr(1.0), false},
 	{"min(1, 2 )", ptr(1.0), false},
-	{"min(1)", nil, false},
+	{"min(1)", ptr(1.0), false},
+	{"min()", nil, false}, // eval error?
+	{"min(1, 2, 3)", ptr(1.0), false},
+	{"max(1, 2, 3)", ptr(3.0), false},
+	{"abs(-1)", ptr(1.0), false},
+	{"abs(-1, 2)", nil, false}, // eval error
 	{"round(1.2)", ptr(1.0), false},
-	{"round(1,2)", nil, false},
-	{"round()", nil, false},
+	{"round(1,2)", nil, false}, // eval error
+	{"round()", nil, false},    // eval error?
 	{"1 // comment", ptr(1.0), false},
 	{"1// comment", ptr(1.0), false},
 	{"1//comment", ptr(1.0), false},
 	{"1//comment ", ptr(1.0), false},
-	{"?{undefined}", nil, false},
+	{"?{undefined}", nil, false}, // eval error
 	{"((((((1))))))", ptr(1.0), false},
 
-	// comment-only rolls must still parse
+	// comment should still parse but throw eval errors (nil results)
 	{"# comment", nil, false},
 	{"// comment", nil, false},
 	{`\ comment`, nil, false},
 	{` \ comment`, nil, false},
 
 	// should fail always
+	{"+", nil, true},
+	{"-", nil, true},
 	{"1+--1", nil, true},
 	{"1+*1", nil, true},
 	{"1=1", nil, true},
@@ -142,30 +161,33 @@ var moreCases = []ExpressionTestCase{
 	{"1+(1", nil, true},
 	{"1+)1", nil, true},
 	{"1(2)", nil, true},
-	// unsanitized rolls
-	{"\nd20", nil, true},
+	{"\nd20", nil, true}, // unsanitized roll strings
 	{"\n", nil, true},
 	{"d20\n", nil, true},
 
-	// TODO: fix these cases
-	{"1d20d>2", nil, false},           // FIXME: no comparisons on drop/keep modifiers
-	{"// comment\n1", ptr(1.0), true}, // FIXME: support single multiline roll
-	{"1[foo]", ptr(1.0), true},        // FIXME: allow labels on Numbers
+	// TODO: fix the below cases cases?
+	{"3d6d>2", nil, false},            // no comparisons on drop/keep modifiers
+	{"// comment\n1", ptr(1.0), true}, // support single multiline roll
+	{"1[foo]", ptr(1.0), true},        // allow labels on Numbers/Factors
+	{"1d20f1", nil, true},             // allow optional equals for failures?
 
 	// TODO: future features
 	// computed dice
 	{"d(1)", ptr(1.0), true},
+	{"3d(1)", ptr(1.0), true},
 	{"(3)d1", ptr(3.0), true},
 	{"(3)d(1)", ptr(3.0), true},
 	{"(3d1)d1", ptr(3.0), true},
 	{"(3)d(1)k2", ptr(2.0), true},
+	{"?{bar}d(1)", ptr(3.0), true},
 	// dice groups
 	{"{3,4}k1", ptr(4.0), true},
 	{"{3,4}>=2", ptr(2.0), true},
 	{"{3,4}s", ptr(7.0), true},
-	{"{1,1}d1>=2", ptr(0.0), true},
 	{"{1,3}d1>=2", ptr(1.0), true},
-	// inline group
+	{"{1,1}d1>=2", ptr(0.0), true},
+	{"{3+4}k1", nil, true}, // eval error?
+	// inline rolls
 	{"[[[[2]]d1]]+1", nil, true},
 	// {"[[[[2]]d1]]", nil, true}, // TBD
 }
@@ -183,8 +205,8 @@ type ASTTestCase struct {
 var params map[string]string = map[string]string{
 	"foo":     "1",
 	"bar":     "2+1",
-	"baz":     "",
 	"foo bar": "4",
+	"baz":     "",
 }
 
 var astCases = []ASTTestCase{
@@ -199,8 +221,6 @@ var astCases = []ASTTestCase{
 	{"0+.1", &Root{Expr: &Expr{L: &Factor{Number: ptr(0.0)}, R: []*OpFactor{{Op: "+", Factor: &Factor{Number: ptr(0.1)}}}}}, false},
 	{"1--1", &Root{Expr: &Expr{L: &Factor{Number: ptr(1.0)}, R: []*OpFactor{{Op: "-", Factor: &Factor{Number: ptr(-1.0)}}}}}, false},
 	{"1d20[foo]", &Root{Expr: &Expr{L: &Factor{Dice: &Dice{Count: ptr(1), Size: ptr(20)}, Label: "foo"}}}, false},
-
-	// TODO: fix these cases
 }
 
 func TestParseString(t *testing.T) {
@@ -248,28 +268,6 @@ func BenchmarkParseString(b *testing.B) {
 				}
 				global = got
 			}
-		})
-	}
-}
-
-func Test_main(t *testing.T) {
-	tmp := os.Args // initial args
-	tests := []struct {
-		name string
-		args []string
-	}{
-		{"blank", []string{}},
-		{"base", []string{"2d20 + 1 # test"}},
-		{"trace", []string{"-trace", "1d20"}},
-		{"diagram", []string{"-diagram"}},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			os.Args = tmp
-			for _, arg := range tt.args {
-				os.Args = append(os.Args, arg)
-			}
-			main()
 		})
 	}
 }
