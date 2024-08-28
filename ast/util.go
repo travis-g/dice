@@ -2,6 +2,11 @@ package main
 
 import "reflect"
 
+// ptr returns a pointer to the passed value.
+func ptr[T any](v T) *T {
+	return &v
+}
+
 func deepEqual(a, b interface{}) bool {
 	return deepEqualValue(reflect.ValueOf(a), reflect.ValueOf(b))
 }

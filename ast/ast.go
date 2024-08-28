@@ -226,8 +226,3 @@ func ParseString(expression string, trace bool) (*Root, error) {
 		return Parser.ParseString(expression, expression)
 	}
 }
-
-// ptr returns the pointer to the passed value.
-func ptr[T any](v T) *T {
-	return &v
-}
