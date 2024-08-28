@@ -6,6 +6,7 @@ See https://github.com/alecthomas/participle
 package main
 
 import (
+	"context"
 	"errors"
 	"os"
 	"strconv"
@@ -18,7 +19,13 @@ import (
 
 var (
 	ErrEmptyExpression = errors.New("empty expression")
+	ErrNotImplemented  = errors.New("not implemented")
 )
+
+// A Node abstracts any leaf in an expression AST.
+type Node interface {
+	Eval(ctx context.Context) error
+}
 
 // A Root is the top level AST node of any individual dice roll expression.
 type Root struct {
@@ -72,27 +79,8 @@ type Dice struct {
 	Fudge bool `| @("F"|"f") )`
 }
 
-type Quantity struct {
-	Number *int   `@Uint`
-	Expr   *Expr  `| "(" @@ ")"`
-	Query  *Query `| "?{" @@ "}"`
-}
-
-type Modifier struct {
-	// FIXME: not all types need or can have a comparison operator and/or value!
-	Type      string `@(Drop | Keep | Reroll | CriticalSuccess | CriticalFailure | Sort | Explode)`
-	CompareOp string `@ComparisonOp?`
-	Value     int    `@ComparisonValue?`
-}
-
-type GroupModifier struct {
-	Failure   bool   `@("f"|"F")?`
-	CompareOp string `@ComparisonOp`
-	Value     int    `@ComparisonValue`
-}
-
 func (d *Dice) Capture(values []string) error {
-	// TODO: parse byte by byte rather than regex
+	// HACK: parse byte by byte rather than regex
 	components := dice.FindNamedCaptureGroups(dice.DiceWithModifiersExpressionRegex, values[0])
 
 	if components["count"] != "" {
@@ -112,6 +100,25 @@ func (d *Dice) Capture(values []string) error {
 		d.Size = ptr(1)
 	}
 	return nil
+}
+
+type Quantity struct {
+	Number *int   `@Uint`
+	Expr   *Expr  `| "(" @@ ")"`
+	Query  *Query `| "?{" @@ "}"`
+}
+
+type Modifier struct {
+	// FIXME: not all types need or can have a comparison operator and/or value!
+	Type      string `@(Drop | Keep | Reroll | CriticalSuccess | CriticalFailure | Sort | Explode)`
+	CompareOp string `@ComparisonOp?`
+	Value     int    `@ComparisonValue?`
+}
+
+type GroupModifier struct {
+	Failure   bool   `@("f"|"F")?`
+	CompareOp string `@ComparisonOp`
+	Value     int    `@ComparisonValue`
 }
 
 // The lexer state machine rules. Rules are checked in the order that they
