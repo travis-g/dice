@@ -55,8 +55,8 @@ type Factor struct {
 }
 
 type Func struct {
-	Name string  `@Ident`
-	Args []*Args `"(" (@@ ( "," @@ )*)? ")"`
+	Name string `@Ident`
+	Args *Args  `"(" @@? ")"`
 }
 
 type Args struct {
