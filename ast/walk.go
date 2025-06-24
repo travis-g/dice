@@ -3,7 +3,10 @@ package main
 import "context"
 
 func Walk(ctx context.Context, n *Node, fn WalkFunc) error {
-	panic(ErrNotImplemented)
+	if err := fn(ctx, n); err != nil {
+		return err
+	}
+	return ErrNotImplemented
 }
 
-type WalkFunc func(ctx context.Context, n *Node, err error) error
+type WalkFunc func(ctx context.Context, n *Node) error
