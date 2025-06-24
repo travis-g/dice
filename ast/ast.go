@@ -1,13 +1,25 @@
-/*
-AST parses a dice roll expression into an abstract syntax tree.
+// AST parses a dice roll expression into an abstract syntax tree.
+//
+// See https://github.com/alecthomas/participle
+//
+// # Linting
+//
+// Reflecting the parsed results of a whitespace-heavy vs. whitespace-less
+// expression string should result in the same parsed AST. As examples, the
+// following two strings should result in the same ASTs:
+//
+//  ' 3 d6 [foo] //  bar'
+//  '3d6[foo]#bar'
+//
+// Linting standards are in flux, but as a general rule, String methods should
+// preserve any existing whitespace: "no linting when printing".
 
-See https://github.com/alecthomas/participle
-*/
 package main
 
 import (
-	"context"
+	"bytes"
 	"errors"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -18,67 +30,206 @@ import (
 )
 
 var (
-	ErrEmptyExpression = errors.New("empty expression")
-	ErrNotImplemented  = errors.New("not implemented")
+	ErrEmptyExpression    = errors.New("empty expression")
+	ErrNotImplemented     = errors.New("not implemented")
+	ErrUnreachable        = errors.New("unreachable code")
+	ErrInvalidStructField = errors.New("invalid struct field")
 )
 
-// A Node abstracts any leaf in an expression AST.
-type Node interface {
-	Eval(ctx context.Context) error
+type Stringer interface {
+	String() string
+	// TODO: add a "compact" string method
+	// CompactString() string
 }
 
 // A Root is the top level AST node of any individual dice roll expression.
 type Root struct {
-	Expr    *Expr   `@@?`
+	Expr    *Expr   `parser:"@@?"`
 	Comment *string `(("//" | "\\" | "#") @CommentText?)?`
 }
 
+func (r *Root) String() string {
+	buf := new(bytes.Buffer)
+	if r.Expr != nil {
+		buf.WriteString(r.Expr.String())
+	}
+	if r.Expr != nil && r.Comment != nil {
+		buf.WriteRune(' ')
+	}
+	if r.Comment != nil && *r.Comment != "" {
+		buf.Write([]byte{'#', ' '})
+		buf.WriteString(*r.Comment)
+	}
+	return buf.String()
+}
+
+// An Expr is a full expression, which may consist of a single Term or a Term
+// followed by one or more operator-Term pairs.
 type Expr struct {
-	L *Factor     `@@`
-	R []*OpFactor `@@*`
+	L *Term     `parser:"@@"`
+	R []*OpTerm `parser:"@@*"`
 }
 
-type OpFactor struct {
-	Op     string  `@Operator`
-	Factor *Factor `@@`
+func (e *Expr) String() string {
+	buf := new(bytes.Buffer)
+	if e.L != nil {
+		buf.WriteString(e.L.String())
+	}
+	if len(e.R) > 0 {
+		buf.WriteRune(' ')
+		for _, r := range e.R {
+			if r != nil {
+				buf.WriteString(r.String())
+			}
+		}
+	}
+	return buf.String()
 }
 
-type Factor struct {
-	Subexpr       *Expr            `( "(" @@ ")"`
-	Query         *Query           `| "?{" @@ "}" )`
-	Number        *float64         `| @(("-" | "+")? (Int | Float))`
-	Dice          *Dice            `| ( @SimpleNotation`
-	Modifiers     []*Modifier      `@@*`
-	GroupModifier []*GroupModifier `@@*`
-	Label         string           `("[" @~"]" "]")? )`
-	Func          *Func            `| @@`
+// An OpTerm is an operator followed by a Term.
+type OpTerm struct {
+	Op   string `parser:"@Operator"`
+	Term *Term  `parser:"@@"`
+}
+
+func (ot *OpTerm) String() string {
+	buf := new(bytes.Buffer)
+	buf.WriteString(ot.Op)
+	buf.WriteRune(' ')
+	buf.WriteString(ot.Term.String())
+	return buf.String()
+}
+
+// A Term is an individual part of an expression. Terms should resolve to a
+// value.
+type Term struct {
+	Subexpr *Expr    `parser:"( '(' @@ ')'"`
+	Query   *Query   `parser:"| '?{' @@ '}' )"`
+	Number  *float64 `parser:"| @(('-' | '+')? (Int | Float))"`
+	Dice    *Dice    `parser:"| ( @SimpleNotation"`
+	// TODO: RollGroup
+	Modifiers     []*Modifier      `parser:"@@*"`
+	GroupModifier []*GroupModifier `parser:"@@*"`
+	Func          *Func            `parser:"| @@)"`
+	Label         *string          `parser:"('[' @~']' ']')?"`
+}
+
+func (t *Term) String() string {
+	buf := new(bytes.Buffer)
+	if t.Subexpr != nil {
+		buf.WriteRune('(')
+		buf.WriteString(t.Subexpr.String())
+		buf.WriteRune(')')
+		return buf.String()
+	}
+	if t.Query != nil {
+		buf.WriteString(t.Query.String())
+		return buf.String()
+	}
+	if t.Number != nil {
+		buf.WriteString(strconv.FormatFloat(*t.Number, 'f', -1, 64))
+	}
+	if t.Dice != nil {
+		buf.WriteString(t.Dice.String())
+	}
+	if len(t.Modifiers) > 0 {
+		for _, m := range t.Modifiers {
+			buf.WriteString(m.String())
+		}
+	}
+	if len(t.GroupModifier) > 0 {
+		// TODO
+		// buf.WriteString(t.GroupModifier.String())
+	}
+	if t.Func != nil {
+		buf.WriteString(t.Func.String())
+	}
+	if t.Label != nil {
+		buf.WriteRune('[')
+		buf.WriteString(*t.Label)
+		buf.WriteRune(']')
+	}
+	return buf.String()
 }
 
 type Func struct {
-	Name string `@Ident`
-	Args *Args  `"(" @@? ")"`
+	Name string `parser:"@Ident"`
+	Args *Args  `parser:"'(' @@? ')'"`
 }
 
+func (f *Func) String() string {
+	buf := new(bytes.Buffer)
+	buf.WriteString(f.Name)
+	buf.WriteRune('(')
+	if f.Args != nil {
+		buf.WriteString(f.Args.String())
+	}
+	buf.WriteRune(')')
+	return buf.String()
+}
+
+// Args is a list of arguments to a function call, separated by commas.
 type Args struct {
-	Arg []*Factor `@@ ("," @@)*`
+	Arg []*Term `parser:"@@ (',' @@)*"`
+}
+
+func (a *Args) String() string {
+	var args []string
+	for _, arg := range a.Arg {
+		args = append(args, arg.String())
+	}
+	return strings.Join(args, ", ")
 }
 
 type Query struct {
-	Name    string         `@QueryText`
-	Options []*QueryOption `("|" @@)*`
+	Name    string         `parser:"@QueryText"`
+	Options []*QueryOption `parser:"('|' @@)*"`
 }
 
+func (q *Query) String() string {
+	buf := new(bytes.Buffer)
+	buf.Write([]byte{'?', '{'})
+	buf.WriteString(q.Name)
+	for _, opt := range q.Options {
+		buf.WriteByte('|')
+		if opt.OptionLabel != "" {
+			buf.WriteString(opt.OptionLabel)
+			buf.Write([]byte{',', ' '})
+		}
+		buf.WriteString(opt.OptionValue)
+	}
+	buf.WriteRune('}')
+	return buf.String()
+}
+
+// QueryOptions are suggested/available values for a query answer.
 type QueryOption struct {
-	OptionLabel string `(@QueryText ",")?`
-	OptionValue string `@QueryText`
+	OptionLabel string `parser:"(@QueryText ',')?"`
+	OptionValue string `parser:"@QueryText"`
+}
+
+func (qo *QueryOption) String() string {
+	buf := new(bytes.Buffer)
+	if qo.OptionLabel != "" {
+		buf.WriteString(qo.OptionLabel)
+		buf.WriteString(", ")
+	}
+	buf.WriteString(qo.OptionValue)
+	return buf.String()
 }
 
 type Dice struct {
-	Count *int `@Uint? ("d"|"D")`
-	Size  *int `( @Uint`
-	Fudge bool `| @("F"|"f") )`
+	// TODO: Sub-expressions should be supported as possible Dice counts and
+	// sizes
+	_     *Expr `parser:"( '(' @@ ')'"`
+	Count *int  `parser:"| @Uint? ) ('d'|'D')"`
+	Size  *int  `parser:"( @Uint"`
+	Fudge bool  `parser:"| @('F'|'f')"`
+	_     *Expr `parser:"| '(' @@ ')' )"`
 }
 
+// Capture loads a Dice structure from a string slice of values. The values
+// slice is expected to be a single element.
 func (d *Dice) Capture(values []string) error {
 	// HACK: parse byte by byte rather than regex
 	components := dice.FindNamedCaptureGroups(dice.DiceWithModifiersExpressionRegex, values[0])
@@ -102,23 +253,85 @@ func (d *Dice) Capture(values []string) error {
 	return nil
 }
 
-type Quantity struct {
-	Number *int   `@Uint`
-	Expr   *Expr  `| "(" @@ ")"`
-	Query  *Query `| "?{" @@ "}"`
+func (d *Dice) String() string {
+	buf := new(bytes.Buffer)
+	if d.Count != nil {
+		if *d.Count != 1 {
+			fmt.Fprintf(buf, "%d", *d.Count)
+		}
+	}
+	buf.WriteRune('d')
+	if d.Fudge {
+		buf.WriteRune('F')
+	} else {
+		fmt.Fprintf(buf, "%d", *d.Size)
+	}
+	return buf.String()
 }
 
+type Quantity struct {
+	Number  *int   `parser:"@Uint"`
+	Subexpr *Expr  `parser:"| '(' @@ ')'"`
+	Query   *Query `parser:"| '?{' @@ '}' )"`
+}
+
+func (q *Quantity) String() string {
+	buf := new(bytes.Buffer)
+	switch {
+	case q.Number != nil:
+		fmt.Fprintf(buf, "%d", *q.Number)
+	case q.Subexpr != nil:
+		buf.WriteRune('(')
+		buf.WriteString(q.Subexpr.String())
+		buf.WriteRune(')')
+	case q.Query != nil:
+		buf.WriteString(q.Query.String())
+	default:
+		panic(ErrUnreachable)
+	}
+	return buf.String()
+}
+
+// A modifier changes how a roll/set of dice has its result(s) calculated, or
+// how it is displayed/tracked internally.
+// FIXME: not all types need or can have a comparison operator and/or value.
 type Modifier struct {
-	// FIXME: not all types need or can have a comparison operator and/or value!
-	Type      string `@(Drop | Keep | Reroll | CriticalSuccess | CriticalFailure | Sort | Explode)`
-	CompareOp string `@ComparisonOp?`
-	Value     int    `@ComparisonValue?`
+	Type      string  `parser:"@(Drop | Keep | Reroll | CriticalSuccess | CriticalFailure | Sort | Explode)"`
+	CompareOp *string `parser:"@ComparisonOp?"`
+	Value     *int    `parser:"@ComparisonValue?"`
+}
+
+func (m *Modifier) String() string {
+	// TODO(travis-g): implement all modifier types
+	buf := new(bytes.Buffer)
+	switch m.Type {
+	case "Drop":
+	case "Keep":
+	case "Reroll":
+	case "CriticalSuccess":
+	case "CriticalFailure":
+	case "Sort":
+	case "Explode":
+	default:
+		panic(ErrNotImplemented)
+	}
+	return buf.String()
 }
 
 type GroupModifier struct {
-	Failure   bool   `@("f"|"F")?`
-	CompareOp string `@ComparisonOp`
-	Value     int    `@ComparisonValue`
+	Failure   bool   `parser:"@('F'|'f')?"`
+	CompareOp string `parser:"@ComparisonOp"`
+	Value     int    `parser:"@ComparisonValue"`
+}
+
+func (gm *GroupModifier) String() string {
+	buf := new(bytes.Buffer)
+	if gm.Failure {
+		buf.WriteString("f")
+	}
+	buf.WriteString(gm.CompareOp)
+	fmt.Fprintf(buf, "%d", gm.Value)
+	return buf.String()
 }
 
 // The lexer state machine rules. Rules are checked in the order that they
@@ -142,12 +355,12 @@ var rules = lexer.Rules{
 		{Name: "Operator", Pattern: `\*\*|[-+*^%/]|<<|>>`},
 		lexer.Include("Numbers"),
 		{Name: "Expr", Pattern: `\(`, Action: lexer.Push("Expr")},
-		{Name: "Ident", Pattern: `(?i)[a-z][a-z_]{2,}`},
 		{Name: "Comma", Pattern: `,`},
 		{Name: "Query", Pattern: `\?{`, Action: lexer.Push("Query")},
 		{Name: "RollGroup", Pattern: `{`, Action: lexer.Push("RollGroup")},
 		// {Name: "InlineExpr", Pattern: `\[\[`, Action: lexer.Push("InlineExpr")},
 		{Name: "Label", Pattern: `\[`, Action: lexer.Push("Label")},
+		{Name: "Ident", Pattern: `(?i)[a-z][a-z_0-9]{2,}`},
 		{Name: "Char", Pattern: `\$|[^$]+`},
 	},
 	"Expr": {
@@ -155,7 +368,7 @@ var rules = lexer.Rules{
 		lexer.Include("Root"),
 		lexer.Return(),
 	},
-	"InlineExpr": { // TODO
+	"InlineExpr": {
 		{Name: "InlineExprEnd", Pattern: `]]`, Action: lexer.Pop()},
 		lexer.Include("Root"),
 		lexer.Return(),
@@ -220,8 +433,8 @@ func Sanitize(expression string) (sanitized string) {
 	return
 }
 
-// ParseString is a wrapper to parse an expression. Expression strings are
-// assumed to be sanitized or linted before being parsed.
+// ParseString is a wrapper to parse an expression from an input string.
+// Expression strings are assumed to be sanitized or linted before being parsed.
 func ParseString(expression string, trace bool) (*Root, error) {
 	if expression == "" {
 		return nil, ErrEmptyExpression

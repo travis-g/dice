@@ -2,11 +2,90 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
+	"reflect"
 	"testing"
 )
 
 // write-only global variable to prevent compiler optimizations
 var global any
+
+// Ensure that all AST types implement the Stringer interface.
+var (
+	_ Stringer = (*Dice)(nil)
+	_ Stringer = (*Expr)(nil)
+	_ Stringer = (*Func)(nil)
+	_ Stringer = (*OpTerm)(nil)
+	_ Stringer = (*Query)(nil)
+	_ Stringer = (*QueryOption)(nil)
+	_ Stringer = (*Args)(nil)
+	_ Stringer = (*Modifier)(nil)
+	_ Stringer = (*GroupModifier)(nil)
+	_ Stringer = (*Root)(nil)
+	_ Stringer = (*Term)(nil)
+)
+
+func TestRoot_String(t *testing.T) {
+	tests := []struct {
+		r       *Root
+		want    string
+		wantErr bool
+	}{
+		{&Root{}, "", false},
+		{&Root{Comment: ptr("test")}, "# test", false},
+		{&Root{Comment: ptr(" test ")}, "#  test ", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.want, func(t *testing.T) {
+			got := tt.r.String()
+			if (got != tt.want) != tt.wantErr {
+				t.Errorf("Root.String() = %v, want %v", got, tt.want)
+			}
+			global = got
+		})
+	}
+}
+
+func TestFactor_String(t *testing.T) {
+	tests := []struct {
+		f       *Term
+		want    string
+		wantErr bool
+	}{
+		// TODO: more test cases!
+		{&Term{Number: ptr(0.0)}, "0", false},
+		{&Term{Number: ptr(0.000001)}, "0.000001", false},
+		{&Term{Number: ptr(-0.000001)}, "-0.000001", false},
+		{&Term{Number: ptr(10.0)}, "10", false},
+		{&Term{Number: ptr(10.0), Label: ptr("test")}, "10[test]", false},
+		{&Term{Func: &Func{Name: "foo"}}, "foo()", false},
+		{&Term{Dice: &Dice{Count: ptr(1), Size: ptr(6)}}, "d6", false},
+		{&Term{Dice: &Dice{Count: ptr(2), Size: ptr(6)}}, "2d6", false},
+		{&Term{Dice: &Dice{Count: ptr(2), Fudge: true}}, "2dF", false},
+		{&Term{Query: &Query{Name: "foo"}}, "?{foo}", false},
+		{&Term{Query: &Query{Name: "foo", Options: []*QueryOption{{OptionValue: "3"}}}}, "?{foo|3}", false},
+		{&Term{Query: &Query{Name: "foo", Options: []*QueryOption{{OptionLabel: "test", OptionValue: "3"}}}}, "?{foo|test, 3}", false},
+		{&Term{Subexpr: &Expr{}}, "()", false},
+		{&Term{Subexpr: &Expr{L: &Term{Number: ptr(0.0)}}}, "(0)", false},
+		{&Term{Subexpr: &Expr{L: &Term{Number: ptr(0.0)}, R: []*OpTerm{{Op: "+", Term: &Term{Number: ptr(1.0)}}}}}, "(0 + 1)", false},
+		{&Term{Subexpr: &Expr{L: &Term{Subexpr: &Expr{L: &Term{Number: ptr(0.0)}}}}}, "((0))", false},
+		{&Term{Subexpr: nil, Query: nil, Number: nil, Dice: nil, Func: nil, Label: ptr("test")}, "[test]", false},
+
+		// TODO(travis-g): decide the results of the below cases
+		{&Term{Dice: &Dice{Count: ptr(0), Size: ptr(6)}}, "0d6", false},
+		{&Term{Query: &Query{Name: "foo", Options: []*QueryOption{{OptionLabel: "test"}}}}, "?{foo}", true},
+		{&Term{Query: &Query{}}, "?{}", false}, // panic, or print nothing?
+	}
+	for _, tt := range tests {
+		t.Run(tt.want, func(t *testing.T) {
+			got := tt.f.String()
+			if (got != tt.want) != tt.wantErr {
+				t.Errorf("Factor.String() = %v, want %v", got, tt.want)
+			}
+			global = got
+		})
+	}
+}
 
 type ExpressionTestCase struct {
 	expression string
@@ -27,6 +106,7 @@ var benchmarkCases = []ExpressionTestCase{
 	{"", nil, true},
 	{"1d20", nil, false},
 	{"d20", nil, false},
+	{"D20", nil, false},
 	{"1dF", nil, false},
 	{"dF", nil, false},
 	{"1d20 + 1", nil, false},
@@ -43,12 +123,11 @@ var benchmarkCases = []ExpressionTestCase{
 	{"foo", nil, true},
 }
 
-// More test cases. Many of these should parse correctly, but may throw errors
-// when evaluated.
+// More test cases. Many of these should parse correctly as they are
+// syntactically valid but would throw errors when evaluated.
 var moreCases = []ExpressionTestCase{
 	// TODO: break these into more case "sets" for maintainability, ex. case
 	// sensitivity set vs. future features set vs. eval error set
-	{"D20", nil, false},
 	{"df", nil, false},
 	{"Df", nil, false},
 	{"d0", ptr(0.0), false},
@@ -75,7 +154,7 @@ var moreCases = []ExpressionTestCase{
 	{"1d20Sd", nil, false},
 	{"1d20sD", nil, false},
 	{"1d20ssd", nil, false},      // double sort
-	{"1d20sad", ptr(0.0), false}, // sort + drop
+	{"1d20sad", ptr(0.0), false}, // sort ascending + drop
 	{"1d20cf", nil, false},
 	{"1d20cs", nil, false},
 	{"1d20cs>2", nil, false},
@@ -111,13 +190,13 @@ var moreCases = []ExpressionTestCase{
 	{".1", ptr(0.1), false},
 	{"0+.1", ptr(0.1), false},
 	{"0-.1", ptr(-0.1), false},
-	{"?{foo|a,1}", nil, false}, // roll queries
-	{"?{foo|a,1|b, 2}", nil, false},
-	{"?{baz|1}", nil, false},
-	{"?{baz|1|2}", nil, false},
+	{"?{foo|1}", nil, false}, // roll queries
+	{"?{foo|a,1}", nil, false},
 	{"?{bar}", ptr(3.0), false},
 	{"?{foo bar}", ptr(4.0), false},
 	{"1+?{foo|a,1}", nil, false},
+	{"?{foo|a,1|b, 2}", nil, false}, // dropdowns
+	{"?{baz|1|2}", nil, false},
 	{"1+-1", ptr(0.0), false},
 	{"1+(-1)", ptr(0.0), false},
 	{"1-+1", ptr(0.0), false},
@@ -126,16 +205,17 @@ var moreCases = []ExpressionTestCase{
 	{"1*+3", ptr(3.0), false},
 	{"-.3", ptr(-0.3), false},
 	{"+.3", ptr(0.3), false},
-	{"min(1,2)", ptr(1.0), false},
+	{"min(1,2)", ptr(1.0), false}, // functions
 	{"min(1, 2)", ptr(1.0), false},
 	{"min(1, 2 )", ptr(1.0), false},
-	{"min(1)", ptr(1.0), false},
-	{"min()", nil, false}, // eval error?
+	{"min(1)", ptr(1.0), false}, // eval error?
+	{"min()", nil, false},       // eval error?
 	{"min(1, 2, 3)", ptr(1.0), false},
 	{"max(1, 2, 3)", ptr(3.0), false},
 	{"abs(-1)", ptr(1.0), false},
 	{"abs(-1, 2)", nil, false}, // eval error
 	{"round(1.2)", ptr(1.0), false},
+	{"round(1.5)", ptr(2.0), false},
 	{"round(1,2)", nil, false}, // eval error
 	{"round()", nil, false},    // eval error?
 	{"1 // comment", ptr(1.0), false},
@@ -164,12 +244,16 @@ var moreCases = []ExpressionTestCase{
 	{"\nd20", nil, true}, // unsanitized roll strings
 	{"\n", nil, true},
 	{"d20\n", nil, true},
+	{"1[]", ptr(1.0), true}, // empty label
 
-	// TODO: fix the below cases cases?
+	// TODO: fix the below test cases
 	{"3d6d>2", nil, false},            // no comparisons on drop/keep modifiers
+	{"5d10s9#2s7f2#2f", nil, false},   // Fantasy Grounds
 	{"// comment\n1", ptr(1.0), true}, // support single multiline roll
 	{"1[foo]", ptr(1.0), true},        // allow labels on Numbers/Factors
-	{"1d20f1", nil, true},             // allow optional equals for failures?
+	{"1 [foo]", ptr(1.0), true},       // allow spaces before labels
+	{"1d20f1", nil, true},             // allow optional equals sign for failures?
+	{"sling5", nil, true},             // custom regexp-based macro
 
 	// TODO: future features
 	// computed dice
@@ -181,14 +265,17 @@ var moreCases = []ExpressionTestCase{
 	{"(3)d(1)k2", ptr(2.0), true},
 	{"?{bar}d(1)", ptr(3.0), true},
 	// dice groups
+	{"{3,4}", ptr(7.0), true},
+	{"{3, 4}", ptr(7.0), true},
 	{"{3,4}k1", ptr(4.0), true},
 	{"{3,4}>=2", ptr(2.0), true},
 	{"{3,4}s", ptr(7.0), true},
+	{"{4,3}s", ptr(7.0), true},
 	{"{1,3}d1>=2", ptr(1.0), true},
 	{"{1,1}d1>=2", ptr(0.0), true},
 	{"{3+4}k1", nil, true}, // eval error?
 	// inline rolls
-	{"[[[[2]]d1]]+1", nil, true},
+	{"[[[[2]]d1]]+1", ptr(1.0), true},
 	// {"[[[[2]]d1]]", nil, true}, // TBD
 }
 
@@ -206,26 +293,24 @@ var params map[string]string = map[string]string{
 	"foo":     "1",
 	"bar":     "2+1",
 	"foo bar": "4",
-	"baz":     "",
+	"baz":     "", // empty string is an unexpected value, but valid
 }
 
 var astCases = []ASTTestCase{
 	// TODO: ensure that defaults are tested as well
 	{"", nil, true},
-	{"1", &Root{Expr: &Expr{L: &Factor{Number: ptr(1.0)}}}, false},
-	{"1d20", &Root{Expr: &Expr{L: &Factor{Dice: &Dice{Count: ptr(1), Size: ptr(20)}}}}, false},
-	{"d20", &Root{Expr: &Expr{L: &Factor{Dice: &Dice{Count: ptr(1), Size: ptr(20)}}}}, false},
-	{"1d20+1", &Root{Expr: &Expr{L: &Factor{Dice: &Dice{Count: ptr(1), Size: ptr(20)}}, R: []*OpFactor{{Op: "+", Factor: &Factor{Number: ptr(1.0)}}}}}, false},
-	{"1 //test", &Root{Expr: &Expr{L: &Factor{Number: ptr(1.0)}}, Comment: ptr("test")}, false},
-	{"1 // te st ", &Root{Expr: &Expr{L: &Factor{Number: ptr(1.0)}}, Comment: ptr("te st ")}, false},
-	{"0+.1", &Root{Expr: &Expr{L: &Factor{Number: ptr(0.0)}, R: []*OpFactor{{Op: "+", Factor: &Factor{Number: ptr(0.1)}}}}}, false},
-	{"1--1", &Root{Expr: &Expr{L: &Factor{Number: ptr(1.0)}, R: []*OpFactor{{Op: "-", Factor: &Factor{Number: ptr(-1.0)}}}}}, false},
-	{"1d20[foo]", &Root{Expr: &Expr{L: &Factor{Dice: &Dice{Count: ptr(1), Size: ptr(20)}, Label: "foo"}}}, false},
+	{"1", &Root{Expr: &Expr{L: &Term{Number: ptr(1.0)}}}, false},
+	{"1d20", &Root{Expr: &Expr{L: &Term{Dice: &Dice{Count: ptr(1), Size: ptr(20)}}}}, false},
+	{"d20", &Root{Expr: &Expr{L: &Term{Dice: &Dice{Count: ptr(1), Size: ptr(20)}}}}, false},
+	{"1d20+1", &Root{Expr: &Expr{L: &Term{Dice: &Dice{Count: ptr(1), Size: ptr(20)}}, R: []*OpTerm{{Op: "+", Term: &Term{Number: ptr(1.0)}}}}}, false},
+	{"1 //test", &Root{Expr: &Expr{L: &Term{Number: ptr(1.0)}}, Comment: ptr("test")}, false},
+	{"1 // te st ", &Root{Expr: &Expr{L: &Term{Number: ptr(1.0)}}, Comment: ptr("te st ")}, false}, // parser doesn't sanitize
+	{"0+.1", &Root{Expr: &Expr{L: &Term{Number: ptr(0.0)}, R: []*OpTerm{{Op: "+", Term: &Term{Number: ptr(0.1)}}}}}, false},
+	{"1--1", &Root{Expr: &Expr{L: &Term{Number: ptr(1.0)}, R: []*OpTerm{{Op: "-", Term: &Term{Number: ptr(-1.0)}}}}}, false},
+	{"1d20[foo]", &Root{Expr: &Expr{L: &Term{Dice: &Dice{Count: ptr(1), Size: ptr(20)}, Label: ptr("foo")}}}, false},
 }
 
 func TestParseString(t *testing.T) {
-	t.Parallel()
-
 	// test that given expressions can be parsed or error out as expected
 	for _, tt := range expressionParseCases {
 		t.Run(tt.expression, func(t *testing.T) {
@@ -247,10 +332,16 @@ func TestParseString(t *testing.T) {
 				t.Errorf("error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !deepEqual(got, tt.ast) {
-				gotBytes, _ := json.Marshal(got)
-				astBytes, _ := json.Marshal(tt.ast)
-				t.Errorf("got = %v, want %v", string(gotBytes), string(astBytes))
+			if !reflect.DeepEqual(got, tt.ast) {
+				gotBytes, err := json.Marshal(got)
+				if err != nil {
+					panic(err)
+				}
+				wantBytes, err := json.Marshal(tt.ast)
+				if err != nil {
+					panic(err)
+				}
+				t.Errorf("got = %v, want %v", string(gotBytes), string(wantBytes))
 			}
 			global = got
 		})
@@ -267,6 +358,63 @@ func BenchmarkParseString(b *testing.B) {
 					return
 				}
 				global = got
+			}
+		})
+	}
+}
+
+func TestParseString_linting(t *testing.T) {
+	tests := []struct {
+		base     string
+		compare  string
+		wantSame bool // true is good
+	}{
+		{"3d6#bar", " 3 d6  //  bar", true},
+		{`3d6\bar`, " 3 d6 // bar", true},
+
+		// Fail cases:
+		{"3d6//bar", "3 d6 ", false},       // no Comment
+		{"3d6#bar", "3 d6#bar ", false},    // no space after Comment
+		{`3d6\bar`, " 3 d6 # bar ", false}, // extra space in Comment
+	}
+	for i, tt := range tests {
+		t.Run(fmt.Sprintf("%v", i), func(t *testing.T) {
+			want, err := ParseString(tt.base, false)
+			if err != nil {
+				panic(err)
+			}
+			got, err := ParseString(tt.compare, false)
+			if err != nil {
+				panic(err)
+			}
+			if reflect.DeepEqual(want, got) != tt.wantSame {
+				wantBytes, err := json.Marshal(want)
+				if err != nil {
+					panic(err)
+				}
+				gotBytes, err := json.Marshal(got)
+				if err != nil {
+					panic(err)
+				}
+				t.Errorf("got = %v, want %v", string(gotBytes), string(wantBytes))
+			}
+			global = got
+		})
+	}
+}
+
+func TestFunc_String(t *testing.T) {
+	tests := []struct {
+		f    *Func
+		want string
+	}{
+		{&Func{Name: "a"}, "a()"},
+		{&Func{Name: "b", Args: &Args{Arg: []*Term{{Number: ptr(1.0)}, {Number: ptr(2.0)}}}}, "b(1, 2)"},
+	}
+	for i, tt := range tests {
+		t.Run(fmt.Sprintf("%v", i), func(t *testing.T) {
+			if got := tt.f.String(); got != tt.want {
+				t.Errorf("Func.String() = %v, want %v", got, tt.want)
 			}
 		})
 	}
