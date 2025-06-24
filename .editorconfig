@@ -14,7 +14,7 @@ insert_final_newline = true
 [Makefile]
 indent_style = tab
 
-[*.go]
+[*.{go,txt}]
 indent_style = tab
 
 [*.md]
