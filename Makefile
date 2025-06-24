@@ -1,6 +1,6 @@
 fmt:
 	@echo "==> Running gofmt..."
-	gofmt -s -w .
+	go fmt ./...
 
 build: fmt test
 	@echo "==> Building the parser..."
