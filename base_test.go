@@ -6,8 +6,7 @@ import (
 	"testing"
 )
 
-// Ensure csprngSource statisfies the rand.Source64 interface; rand.Source64
-// sources use half the entropy of a regular rand.Source.
+// Ensure csprngSource statisfies the [rand.Source64] interface.
 var _ = (rand.Source64)(&csprngSource{})
 
 // Set of basic range sizes.

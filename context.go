@@ -41,6 +41,8 @@ func CtxTotalRolls(ctx context.Context) *uint64 {
 	return new(uint64)
 }
 
+// MustCtxTotalRolls returns the pointer to the total number of rolls made by
+// the context. Panics if the context key does not exist.
 func MustCtxTotalRolls(ctx context.Context) *uint64 {
 	if count, ok := ctx.Value(CtxKeyTotalRolls).(*uint64); ok {
 		return count
@@ -49,7 +51,7 @@ func MustCtxTotalRolls(ctx context.Context) *uint64 {
 }
 
 // CtxMaxRolls returns the context's maximum allowed number of rolls, or the
-// default.
+// library default.
 func CtxMaxRolls(ctx context.Context) uint64 {
 	if max, ok := ctx.Value(CtxKeyMaxRolls).(uint64); ok {
 		return max
@@ -57,7 +59,8 @@ func CtxMaxRolls(ctx context.Context) uint64 {
 	return MaxRolls
 }
 
-// CtxParameters returns the context's arbitrary parameters.
+// CtxParameters returns the context's arbitrary parameters, or an empty map if
+// not set.
 func CtxParameters(ctx context.Context) map[string]interface{} {
 	if params, ok := ctx.Value(CtxKeyParameters).(map[string]interface{}); ok {
 		return params

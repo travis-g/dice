@@ -51,6 +51,7 @@ type Roller interface {
 	// yield an equivalent property set.
 	fmt.Stringer
 
+	// Returns a valid DOT/Graphviz grammar for the Roller.
 	ToGraphviz() string
 }
 

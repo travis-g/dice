@@ -2,12 +2,12 @@ package main
 
 import "context"
 
-// A Node abstracts any leaf in an expression AST.
+// A Node abstracts a leaf in an expression AST.
 type Node interface {
-	// Eval traverses any sub-Nodes and returns a result.
+	// Eval traverses the Node and any children and returns a result.
 	Eval(ctx context.Context) error
-	// Resolve traverses any sub-Nodes and ensures all required data is fetched,
-	// such as query parameters.
+	// Resolve traverses the Node and any children to ensures all required data
+	// is fetched, such as query parameters.
 	Resolve(ctx context.Context) (*Node, error)
 }
 

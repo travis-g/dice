@@ -18,31 +18,36 @@ var MaxRolls uint64 = math.MaxUint64
 var MaxDepth int = 3
 
 // Source is the dice package's global RNG source. Source uses the system's
-// native cryptographically secure pseudorandom number generator by default.
+// native cryptographically secure pseudorandom number generator by default. It
+// can be overridden if desired.
 //
 // Source must be safe for concurrent use: to use something akin to math/rand's
-// thread safe global reader try binding a Source64 with a Mutex. See
+// thread safe global reader try binding a [rand.Source64] with a Mutex. See
 // math/rand's globalRand variable source code for an example.
 var Source *rand.Rand
 
 func init() {
+	// initialize [Source] to use a CSPRNG source.
 	Source = rand.New(&csprngSource{})
 }
 
-// csprngSource is a wrapper for crypto.Reader that implements
-// rand.Source64.
+// csprngSource is a wrapper for [crypto.Reader] that implements both
+// [rand.Source] and [rand.Source64]. Valid rand.Source64 sources use half the
+// entropy of a regular rand.Source.
 type csprngSource struct{}
 
-// Seed is a noop; a csprngSource does not need to be seeded.
+// Seed is a noop: a csprngSource does not need to be seeded but is required to
+// implement the [rand.Source] interface.
 func (s *csprngSource) Seed(int64) {
-	// noop; system CSPRNG cannot be seeded
+	// noop
 }
 
+// Int63 satisfies the [rand.Source] interface.
 func (s *csprngSource) Int63() int64 {
 	return int64(s.Uint64() & ^uint64(1<<63))
 }
 
-// Uint64 satisfies the rand.Source64 interface.
+// Uint64 satisfies the [rand.Source64] interface.
 func (s *csprngSource) Uint64() (u uint64) {
 	err := binary.Read(crypto.Reader, binary.BigEndian, &u)
 	if err != nil {
@@ -52,11 +57,8 @@ func (s *csprngSource) Uint64() (u uint64) {
 }
 
 // CryptoInt64 is a convenience function that returns a cryptographically random
-// int64 using the system's CSPRNG. If there is a problem generating enough
-// entropy it will return a non-nil error.
-//
-// This function was designed to seed math/rand Sources with uniform random
-// values. It will not use the package's global Source.
+// int64 using the system's CSPRNG, bypassing the package's global [Source]. If
+// there is a problem generating enough entropy it will return a non-nil error.
 func CryptoInt64() (int64, error) {
 	i, err := crypto.Int(crypto.Reader, big.NewInt(math.MaxInt64))
 	if err != nil {
@@ -65,11 +67,12 @@ func CryptoInt64() (int64, error) {
 	return i.Int64(), nil
 }
 
-// CryptoIntn is a convenience wrapper for emulating rand.Intn using
+// CryptoIntn is a convenience wrapper for emulating [rand.Intn] using
 // crypto/rand. Panics if max <= 0, and any other errors encountered when
-// generating the integer are passed through by err.
+// generating the integer are bubbled as err.
 //
-// CryptoIntn does not use the package's global Source, it uses crypto.Reader.
+// CryptoIntn does not use the package's global [Source], it uses
+// [crypto.Reader].
 func CryptoIntn(max int) (n int, err error) {
 	bigInt, err := crypto.Int(crypto.Reader, big.NewInt(int64(max)))
 	n = int(bigInt.Int64())
@@ -87,7 +90,8 @@ func quote(s string) string {
 }
 
 // expression creates a math expression from an arbitrary set of interfaces,
-// simplifying the result using the commutative property of addition.
+// simplifying the resulting expression using the commutative property of
+// addition.
 func expression(i ...interface{}) string {
 	raw := strings.Trim(strings.Join(strings.Fields(fmt.Sprint(i...)), "+"), "[]")
 	return strings.Replace(raw, "+-", "-", -1)

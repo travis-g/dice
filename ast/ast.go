@@ -1,4 +1,4 @@
-// AST parses a dice roll expression into an abstract syntax tree.
+// Package ast parses a dice roll expression into an abstract syntax tree (AST).
 //
 // See https://github.com/alecthomas/participle
 //
