@@ -1,19 +1,3 @@
-// Package ast parses a dice roll expression into an abstract syntax tree (AST).
-//
-// See https://github.com/alecthomas/participle
-//
-// # Linting
-//
-// Reflecting the parsed results of a whitespace-heavy vs. whitespace-less
-// expression string should result in the same parsed AST. As examples, the
-// following two strings should result in the same ASTs:
-//
-//  ' 3 d6 [foo] //  bar'
-//  '3d6[foo]#bar'
-//
-// Linting standards are in flux, but as a general rule, String methods should
-// preserve any existing whitespace: "no linting when printing".
-
 package main
 
 import (
@@ -138,8 +122,9 @@ func (t *Term) String() string {
 		}
 	}
 	if len(t.GroupModifier) > 0 {
-		// TODO
-		// buf.WriteString(t.GroupModifier.String())
+		for _, gm := range t.GroupModifier {
+			buf.WriteString(gm.String())
+		}
 	}
 	if t.Func != nil {
 		buf.WriteString(t.Func.String())
@@ -152,6 +137,7 @@ func (t *Term) String() string {
 	return buf.String()
 }
 
+// A Func is a function call with an Ident name and optional arguments.
 type Func struct {
 	Name string `parser:"@Ident"`
 	Args *Args  `parser:"'(' @@? ')'"`
@@ -181,6 +167,7 @@ func (a *Args) String() string {
 	return strings.Join(args, ", ")
 }
 
+// A Query is a named query with optional options.
 type Query struct {
 	Name    string         `parser:"@QueryText"`
 	Options []*QueryOption `parser:"('|' @@)*"`
@@ -192,17 +179,13 @@ func (q *Query) String() string {
 	buf.WriteString(q.Name)
 	for _, opt := range q.Options {
 		buf.WriteByte('|')
-		if opt.OptionLabel != "" {
-			buf.WriteString(opt.OptionLabel)
-			buf.Write([]byte{',', ' '})
-		}
-		buf.WriteString(opt.OptionValue)
+		buf.WriteString(opt.String())
 	}
 	buf.WriteRune('}')
 	return buf.String()
 }
 
-// QueryOptions are suggested/available values for a query answer.
+// QueryOptions are suggested/available values for a Query.
 type QueryOption struct {
 	OptionLabel string `parser:"(@QueryText ',')?"`
 	OptionValue string `parser:"@QueryText"`
@@ -218,9 +201,10 @@ func (qo *QueryOption) String() string {
 	return buf.String()
 }
 
+// A Dice is a dice roll expression, such as "2d6" or "dF".
 type Dice struct {
 	// TODO: Sub-expressions should be supported as possible Dice counts and
-	// sizes
+	// sizes, for example '2d(1+2)'. See also [Quantity].
 	_     *Expr `parser:"( '(' @@ ')'"`
 	Count *int  `parser:"| @Uint? ) ('d'|'D')"`
 	Size  *int  `parser:"( @Uint"`
@@ -269,6 +253,8 @@ func (d *Dice) String() string {
 	return buf.String()
 }
 
+// A Quantity is a number, sub-expression, or query that evaluates to a positive
+// integer.
 type Quantity struct {
 	Number  *int   `parser:"@Uint"`
 	Subexpr *Expr  `parser:"| '(' @@ ')'"`
@@ -293,7 +279,7 @@ func (q *Quantity) String() string {
 }
 
 // A modifier changes how a roll/set of dice has its result(s) calculated, or
-// how it is displayed/tracked internally.
+// how it is tracked internally or how it is displayed.
 // FIXME: not all types need or can have a comparison operator and/or value.
 type Modifier struct {
 	Type      string  `parser:"@(Drop | Keep | Reroll | CriticalSuccess | CriticalFailure | Sort | Explode)"`
@@ -304,33 +290,36 @@ type Modifier struct {
 func (m *Modifier) String() string {
 	// TODO(travis-g): implement all modifier types
 	buf := new(bytes.Buffer)
+	m.Type = strings.ToLower(m.Type)
 	switch m.Type {
-	case "Drop":
-	case "Keep":
-	case "Reroll":
-	case "CriticalSuccess":
-	case "CriticalFailure":
-	case "Sort":
-	case "Explode":
+	// FIXME: handle modifier types individually
 	default:
-		panic(ErrNotImplemented)
+		buf.WriteString(m.Type)
+	}
+	if m.CompareOp != nil {
+		buf.WriteString(*m.CompareOp)
+	}
+	if m.Value != nil {
+		fmt.Fprintf(buf, "%d", *m.Value)
 	}
 	return buf.String()
 }
 
+// A GroupModifier is a modifier that applies to a group of dice rolls, such as
+// comparisons of dice rolled against a value.
 type GroupModifier struct {
-	Failure   bool   `parser:"@('F'|'f')?"`
-	CompareOp string `parser:"@ComparisonOp"`
-	Value     int    `parser:"@ComparisonValue"`
+	Failure   bool    `parser:"@('F'|'f')?"`
+	CompareOp *string `parser:"@ComparisonOp"`
+	Value     *int    `parser:"@ComparisonValue"`
 }
 
 func (gm *GroupModifier) String() string {
 	buf := new(bytes.Buffer)
 	if gm.Failure {
-		buf.WriteString("f")
+		buf.WriteRune('f')
 	}
-	buf.WriteString(gm.CompareOp)
-	fmt.Fprintf(buf, "%d", gm.Value)
+	buf.WriteString(*gm.CompareOp)
+	fmt.Fprintf(buf, "%d", *gm.Value)
 	return buf.String()
 }
 
@@ -418,8 +407,10 @@ var rules = lexer.Rules{
 	},
 }
 
+// Lexer is the lexer state machine for parsing dice roll expressions.
 var Lexer = lexer.MustStateful(rules)
 
+// Parser is the participle parser for dice roll expressions.
 var Parser = participle.MustBuild[Root](
 	participle.Lexer(Lexer),
 	participle.Elide("Whitespace", "InlineWhitespace", "Comment"),
@@ -445,4 +436,9 @@ func ParseString(expression string, trace bool) (*Root, error) {
 	} else {
 		return Parser.ParseString(expression, expression)
 	}
+}
+
+// ptr is a helper function to return the pointer to the passed value.
+func ptr[T any](v T) *T {
+	return &v
 }

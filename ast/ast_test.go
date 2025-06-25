@@ -12,15 +12,15 @@ var global any
 
 // Ensure that all AST types implement the Stringer interface.
 var (
+	_ Stringer = (*Args)(nil)
 	_ Stringer = (*Dice)(nil)
 	_ Stringer = (*Expr)(nil)
 	_ Stringer = (*Func)(nil)
+	_ Stringer = (*GroupModifier)(nil)
+	_ Stringer = (*Modifier)(nil)
 	_ Stringer = (*OpTerm)(nil)
 	_ Stringer = (*Query)(nil)
 	_ Stringer = (*QueryOption)(nil)
-	_ Stringer = (*Args)(nil)
-	_ Stringer = (*Modifier)(nil)
-	_ Stringer = (*GroupModifier)(nil)
 	_ Stringer = (*Root)(nil)
 	_ Stringer = (*Term)(nil)
 )
@@ -32,8 +32,10 @@ func TestRoot_String(t *testing.T) {
 		wantErr bool
 	}{
 		{&Root{}, "", false},
-		{&Root{Comment: ptr("test")}, "# test", false},
 		{&Root{Comment: ptr(" test ")}, "#  test ", false},
+		{&Root{Comment: ptr("test")}, "# test", false},
+		{&Root{Expr: &Expr{L: &Term{Number: ptr(1.0)}}, Comment: ptr("test")}, "1 # test", false},
+		{&Root{Expr: &Expr{L: &Term{Number: ptr(1.0)}}}, "1", false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.want, func(t *testing.T) {
@@ -46,30 +48,35 @@ func TestRoot_String(t *testing.T) {
 	}
 }
 
-func TestFactor_String(t *testing.T) {
+func TestTerm_String(t *testing.T) {
 	tests := []struct {
 		f       *Term
 		want    string
 		wantErr bool
 	}{
 		// TODO: more test cases!
+		{&Term{Dice: &Dice{Count: ptr(1), Size: ptr(6)}}, "d6", false},
+		{&Term{Dice: &Dice{Count: ptr(2), Fudge: true}}, "2dF", false},
+		{&Term{Dice: &Dice{Count: ptr(2), Size: ptr(6)}}, "2d6", false},
+		{&Term{Dice: &Dice{Count: ptr(2), Size: ptr(8)}, Label: ptr("test")}, "2d8[test]", false},
+		{&Term{Func: &Func{Name: "foo", Args: &Args{Arg: []*Term{{Number: ptr(1.0)}}}}}, "foo(1)", false},
+		{&Term{Func: &Func{Name: "foo"}}, "foo()", false},
+		{&Term{GroupModifier: []*GroupModifier{{Failure: true, CompareOp: ptr("<"), Value: ptr(19)}}}, "f<19", false},
+		{&Term{Label: ptr("test")}, "[test]", false},
+		{&Term{Modifiers: []*Modifier{{Type: "r", CompareOp: ptr(">")}}}, "r>", false},
+		{&Term{Modifiers: []*Modifier{{Type: "foo"}, {Type: "bar", Value: ptr(1)}}}, "foobar1", false},
+		{&Term{Number: ptr(-0.000001)}, "-0.000001", false},
 		{&Term{Number: ptr(0.0)}, "0", false},
 		{&Term{Number: ptr(0.000001)}, "0.000001", false},
-		{&Term{Number: ptr(-0.000001)}, "-0.000001", false},
-		{&Term{Number: ptr(10.0)}, "10", false},
 		{&Term{Number: ptr(10.0), Label: ptr("test")}, "10[test]", false},
-		{&Term{Func: &Func{Name: "foo"}}, "foo()", false},
-		{&Term{Dice: &Dice{Count: ptr(1), Size: ptr(6)}}, "d6", false},
-		{&Term{Dice: &Dice{Count: ptr(2), Size: ptr(6)}}, "2d6", false},
-		{&Term{Dice: &Dice{Count: ptr(2), Fudge: true}}, "2dF", false},
-		{&Term{Query: &Query{Name: "foo"}}, "?{foo}", false},
-		{&Term{Query: &Query{Name: "foo", Options: []*QueryOption{{OptionValue: "3"}}}}, "?{foo|3}", false},
+		{&Term{Number: ptr(10.0)}, "10", false},
 		{&Term{Query: &Query{Name: "foo", Options: []*QueryOption{{OptionLabel: "test", OptionValue: "3"}}}}, "?{foo|test, 3}", false},
+		{&Term{Query: &Query{Name: "foo", Options: []*QueryOption{{OptionValue: "3"}}}}, "?{foo|3}", false},
+		{&Term{Query: &Query{Name: "foo"}}, "?{foo}", false},
 		{&Term{Subexpr: &Expr{}}, "()", false},
-		{&Term{Subexpr: &Expr{L: &Term{Number: ptr(0.0)}}}, "(0)", false},
 		{&Term{Subexpr: &Expr{L: &Term{Number: ptr(0.0)}, R: []*OpTerm{{Op: "+", Term: &Term{Number: ptr(1.0)}}}}}, "(0 + 1)", false},
+		{&Term{Subexpr: &Expr{L: &Term{Number: ptr(0.0)}}}, "(0)", false},
 		{&Term{Subexpr: &Expr{L: &Term{Subexpr: &Expr{L: &Term{Number: ptr(0.0)}}}}}, "((0))", false},
-		{&Term{Subexpr: nil, Query: nil, Number: nil, Dice: nil, Func: nil, Label: ptr("test")}, "[test]", false},
 
 		// TODO(travis-g): decide the results of the below cases
 		{&Term{Dice: &Dice{Count: ptr(0), Size: ptr(6)}}, "0d6", false},
@@ -80,14 +87,32 @@ func TestFactor_String(t *testing.T) {
 		t.Run(tt.want, func(t *testing.T) {
 			got := tt.f.String()
 			if (got != tt.want) != tt.wantErr {
-				t.Errorf("Factor.String() = %v, want %v", got, tt.want)
+				t.Errorf("Term.String() = %v, want %v", got, tt.want)
 			}
 			global = got
 		})
 	}
 }
 
-type ExpressionTestCase struct {
+func TestQuantity_String(t *testing.T) {
+	tests := []struct {
+		q    *Quantity
+		want string
+	}{
+		{&Quantity{Number: ptr(1)}, "1"},
+		{&Quantity{Subexpr: &Expr{L: &Term{Number: ptr(1.0)}, R: []*OpTerm{{Op: "+", Term: &Term{Number: ptr(2.0)}}}}}, "(1 + 2)"},
+		{&Quantity{Query: &Query{Name: "foo", Options: []*QueryOption{{OptionLabel: "bar", OptionValue: "3"}}}}, "?{foo|bar, 3}"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.want, func(t *testing.T) {
+			if got := tt.q.String(); got != tt.want {
+				t.Errorf("Quantity.String() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+type expressionTestCase struct {
 	expression string
 	// if expression's mathematic result is deterministic then result is a
 	// pointer to the evaluated expression's result, ex. "1+1" => `ptr(2.0)`.
@@ -98,11 +123,11 @@ type ExpressionTestCase struct {
 
 // Deterministic returns whether a test case has a defined result, indicating
 // any evaluation of the expression should result in the same value.
-func (e *ExpressionTestCase) Deterministic() bool {
+func (e *expressionTestCase) Deterministic() bool {
 	return e.result != nil
 }
 
-var benchmarkCases = []ExpressionTestCase{
+var benchmarkCases = []expressionTestCase{
 	{"", nil, true},
 	{"1d20", nil, false},
 	{"d20", nil, false},
@@ -125,7 +150,7 @@ var benchmarkCases = []ExpressionTestCase{
 
 // More test cases. Many of these should parse correctly as they are
 // syntactically valid but would throw errors when evaluated.
-var moreCases = []ExpressionTestCase{
+var moreCases = []expressionTestCase{
 	// TODO: break these into more case "sets" for maintainability, ex. case
 	// sensitivity set vs. future features set vs. eval error set
 	{"df", nil, false},
@@ -281,12 +306,6 @@ var moreCases = []ExpressionTestCase{
 
 var expressionParseCases = append(benchmarkCases, moreCases...)
 
-type ASTTestCase struct {
-	expression string
-	ast        *Root
-	wantErr    bool
-}
-
 // params are parameters referenced when using test roll queries. These should
 // be passed into test contexts.
 var params map[string]string = map[string]string{
@@ -294,6 +313,12 @@ var params map[string]string = map[string]string{
 	"bar":     "2+1",
 	"foo bar": "4",
 	"baz":     "", // empty string is an unexpected value, but valid
+}
+
+type ASTTestCase struct {
+	expression string
+	ast        *Root
+	wantErr    bool
 }
 
 var astCases = []ASTTestCase{
@@ -348,21 +373,6 @@ func TestParseString(t *testing.T) {
 	}
 }
 
-func BenchmarkParseString(b *testing.B) {
-	for _, tt := range benchmarkCases {
-		b.Run(tt.expression, func(b *testing.B) {
-			for n := 0; n < b.N; n++ {
-				got, err := ParseString(tt.expression, false)
-				if (err != nil) != tt.wantParseErr {
-					b.Errorf("error = %v, wantErr %v", err, tt.wantParseErr)
-					return
-				}
-				global = got
-			}
-		})
-	}
-}
-
 func TestParseString_linting(t *testing.T) {
 	tests := []struct {
 		base     string
@@ -403,18 +413,39 @@ func TestParseString_linting(t *testing.T) {
 	}
 }
 
-func TestFunc_String(t *testing.T) {
-	tests := []struct {
-		f    *Func
-		want string
-	}{
-		{&Func{Name: "a"}, "a()"},
-		{&Func{Name: "b", Args: &Args{Arg: []*Term{{Number: ptr(1.0)}, {Number: ptr(2.0)}}}}, "b(1, 2)"},
+func BenchmarkParseString(b *testing.B) {
+	for _, tt := range benchmarkCases {
+		b.Run(tt.expression, func(b *testing.B) {
+			for n := 0; n < b.N; n++ {
+				got, err := ParseString(tt.expression, false)
+				if (err != nil) != tt.wantParseErr {
+					b.Errorf("error = %v, wantErr %v", err, tt.wantParseErr)
+					return
+				}
+				global = got
+			}
+		})
 	}
-	for i, tt := range tests {
-		t.Run(fmt.Sprintf("%v", i), func(t *testing.T) {
-			if got := tt.f.String(); got != tt.want {
-				t.Errorf("Func.String() = %v, want %v", got, tt.want)
+}
+
+func TestSanitize(t *testing.T) {
+	type args struct {
+		expression string
+	}
+	tests := []struct {
+		name          string
+		args          args
+		wantSanitized string
+	}{
+		{"empty", args{""}, ""},
+		{"whitespace", args{" \t\n "}, ""},
+		{"trailing", args{"foo  "}, "foo"},
+		{"comment", args{"// comment "}, "// comment"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if gotSanitized := Sanitize(tt.args.expression); gotSanitized != tt.wantSanitized {
+				t.Errorf("Sanitize() = %v, want %v", gotSanitized, tt.wantSanitized)
 			}
 		})
 	}

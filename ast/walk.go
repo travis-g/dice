@@ -1,21 +1,30 @@
 package main
 
-import "context"
+import (
+	"context"
+	"errors"
+)
 
-// A Node abstracts a leaf in an expression AST.
+// SkipDir is used as a return value from [WalkFunc] to indicate that the AST
+// node is to be skipped.
+var SkipDir = errors.New("skip this node")
+
+// SkipAll is used as a return value from [WalkFunc] to indicate that all
+// remaining AST nodes are to be skipped.
+var SkipAll = errors.New("skip everything and stop the walk")
+
+// A Node represents a leaf in the AST of a dice roll expression.
 type Node interface {
-	// Eval traverses the Node and any children and returns a result.
-	Eval(ctx context.Context) error
 	// Resolve traverses the Node and any children to ensures all required data
 	// is fetched, such as query parameters.
 	Resolve(ctx context.Context) (*Node, error)
 }
 
-func Walk(ctx context.Context, n *Node, fn WalkFunc) error {
-	if err := fn(ctx, n); err != nil {
-		return err
-	}
-	return ErrNotImplemented
-}
+// WalkFunc is a function that is called against a Node during a walk.
+type WalkFunc func(ctx context.Context, n *Node, err error) error
 
-type WalkFunc func(ctx context.Context, n *Node) error
+// Walk traverses the AST starting at a given root Node, calling the provided
+// WalkFunc for each Node encountered.
+func Walk(ctx context.Context, root *Node, fn WalkFunc) error {
+	return fn(ctx, root, nil)
+}
