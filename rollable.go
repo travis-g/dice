@@ -241,8 +241,8 @@ func (g Group) SetParent(Roller) {
 	panic("impossible action")
 }
 
-func (g Group) Add(r Roller) {
-	g = append(g, r)
+func (g *Group) Add(r Roller) {
+	*g = append(*g, r)
 }
 
 func (g Group) ToGraphviz() string {
