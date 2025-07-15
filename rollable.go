@@ -328,17 +328,17 @@ func MustNewRollerGroup(props *RollerProperties) *RollerGroup {
 }
 
 // FullRoll rolls each die embedded in the dice group.
-func (d *RollerGroup) FullRoll(ctx context.Context) error {
+func (rg *RollerGroup) FullRoll(ctx context.Context) error {
 	// ensure context has roll counter
 	if _, ok := ctx.Value(CtxKeyTotalRolls).(*uint64); !ok {
 		ctx = context.WithValue(ctx, CtxKeyTotalRolls, new(uint64))
 	}
 
-	if err := d.Group.FullRoll(ctx); err != nil {
+	if err := rg.Group.FullRoll(ctx); err != nil {
 		return err
 	}
-	for _, mod := range d.Modifiers {
-		err := mod.Apply(ctx, d)
+	for _, mod := range rg.Modifiers {
+		err := mod.Apply(ctx, rg)
 		if err != nil {
 			return err
 		}
@@ -347,12 +347,12 @@ func (d *RollerGroup) FullRoll(ctx context.Context) error {
 }
 
 // Reroll re-rolls each die within the dice group.
-func (d *RollerGroup) Reroll(ctx context.Context) error {
-	if err := d.Group.Reroll(ctx); err != nil {
+func (rg *RollerGroup) Reroll(ctx context.Context) error {
+	if err := rg.Group.Reroll(ctx); err != nil {
 		return err
 	}
-	for _, mod := range d.Modifiers {
-		err := mod.Apply(ctx, d)
+	for _, mod := range rg.Modifiers {
+		err := mod.Apply(ctx, rg)
 		if err != nil {
 			return err
 		}
@@ -362,18 +362,18 @@ func (d *RollerGroup) Reroll(ctx context.Context) error {
 
 // Add adds a Roller to the RollerGroup's embedded Group and sets this as the
 // Roller's parent.
-func (d *RollerGroup) Add(r Roller) {
-	r.SetParent(d)
-	d.Group.Add(r)
+func (rg *RollerGroup) Add(r Roller) {
+	r.SetParent(rg)
+	rg.Group.Add(r)
 }
 
-func (d *RollerGroup) ToGraphviz() string {
+func (rg *RollerGroup) ToGraphviz() string {
 	var b bytes.Buffer
-	fmt.Fprintf(&b, "\"%p\" [label=\"%T\"];\n", d, d)
-	fmt.Fprintf(&b, "\"%p\" -> \"%p\"", d, d.Group)
-	fmt.Fprintf(&b, "%s\n", d.Group.ToGraphviz())
-	if d.Parent() != nil {
-		fmt.Fprintf(&b, "\"%p\" -> \"%p\" [dir=back style=dashed color=red];\n", d.Parent(), d)
+	fmt.Fprintf(&b, "\"%p\" [label=\"%T\"];\n", rg, rg)
+	fmt.Fprintf(&b, "\"%p\" -> \"%p\"", rg, rg.Group)
+	fmt.Fprintf(&b, "%s\n", rg.Group.ToGraphviz())
+	if rg.Parent() != nil {
+		fmt.Fprintf(&b, "\"%p\" -> \"%p\" [dir=back style=dashed color=red];\n", rg.Parent(), rg)
 	}
 	return b.String()
 }
