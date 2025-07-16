@@ -4,18 +4,17 @@ import (
 	"context"
 )
 
-type contextKey struct {
-	name string
-}
+type contextKey string
 
-func (k *contextKey) String() string {
-	return "dice context value " + k.name
+func (k contextKey) String() string {
+	return "dice context value " + string(k)
 }
 
 var (
-	CtxKeyTotalRolls = &contextKey{name: "total rolls"}
-	CtxKeyMaxRolls   = &contextKey{name: "max rolls"}
-	CtxKeyParameters = &contextKey{name: "parameters"}
+	CtxKeyTotalRolls = contextKey("total rolls")
+	CtxKeyMaxRolls   = contextKey("max rolls")
+	CtxKeyParameters = contextKey("parameters")
+	CtxKeyFunctions  = contextKey("functions")
 )
 
 // NewContextFromContext makes a child context from a given context, including
