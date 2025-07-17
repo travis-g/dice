@@ -70,7 +70,7 @@ func EvaluateExpression(ctx context.Context, expression string) (*ExpressionResu
 	var evalErrors = []error{}
 	expression = strings.ToLower(expression)
 
-	params := dice.CtxParameters(ctx)
+	params, _ := dice.CtxParameters(ctx)
 	if len(params) > 0 {
 		// TODO: better nesting failout is necessary
 		for i := 0; i < dice.MaxDepth; i++ {

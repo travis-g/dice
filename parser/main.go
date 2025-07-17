@@ -81,7 +81,7 @@ func (q *RollQuery) String() string {
 
 func (q *RollQuery) Resolve(ctx context.Context) error {
 	if q != nil {
-		params := dice.CtxParameters(ctx)
+		params, _ := dice.CtxParameters(ctx)
 		if a, ok := params[q.string]; ok {
 			q.answer = a
 		} else {

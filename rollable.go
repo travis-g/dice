@@ -15,8 +15,7 @@ type Roller interface {
 	FullRoll(context.Context) error
 
 	// Roll rolls and records the object's Result. Roll should not apply
-	// modifiers. However, it should always increment the appropriate roll
-	// count context key.
+	// modifiers. However, it should always increment [CtxKeyTotalRolls].
 	Roll(context.Context) error
 
 	// Reroll resets the object and should re-roll the core die by calling Roll.

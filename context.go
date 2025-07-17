@@ -10,8 +10,12 @@ func (k contextKey) String() string {
 	return "dice context value " + string(k)
 }
 
+// CtxKeyTotalRolls is the context key for the total number of rolls made during
+// the request. NOTE: It is a pointer to a uint64, allowing parent contexts to
+// respond properly to additional rolls made by child contexts.
+var CtxKeyTotalRolls = contextKey("total rolls")
+
 var (
-	CtxKeyTotalRolls = contextKey("total rolls")
 	CtxKeyMaxRolls   = contextKey("max rolls")
 	CtxKeyParameters = contextKey("parameters")
 	CtxKeyFunctions  = contextKey("functions")
@@ -31,38 +35,31 @@ func NewContextFromContext(ctx context.Context) context.Context {
 	return ctx
 }
 
-// CtxTotalRolls returns the pointer to total number of rolls made by the
-// context.
-func CtxTotalRolls(ctx context.Context) *uint64 {
+// CtxTotalRolls returns the pointer to count of rolls made within the context.
+// It returns a pointer to a new uint64 and a non-nil error if the value is
+// missing.
+func CtxTotalRolls(ctx context.Context) (*uint64, error) {
 	if count, ok := ctx.Value(CtxKeyTotalRolls).(*uint64); ok {
-		return count
+		return count, nil
 	}
-	return new(uint64)
+	return new(uint64), ErrContextKeyMissing
 }
 
-// MustCtxTotalRolls returns the pointer to the total number of rolls made by
-// the context. Panics if the context key does not exist.
-func MustCtxTotalRolls(ctx context.Context) *uint64 {
-	if count, ok := ctx.Value(CtxKeyTotalRolls).(*uint64); ok {
-		return count
-	}
-	panic(ErrContextKeyMissing)
-}
-
-// CtxMaxRolls returns the context's maximum allowed number of rolls, or the
-// library default.
-func CtxMaxRolls(ctx context.Context) uint64 {
+// CtxMaxRolls returns the context's maximum allowed number of rolls. If
+// missing, it returns the default and a non-nil error. The default is defined
+// by [MaxRolls].
+func CtxMaxRolls(ctx context.Context) (uint64, error) {
 	if max, ok := ctx.Value(CtxKeyMaxRolls).(uint64); ok {
-		return max
+		return max, nil
 	}
-	return MaxRolls
+	return MaxRolls, ErrContextKeyMissing
 }
 
-// CtxParameters returns the context's arbitrary parameters, or an empty map if
-// not set.
-func CtxParameters(ctx context.Context) map[string]string {
+// CtxParameters returns the context's arbitrary parameters. If missing, it
+// returns an empty map and a non-nil error.
+func CtxParameters(ctx context.Context) (map[string]string, error) {
 	if params, ok := ctx.Value(CtxKeyParameters).(map[string]string); ok {
-		return params
+		return params, nil
 	}
-	return make(map[string]string)
+	return make(map[string]string), ErrContextKeyMissing
 }
