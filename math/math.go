@@ -77,7 +77,7 @@ func EvaluateExpression(ctx context.Context, expression string) (*ExpressionResu
 			replaced := expression
 			for old, new := range params {
 				// HACK: lowercase these strings beforehand
-				replaced = strings.ReplaceAll(replaced, strings.ToLower(old), strings.ToLower(new.(string)))
+				replaced = strings.ReplaceAll(replaced, strings.ToLower(old), strings.ToLower(new))
 			}
 
 			if replaced == expression {

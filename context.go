@@ -60,9 +60,9 @@ func CtxMaxRolls(ctx context.Context) uint64 {
 
 // CtxParameters returns the context's arbitrary parameters, or an empty map if
 // not set.
-func CtxParameters(ctx context.Context) map[string]interface{} {
-	if params, ok := ctx.Value(CtxKeyParameters).(map[string]interface{}); ok {
+func CtxParameters(ctx context.Context) map[string]string {
+	if params, ok := ctx.Value(CtxKeyParameters).(map[string]string); ok {
 		return params
 	}
-	return make(map[string]interface{})
+	return make(map[string]string)
 }
