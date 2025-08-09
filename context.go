@@ -15,8 +15,11 @@ func (k contextKey) String() string {
 // respond properly to additional rolls made by child contexts.
 var CtxKeyTotalRolls = contextKey("total rolls")
 
+// CtxKeyMaxRolls is the context key for the maximum number of rolls allowed for
+// the context.
+var CtxKeyMaxRolls = contextKey("max rolls")
+
 var (
-	CtxKeyMaxRolls   = contextKey("max rolls")
 	CtxKeyParameters = contextKey("parameters")
 	CtxKeyFunctions  = contextKey("functions")
 )
