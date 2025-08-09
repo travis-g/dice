@@ -7,9 +7,9 @@ import (
 )
 
 func TestParseNotation(t *testing.T) {
-	ctx := context.WithValue(context.Background(), CtxKeyParameters, map[string]interface{}{
+	ctx := context.WithValue(context.Background(), CtxKeyParameters, map[string]any{
 		"foo": "3",
-		"bar": "dfoo",
+		"bar": "foo",
 	})
 	tests := []struct {
 		name     string
@@ -31,6 +31,17 @@ func TestParseNotation(t *testing.T) {
 		{
 			name:     "capitalized",
 			notation: "D6",
+			want: RollerProperties{
+				Type:           TypePolyhedron,
+				Count:          1,
+				Size:           6,
+				DieModifiers:   ModifierList{},
+				GroupModifiers: ModifierList{},
+			},
+		},
+		{
+			name:     "spaces",
+			notation: "1 d6",
 			want: RollerProperties{
 				Type:           TypePolyhedron,
 				Count:          1,
