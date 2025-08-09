@@ -326,11 +326,11 @@ func (gm *GroupModifier) String() string {
 // The lexer state machine rules. Rules are checked in the order that they
 // appear within the named rule set.
 var rules = lexer.Rules{
-	"_": {
+	"_": { // Whitespace-related rules
 		{Name: "InlineWhitespace", Pattern: `[ \t]+`},
 		{Name: "EOL", Pattern: `[\n\r]+`},
 		{Name: "Whitespace", Pattern: `[ \t\n\r]+`},
-		{Name: "End", Pattern: `$`},
+		{Name: "End", Pattern: `$`}, // end of input
 	},
 	"Numbers": {
 		{Name: "Float", Pattern: `[-+]?\d*\.\d+`},
