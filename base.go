@@ -75,8 +75,16 @@ func CryptoInt64() (int64, error) {
 // [crypto.Reader].
 func CryptoIntn(max int) (n int, err error) {
 	bigInt, err := crypto.Int(crypto.Reader, big.NewInt(int64(max)))
-	n = int(bigInt.Int64())
-	return
+	return int(bigInt.Int64()), err
+}
+
+// Must is a convenience function that panics if there is a non-nil error
+// returned when calling the passed function.
+func Must[T any](v T, err error) T {
+	if err != nil {
+		panic(err)
+	}
+	return v
 }
 
 // quote returns the input string wrapped within quotation marks.

@@ -55,12 +55,9 @@ func NewDie(props *RollerProperties) (Roller, error) {
 
 // MustNewDie creates a new die off of a properties list. It will tweak the
 // properties list to better suit reuse. Panics on a non-nil error.
+// DEPRECATED: use Must helper instead.
 func MustNewDie(props *RollerProperties) Roller {
-	if r, err := NewDieWithParent(props, nil); err == nil {
-		return r
-	} else {
-		panic(err)
-	}
+	return Must(NewDie(props))
 }
 
 // NewDieWithParent creates a new die off of a properties list. It will tweak the
