@@ -149,47 +149,47 @@ func TestRollerGroup_FullRoll(t *testing.T) {
 	}{
 		// {
 		// 	name: "negative-sided",
-		// 	d: MustNewRollerGroup(&RollerProperties{
+		// 	d: Must(NewRollerGroup(&RollerProperties{
 		// 		Count: 4,
 		// 		Size:  -1,
-		// 	}),
+		// 	})),
 		// 	wantTotal: nil,
 		// 	wantErr:   true,
 		// },
 		{
 			name: "zero-sided",
-			d: MustNewRollerGroup(&RollerProperties{
+			d: Must(NewRollerGroup(&RollerProperties{
 				Count: 4,
 				Size:  0,
-			}),
-			wantTotal: Ptr(0.0),
+			})),
+			wantTotal: ptr(0.0),
 			wantErr:   false,
 		},
 		{
 			name: "one-sided",
-			d: MustNewRollerGroup(&RollerProperties{
+			d: Must(NewRollerGroup(&RollerProperties{
 				Count: 4,
 				Size:  1,
-			}),
-			wantTotal: Ptr(4.0),
+			})),
+			wantTotal: ptr(4.0),
 			wantErr:   false,
 		},
 		{
 			name: "basic",
-			d: MustNewRollerGroup(&RollerProperties{
+			d: Must(NewRollerGroup(&RollerProperties{
 				Count: 4,
 				Size:  6,
-			}),
+			})),
 			wantTotal: nil,
 			wantErr:   false,
 		},
 		{
 			name: "set dice",
-			d: MustNewRollerGroup(&RollerProperties{
+			d: Must(NewRollerGroup(&RollerProperties{
 				Count: 2,
 				Size:  1,
-			}),
-			wantTotal: Ptr(2.0),
+			})),
+			wantTotal: ptr(2.0),
 			wantErr:   false,
 		},
 	}
