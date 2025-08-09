@@ -10,6 +10,9 @@ var (
 	// ErrNilDie is returned when a die's passed reference is nil.
 	ErrNilDie = errors.New("nil die passed")
 
+	// ErrNilRoller is returned when a Roller's passed reference is nil.
+	ErrNilRoller = errors.New("nil Roller passed")
+
 	// ErrMaxRolls is returned when a maximum number of rolls/rerolls has been
 	// met or surpassed.
 	ErrMaxRolls = errors.New("max rolls reached")
