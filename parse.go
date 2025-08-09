@@ -12,7 +12,7 @@ import (
 var (
 	// DiceNotationPattern is the base XdY notation pattern for matching dice
 	// strings.
-	DiceNotationPattern = `(?i)(?P<count>\d+)?d(?P<size>\d{1,}|f|F)`
+	DiceNotationPattern = `(?i)(?P<count>\d+)? *d(?P<size>\d{1,}|F)`
 
 	// DiceNotationRegex is the compiled RegEx for parsing supported dice
 	// notations.
