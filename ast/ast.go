@@ -32,6 +32,8 @@ type Root struct {
 	Comment *string `(("//" | "\\" | "#") @CommentText?)?`
 }
 
+// String returns the string representation of the Root node, including any
+// comment.
 func (r *Root) String() string {
 	buf := new(bytes.Buffer)
 	if r.Expr != nil {
@@ -54,6 +56,7 @@ type Expr struct {
 	R []*OpTerm `parser:"@@*"`
 }
 
+// String returns the string representation of the expression.
 func (e *Expr) String() string {
 	buf := new(bytes.Buffer)
 	if e.L != nil {
@@ -70,12 +73,13 @@ func (e *Expr) String() string {
 	return buf.String()
 }
 
-// An OpTerm is an operator followed by a Term.
+// An OpTerm is an operator followed by a [Term].
 type OpTerm struct {
 	Op   string `parser:"@Operator"`
 	Term *Term  `parser:"@@"`
 }
 
+// String returns the string representation of the OpTerm.
 func (ot *OpTerm) String() string {
 	buf := new(bytes.Buffer)
 	buf.WriteString(ot.Op)
@@ -98,6 +102,7 @@ type Term struct {
 	Label         *string          `parser:"('[' @~']' ']')?"`
 }
 
+// String returns the string representation of the [Term].
 func (t *Term) String() string {
 	buf := new(bytes.Buffer)
 	if t.Subexpr != nil {
@@ -143,6 +148,7 @@ type Func struct {
 	Args *Args  `parser:"'(' @@? ')'"`
 }
 
+// String returns the string representation of the function and its arguments.
 func (f *Func) String() string {
 	buf := new(bytes.Buffer)
 	buf.WriteString(f.Name)
@@ -154,7 +160,8 @@ func (f *Func) String() string {
 	return buf.String()
 }
 
-// Args is a list of arguments to a function call, separated by commas.
+// Args is a list of [Term] arguments to a function call with each argument
+// separated by a comma.
 type Args struct {
 	Arg []*Term `parser:"@@ (',' @@)*"`
 }
@@ -167,12 +174,15 @@ func (a *Args) String() string {
 	return strings.Join(args, ", ")
 }
 
-// A Query is a named query with optional options.
+// A Query is a special expression that represents a value that may be resolved
+// at runtime. Queries have a name and may have a list of suggested or available
+// options.
 type Query struct {
 	Name    string         `parser:"@QueryText"`
 	Options []*QueryOption `parser:"('|' @@)*"`
 }
 
+// String returns the string representation of the query and its options.
 func (q *Query) String() string {
 	buf := new(bytes.Buffer)
 	buf.Write([]byte{'?', '{'})
@@ -185,12 +195,13 @@ func (q *Query) String() string {
 	return buf.String()
 }
 
-// QueryOptions are suggested/available values for a Query.
+// A QueryOption is a suggested or available value for a [Query].
 type QueryOption struct {
 	OptionLabel string `parser:"(@QueryText ',')?"`
 	OptionValue string `parser:"@QueryText"`
 }
 
+// String returns the string representation of the query option.
 func (qo *QueryOption) String() string {
 	buf := new(bytes.Buffer)
 	if qo.OptionLabel != "" {
@@ -201,7 +212,8 @@ func (qo *QueryOption) String() string {
 	return buf.String()
 }
 
-// A Dice is a dice roll expression, such as "2d6" or "dF".
+// A Dice represents a standalone dice roll expression, such as "2d6" or "dF"
+// broken into its components. Note that modifiers are captured separately.
 type Dice struct {
 	// TODO: Sub-expressions should be supported as possible Dice counts and
 	// sizes, for example '2d(1+2)'. See also [Quantity].
@@ -212,9 +224,13 @@ type Dice struct {
 	_     *Expr `parser:"| '(' @@ ')' )"`
 }
 
-// Capture loads a Dice structure from a string slice of values. The values
-// slice is expected to be a single element.
+// Capture loads a Dice structure from a string slice of values. Panics if
+// values contains more than one element. This is intended to be used as a
+// custom parser action for participle.
 func (d *Dice) Capture(values []string) error {
+	if len(values) != 1 {
+		panic(fmt.Sprintf("invalid number of captured values: %v", values))
+	}
 	// HACK: parse byte by byte rather than regex
 	components := dice.FindNamedCaptureGroups(dice.DiceWithModifiersExpressionRegex, values[0])
 
@@ -237,6 +253,7 @@ func (d *Dice) Capture(values []string) error {
 	return nil
 }
 
+// String returns the string representation of the dice roll expression.
 func (d *Dice) String() string {
 	buf := new(bytes.Buffer)
 	if d.Count != nil {
@@ -253,14 +270,15 @@ func (d *Dice) String() string {
 	return buf.String()
 }
 
-// A Quantity is a number, sub-expression, or query that evaluates to a positive
-// integer.
+// A Quantity is a number, sub-expression, or [Query] that evaluates to a
+// non-negative integer.
 type Quantity struct {
 	Number  *int   `parser:"@Uint"`
 	Subexpr *Expr  `parser:"| '(' @@ ')'"`
 	Query   *Query `parser:"| '?{' @@ '}' )"`
 }
 
+// String returns the string representation of the quantity.
 func (q *Quantity) String() string {
 	buf := new(bytes.Buffer)
 	switch {
@@ -278,8 +296,8 @@ func (q *Quantity) String() string {
 	return buf.String()
 }
 
-// A modifier changes how a roll/set of dice has its result(s) calculated, or
-// how it is tracked internally or how it is displayed.
+// A Modifier changes how the result of a roll or set of dice is calculated, how
+// it is tracked internally or how it is displayed.
 // FIXME: not all types need or can have a comparison operator and/or value.
 type Modifier struct {
 	Type      string  `parser:"@(Drop | Keep | Reroll | CriticalSuccess | CriticalFailure | Sort | Explode)"`
@@ -287,6 +305,7 @@ type Modifier struct {
 	Value     *int    `parser:"@ComparisonValue?"`
 }
 
+// String returns the string representation of the modifier.
 func (m *Modifier) String() string {
 	// TODO(travis-g): implement all modifier types
 	buf := new(bytes.Buffer)
@@ -305,14 +324,15 @@ func (m *Modifier) String() string {
 	return buf.String()
 }
 
-// A GroupModifier is a modifier that applies to a group of dice rolls, such as
-// comparisons of dice rolled against a value.
+// A GroupModifier is a separate type of modifier that applies to a group of
+// dice rolls, such as comparisons of dice rolled against a value.
 type GroupModifier struct {
 	Failure   bool    `parser:"@('F'|'f')?"`
 	CompareOp *string `parser:"@ComparisonOp"`
 	Value     *int    `parser:"@ComparisonValue"`
 }
 
+// String returns the string representation of the group modifier.
 func (gm *GroupModifier) String() string {
 	buf := new(bytes.Buffer)
 	if gm.Failure {
@@ -324,7 +344,10 @@ func (gm *GroupModifier) String() string {
 }
 
 // The lexer state machine rules. Rules are checked in the order that they
-// appear within the named rule set.
+// appear within the named rule set. Rules may include other named rule sets
+// using [lexer.Include]. Rules may push or pop the lexer state machine to
+// change the set of active rules. Rules may return to the parent state using
+// [lexer.Return].
 var rules = lexer.Rules{
 	"_": { // Whitespace-related rules
 		{Name: "InlineWhitespace", Pattern: `[ \t]+`},
@@ -355,12 +378,10 @@ var rules = lexer.Rules{
 	"Expr": {
 		{Name: "ExprEnd", Pattern: `\)`, Action: lexer.Pop()},
 		lexer.Include("Root"),
-		lexer.Return(),
 	},
 	"InlineExpr": {
 		{Name: "InlineExprEnd", Pattern: `]]`, Action: lexer.Pop()},
 		lexer.Include("Root"),
-		lexer.Return(),
 	},
 	"Modifiers": {
 		{Name: "Drop", Pattern: `(?i)d[lh]?`, Action: lexer.Push("ModifierValue")},

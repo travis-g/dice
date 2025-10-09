@@ -113,11 +113,12 @@ func TestQuantity_String(t *testing.T) {
 }
 
 type expressionTestCase struct {
+	// expression for the test case.
 	expression string
 	// if expression's mathematic result is deterministic then result is a
 	// pointer to the evaluated expression's result, ex. "1+1" => `ptr(2.0)`.
 	result *float64
-	// test cases include whether the parsing of the string should fail
+	// whether the expression should parse correctly.
 	wantParseErr bool
 }
 
@@ -222,6 +223,7 @@ var moreCases = []expressionTestCase{
 	{"1+?{foo|a,1}", nil, false},
 	{"?{foo|a,1|b, 2}", nil, false}, // dropdowns
 	{"?{baz|1|2}", nil, false},
+	{"1+1", ptr(2.0), false},
 	{"1+-1", ptr(0.0), false},
 	{"1+(-1)", ptr(0.0), false},
 	{"1-+1", ptr(0.0), false},

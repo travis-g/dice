@@ -7,10 +7,12 @@ import (
 	"os"
 )
 
-var (
-	trace   *bool
-	diagram *bool
-)
+// trace is a flag to enable tracing of the parser to stderr.
+var trace *bool
+
+// diagram is a flag to output the extended Backus–Naur form (EBNF) of the
+// parser which can be used to visualize the grammar.
+var diagram *bool
 
 func init() {
 	// define CLI flags only once
@@ -18,6 +20,8 @@ func init() {
 	diagram = flag.Bool("diagram", false, "output parser diagram code")
 }
 
+// main is the entry point for the dice parser CLI tool. It's useful for testing
+// and debugging the parser.
 func main() {
 	flag.Parse()
 	if *diagram {
