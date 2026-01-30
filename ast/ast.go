@@ -153,7 +153,7 @@ func (f *Func) String() string {
 	buf := new(bytes.Buffer)
 	buf.WriteString(f.Name)
 	buf.WriteRune('(')
-	if f.Args != nil {
+	if f.Args != nil && len(f.Args.Arg) > 0 {
 		buf.WriteString(f.Args.String())
 	}
 	buf.WriteRune(')')
@@ -428,7 +428,7 @@ var rules = lexer.Rules{
 	},
 }
 
-// Lexer is the lexer state machine for parsing dice roll expressions.
+// Lexer is the compiled lexer state machine for parsing dice roll expressions.
 var Lexer = lexer.MustStateful(rules)
 
 // Parser is the participle parser for dice roll expressions.

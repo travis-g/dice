@@ -105,16 +105,6 @@ func NewRoller(props *RollerProperties) (Roller, error) {
 	return NewRollerWithParent(props, nil)
 }
 
-// MustNewRoller creates a new Roller from a properties set using NewRoller and
-// panics if NewRoller returns an error.
-func MustNewRoller(props *RollerProperties) Roller {
-	if r, err := NewRollerWithParent(props, nil); err == nil {
-		return r
-	} else {
-		panic(err)
-	}
-}
-
 // A Group is a slice of rollables.
 type Group []Roller
 
@@ -167,14 +157,15 @@ func (g Group) Copy() []Roller {
 }
 
 // FullRoll implements the Roller interface's FullRoll method by rolling each
-// object/Roller within the group.
+// object/Roller within the group. This method is not thread safe.
 func (g Group) FullRoll(ctx context.Context) (err error) {
 	// ensure context has roll counter
 	if _, ok := ctx.Value(CtxKeyTotalRolls).(*uint64); !ok {
 		ctx = context.WithValue(ctx, CtxKeyTotalRolls, new(uint64))
 	}
 
-	// as Groups can extend if exploded, iterate by index until the end
+	// as Groups can extend if exploded, iterate by index until the end is
+	// found. This is not thread safe.
 	i := 0
 	for i < len(g) {
 		err = g[i].FullRoll(ctx)
@@ -314,16 +305,6 @@ func NewRollerGroup(props *RollerProperties) (*RollerGroup, error) {
 	rg.Modifiers = props.GroupModifiers
 
 	return rg, nil
-}
-
-// MustNewRollerGroup creates a new RollerGroup from properties using
-// NewRollerGroup and panics if the method returns an error.
-func MustNewRollerGroup(props *RollerProperties) *RollerGroup {
-	rg, err := NewRollerGroup(props)
-	if err != nil {
-		panic(err)
-	}
-	return rg
 }
 
 // FullRoll rolls each die embedded in the dice group.

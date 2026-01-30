@@ -131,12 +131,6 @@ func (d *Die) Roll(ctx context.Context) error {
 	return nil
 }
 
-// reset resets a Die's properties so that it can be re-rolled from scratch.
-func (d *Die) reset() {
-	d.Result = nil
-	d.Dropped = false
-}
-
 // FullRoll rolls the Die. The die will be reset if it had been rolled
 // previously.
 func (d *Die) FullRoll(ctx context.Context) error {

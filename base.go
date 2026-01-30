@@ -11,19 +11,23 @@ import (
 	"strings"
 )
 
-// MaxRolls is the maximum number of rolls allowed for a request.
+// MaxRolls is the maximum number of rolls allowed for a request. It defaults to
+// [math.MaxUint64], which is effectively unlimited. It should be set to a
+// significantly lower value at runtime to prevent an overflow.
 var MaxRolls uint64 = math.MaxUint64
 
-// MaxDepth is the maximum number of replacement iterations allowed for a parse.
+// MaxDepth is the maximum number of depth-based replacement iterations allowed
+// for a parse. It is used to prevent infinite loops in replacement operations,
+// such as when [CtxParameters] of a request includes nested parameters.
 var MaxDepth int = 3
 
-// Source is the dice package's global RNG source. Source uses the system's
-// native cryptographically secure pseudorandom number generator by default. It
-// can be overridden if desired.
+// Source is the dice package's global RNG source. Source initializes to the
+// system's native cryptographically secure pseudorandom number generator by
+// default. It can be overridden if desired.
 //
 // Source must be safe for concurrent use: to use something akin to math/rand's
-// thread safe global reader try binding a [rand.Source64] with a Mutex. See
-// math/rand's globalRand variable source code for an example.
+// thread safe global reader try binding a [math/rand.Source64] with a
+// [sync.Mutex]. See [math/rand]'s globalRand internal variable for an example.
 var Source *rand.Rand
 
 func init() {
@@ -31,23 +35,23 @@ func init() {
 	Source = rand.New(&csprngSource{})
 }
 
-// csprngSource is a wrapper for [crypto.Reader] that implements both
-// [rand.Source] and [rand.Source64]. Valid rand.Source64 sources use half the
-// entropy of a regular rand.Source.
+// csprngSource is a [crypto.Reader] that implements both [math/rand.Source] and
+// [math/rand.Source64]. Valid [math/rand.Source64] sources use half the entropy
+// of a regular Source.
 type csprngSource struct{}
 
-// Seed is a noop: a csprngSource does not need to be seeded but is required to
-// implement the [rand.Source] interface.
+// Seed is a noop: a [crypto.Reader] does not need to be seeded but this method
+// is required in order to implement [math/rand.Source].
 func (s *csprngSource) Seed(int64) {
 	// noop
 }
 
-// Int63 satisfies the [rand.Source] interface.
+// Int63 satisfies the [math/rand.Source] interface.
 func (s *csprngSource) Int63() int64 {
 	return int64(s.Uint64() & ^uint64(1<<63))
 }
 
-// Uint64 satisfies the [rand.Source64] interface.
+// Uint64 satisfies the [math/rand.Source64] interface.
 func (s *csprngSource) Uint64() (u uint64) {
 	err := binary.Read(crypto.Reader, binary.BigEndian, &u)
 	if err != nil {
@@ -56,20 +60,17 @@ func (s *csprngSource) Uint64() (u uint64) {
 	return
 }
 
-// CryptoInt64 is a convenience function that returns a cryptographically random
-// int64 using the system's CSPRNG, bypassing the package's global [Source]. If
-// there is a problem generating enough entropy it will return a non-nil error.
+// CryptoInt64 is a convenience function that bypasses the package's global
+// [Source] and returns an int64 by using the system's CSPRNG. If there is a
+// problem generating enough entropy it will return a non-nil error.
 func CryptoInt64() (int64, error) {
-	i, err := crypto.Int(crypto.Reader, big.NewInt(math.MaxInt64))
-	if err != nil {
-		return i.Int64(), err
-	}
-	return i.Int64(), nil
+	bigInt, err := crypto.Int(crypto.Reader, big.NewInt(int64(math.MaxInt64)))
+	return bigInt.Int64(), err
 }
 
-// CryptoIntn is a convenience wrapper for emulating [rand.Intn] using
-// crypto/rand. Panics if max <= 0, and any other errors encountered when
-// generating the integer are bubbled as err.
+// CryptoIntn is a convenience function for replacing [math/rand.Intn] using
+// [crypto/rand] methods. Panics if max <= 0, and any other errors encountered
+// when generating the integer are bubbled as err.
 //
 // CryptoIntn does not use the package's global [Source], it uses
 // [crypto.Reader].
@@ -90,24 +91,24 @@ func Must[T any](v T, err error) T {
 // quote returns the input string wrapped within quotation marks.
 func quote(s string) string {
 	var b strings.Builder
-	write := b.WriteString
-	write("\"")
-	write(s)
-	write("\"")
+	b.WriteRune('"')
+	b.WriteString(s)
+	b.WriteRune('"')
 	return b.String()
 }
 
 // expression creates a math expression from an arbitrary set of interfaces,
 // simplifying the resulting expression using the commutative property of
 // addition.
-func expression(i ...interface{}) string {
+func expression(i ...any) string {
+	// TODO: use strings.Builder?
 	raw := strings.Trim(strings.Join(strings.Fields(fmt.Sprint(i...)), "+"), "[]")
-	return strings.Replace(raw, "+-", "-", -1)
+	return strings.ReplaceAll(raw, "+-", "-")
 }
 
 // FindNamedCaptureGroups finds string submatches within an input string based
-// on a compiled Regexp and returns a map of the named capture groups with their
-// captured submatches.
+// on a compiled [regexp.Regexp] and returns a map of the named capture groups
+// with their captured submatches.
 func FindNamedCaptureGroups(exp *regexp.Regexp, in string) map[string]string {
 	submatches := exp.FindStringSubmatch(in)
 

@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// Ensure csprngSource statisfies the [rand.Source64] interface.
+// Ensure package sources implement the necessary interfaces.
 var _ = (rand.Source64)(&csprngSource{})
 
 // Set of basic range sizes.
@@ -44,5 +44,39 @@ func BenchmarkCryptoInt64(b *testing.B) {
 	b.ReportAllocs()
 	for n := 0; n < b.N; n++ {
 		CryptoInt64()
+	}
+}
+
+func Test_quote(t *testing.T) {
+	tests := []struct {
+		name string
+		s    string
+		want string
+	}{
+		{"empty", "", `""`},
+		{"simple", "foo", `"foo"`},
+		{"with spaces", "foo bar", `"foo bar"`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := quote(tt.s); got != tt.want {
+				t.Errorf("quote() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_csprngSource_Seed(t *testing.T) {
+	tests := []struct {
+		name string
+		s    *csprngSource
+		i    int64
+	}{
+		{"coverage", &csprngSource{}, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.s.Seed(tt.i)
+		})
 	}
 }

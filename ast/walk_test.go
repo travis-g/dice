@@ -6,20 +6,20 @@ import (
 )
 
 func TestWalk_String(t *testing.T) {
-	stringFunc := func(ctx context.Context, n *Node, err error) error {
+	stringFunc := func(ctx context.Context, n Node, err error) error {
 		if n == nil {
 			return nil
 		}
-		if s, ok := any(n).(interface{ String() string }); ok {
+		if s, ok := any(n).(Stringer); ok {
 			_ = s.String()
 			return nil
 		}
-		return nil
+		panic("not a stringer")
 	}
 
 	type args struct {
 		ctx  context.Context
-		root *Node
+		root Node
 	}
 	tests := []struct {
 		name    string

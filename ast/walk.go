@@ -18,17 +18,17 @@ var SkipAll = errors.New("skip everything and stop the walk")
 type Node interface {
 	// Resolve traverses the Node and any children to ensures all required data
 	// is fetched, such as [Query] parameters.
-	Resolve(ctx context.Context) (*Node, error)
+	Resolve(ctx context.Context) (Node, error)
 
 	// Nodes should implement Stringer to provide a string.
 	fmt.Stringer
 }
 
-// WalkFunc is a function that is called against [*Node] during a walk.
-type WalkFunc func(ctx context.Context, n *Node, err error) error
+// WalkFunc is a function that is called against [Node] during a walk.
+type WalkFunc func(ctx context.Context, n Node, err error) error
 
-// Walk traverses the AST starting at a given root [*Node], calling the provided
+// Walk traverses the AST starting at a given root [Node], calling the provided
 // WalkFunc for each Node encountered.
-func Walk(ctx context.Context, root *Node, fn WalkFunc) error {
+func Walk(ctx context.Context, root Node, fn WalkFunc) error {
 	return fn(ctx, root, nil)
 }
