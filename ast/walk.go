@@ -28,7 +28,7 @@ type Node interface {
 type WalkFunc func(ctx context.Context, n Node, err error) error
 
 // Walk traverses the AST starting at a given root [Node], calling the provided
-// WalkFunc for each Node encountered.
+// [WalkFunc] for each Node encountered.
 func Walk(ctx context.Context, root Node, fn WalkFunc) error {
 	return fn(ctx, root, nil)
 }

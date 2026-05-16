@@ -13,6 +13,7 @@ import (
 	"github.com/travis-g/dice"
 )
 
+// Errors that may be returned during parsing or evaluation of expressions.
 var (
 	ErrEmptyExpression    = errors.New("empty expression")
 	ErrNotImplemented     = errors.New("not implemented")
@@ -20,19 +21,23 @@ var (
 	ErrInvalidStructField = errors.New("invalid struct field")
 )
 
+// Stringer is an interface for AST nodes that can be converted back into
+// strings.
 type Stringer interface {
 	String() string
-	// TODO: add a "compact" string method
+	// TODO: add a "compact" string method that omits whitespace for brevity
 	// CompactString() string
 }
 
 // A Root is the top level AST node of any individual dice roll expression.
+// There should be only one Root per expression. A Root may contain an optional
+// comment.
 type Root struct {
 	Expr    *Expr   `parser:"@@?"`
-	Comment *string `(("//" | "\\" | "#") @CommentText?)?`
+	Comment *string `parser:"(('//' | '#') @CommentText?)?"`
 }
 
-// String returns the string representation of the Root node, including any
+// String returns a string representation of the Root node, including any
 // comment.
 func (r *Root) String() string {
 	buf := new(bytes.Buffer)
@@ -49,8 +54,8 @@ func (r *Root) String() string {
 	return buf.String()
 }
 
-// An Expr is a full expression, which may consist of a single Term or a Term
-// followed by one or more operator-Term pairs.
+// An Expr is a full expression, which may consist of a single [Term] or a Term
+// followed by one or more [OpTerm] (operator-Term) pairs.
 type Expr struct {
 	L *Term     `parser:"@@"`
 	R []*OpTerm `parser:"@@*"`
@@ -166,6 +171,7 @@ type Args struct {
 	Arg []*Term `parser:"@@ (',' @@)*"`
 }
 
+// String returns the string representation of the function arguments.
 func (a *Args) String() string {
 	var args []string
 	for _, arg := range a.Arg {
@@ -231,7 +237,7 @@ func (d *Dice) Capture(values []string) error {
 	if len(values) != 1 {
 		panic(fmt.Sprintf("invalid number of captured values: %v", values))
 	}
-	// HACK: parse byte by byte rather than regex
+	// HACK: regex is slow, and should be replaced with a byte-based parser.
 	components := dice.FindNamedCaptureGroups(dice.DiceWithModifiersExpressionRegex, values[0])
 
 	if components["count"] != "" {
@@ -270,8 +276,8 @@ func (d *Dice) String() string {
 	return buf.String()
 }
 
-// A Quantity is a number, sub-expression, or [Query] that evaluates to a
-// non-negative integer.
+// A Quantity is a number, sub-expression, or [Query] that will must resolve to
+// a non-negative integer (>= 0) at runtime.
 type Quantity struct {
 	Number  *int   `parser:"@Uint"`
 	Subexpr *Expr  `parser:"| '(' @@ ')'"`
@@ -305,7 +311,7 @@ type Modifier struct {
 	Value     *int    `parser:"@ComparisonValue?"`
 }
 
-// String returns the string representation of the modifier.
+// String returns the string representation of the Modifier.
 func (m *Modifier) String() string {
 	// TODO(travis-g): implement all modifier types
 	buf := new(bytes.Buffer)
@@ -324,7 +330,7 @@ func (m *Modifier) String() string {
 	return buf.String()
 }
 
-// A GroupModifier is a separate type of modifier that applies to a group of
+// A GroupModifier is a separate type of [Modifier] that applies to a group of
 // dice rolls, such as comparisons of dice rolled against a value.
 type GroupModifier struct {
 	Failure   bool    `parser:"@('F'|'f')?"`
@@ -332,7 +338,7 @@ type GroupModifier struct {
 	Value     *int    `parser:"@ComparisonValue"`
 }
 
-// String returns the string representation of the group modifier.
+// String returns the string representation of the GroupModifier.
 func (gm *GroupModifier) String() string {
 	buf := new(bytes.Buffer)
 	if gm.Failure {
@@ -431,21 +437,22 @@ var rules = lexer.Rules{
 // Lexer is the compiled lexer state machine for parsing dice roll expressions.
 var Lexer = lexer.MustStateful(rules)
 
-// Parser is the participle parser for dice roll expressions.
+// Parser is the participle parser for dice roll expressions. The parser elides
+// whitespace and comments.
 var Parser = participle.MustBuild[Root](
 	participle.Lexer(Lexer),
 	participle.Elide("Whitespace", "InlineWhitespace", "Comment"),
 	// participle.UseLookahead(2),
 )
 
-// Sanitize is a helper to remove odd formatting from an expression, such as
-// leading and trailing whitespace.
+// Sanitize is a rudimentary helper to remove odd formatting from an expression,
+// such as leading and trailing whitespace.
 func Sanitize(expression string) (sanitized string) {
 	sanitized = strings.Trim(expression, " \n\t\r")
 	return
 }
 
-// ParseString is a wrapper to parse an expression from an input string.
+// ParseString is a helper to parse an expression from an input string.
 // Expression strings are assumed to be sanitized or linted before being parsed.
 func ParseString(expression string, trace bool) (*Root, error) {
 	if expression == "" {
@@ -459,7 +466,7 @@ func ParseString(expression string, trace bool) (*Root, error) {
 	}
 }
 
-// ptr is a helper function to return the pointer to the passed value.
+// ptr is an internal helper function to return the pointer to the passed value.
 func ptr[T any](v T) *T {
 	return &v
 }

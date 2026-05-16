@@ -255,8 +255,6 @@ var moreCases = []expressionTestCase{
 	// comment should still parse but throw eval errors (nil results)
 	{"# comment", nil, false},
 	{"// comment", nil, false},
-	{`\ comment`, nil, false},
-	{` \ comment`, nil, false},
 
 	// should fail always
 	{"+", nil, true},
@@ -281,6 +279,11 @@ var moreCases = []expressionTestCase{
 	{"1 [foo]", ptr(1.0), true},       // allow spaces before labels
 	{"1d20f1", nil, true},             // allow optional equals sign for failures?
 	{"sling5", nil, true},             // custom regexp-based macro
+
+	// DEPRECATED: backslashes are hard to support with participle and people
+	// don't use them
+	{`\ comment`, nil, true},
+	{` \ comment`, nil, true},
 
 	// TODO: future features
 	// computed dice
@@ -317,13 +320,13 @@ var params map[string]string = map[string]string{
 	"baz":     "", // empty string is an unexpected value, but valid
 }
 
-type ASTTestCase struct {
+type astTestCase struct {
 	expression string
 	ast        *Root
 	wantErr    bool
 }
 
-var astCases = []ASTTestCase{
+var astCases = []astTestCase{
 	// TODO: ensure that defaults are tested as well
 	{"", nil, true},
 	{"1", &Root{Expr: &Expr{L: &Term{Number: ptr(1.0)}}}, false},
@@ -382,12 +385,10 @@ func TestParseString_linting(t *testing.T) {
 		wantSame bool // true is good
 	}{
 		{"3d6#bar", " 3 d6  //  bar", true},
-		{`3d6\bar`, " 3 d6 // bar", true},
 
 		// Fail cases:
-		{"3d6//bar", "3 d6 ", false},       // no Comment
-		{"3d6#bar", "3 d6#bar ", false},    // no space after Comment
-		{`3d6\bar`, " 3 d6 # bar ", false}, // extra space in Comment
+		{"3d6//bar", "3 d6 ", false},    // no Comment
+		{"3d6#bar", "3 d6#bar ", false}, // no space after Comment
 	}
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%v", i), func(t *testing.T) {
