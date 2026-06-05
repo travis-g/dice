@@ -1,4 +1,4 @@
-See [[./ast.go]] for documentation.
+See [[./doc.go]] for documentation.
 
 To build the AST submodule and create a railroad diagram:
 

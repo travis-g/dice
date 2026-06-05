@@ -1,5 +1,6 @@
-// Package ast provides the abstract syntax tree (AST) for dice roll
-// expressions.
+// Package ast provides the abstract syntax tree (AST) parser for dice roll
+// expressions. It uses participle to define the parser grammar and AST through
+// struct annotations.
 //
 // See https://github.com/alecthomas/participle
 //

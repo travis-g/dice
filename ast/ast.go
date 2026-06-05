@@ -429,7 +429,7 @@ var rules = lexer.Rules{
 	},
 	"Comment": {
 		{Name: "InlineWhitespace", Pattern: `[ \t]+`},
-		{Name: "CommentText", Pattern: `.+`},
+		GenericText,
 		lexer.Return(),
 	},
 }
