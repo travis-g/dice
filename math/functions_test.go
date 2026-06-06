@@ -27,7 +27,7 @@ func TestDiceFunctions(t *testing.T) {
 	}
 	var de *ExpressionResult
 	for _, tc := range testCases {
-		ctx := context.WithValue(context.Background(), dice.CtxKeyParameters, map[string]interface{}{
+		ctx := context.WithValue(context.Background(), dice.CtxKeyParameters, map[string]string{
 			"foo": "3",
 			"bar": "dfoo",
 		})

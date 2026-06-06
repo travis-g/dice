@@ -19,6 +19,10 @@ var (
 	ErrNotImplemented     = errors.New("not implemented")
 	ErrUnreachable        = errors.New("unreachable code")
 	ErrInvalidStructField = errors.New("invalid struct field")
+
+	ErrDivisionByZero  = errors.New("division by zero")
+	ErrInvalidArgCount = errors.New("invalid argument count")
+	ErrNotEnoughArgs   = errors.New("not enough args")
 )
 
 // Stringer is an interface for AST nodes that can be converted back into
@@ -429,7 +433,7 @@ var rules = lexer.Rules{
 	},
 	"Comment": {
 		{Name: "InlineWhitespace", Pattern: `[ \t]+`},
-		GenericText,
+		{Name: "CommentText", Pattern: `.+`},
 		lexer.Return(),
 	},
 }

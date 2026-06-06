@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"reflect"
 	"testing"
+
+	"github.com/travis-g/dice"
 )
 
 // write-only global variable to prevent compiler optimizations
@@ -311,13 +314,20 @@ var moreCases = []expressionTestCase{
 
 var expressionParseCases = append(benchmarkCases, moreCases...)
 
-// params are parameters referenced when using test roll queries. These should
+// testParams are parameters referenced when using test roll queries. These should
 // be passed into test contexts.
-var params map[string]string = map[string]string{
+var testParams map[string]string = map[string]string{
 	"foo":     "1",
 	"bar":     "2+1",
 	"foo bar": "4",
-	"baz":     "", // empty string is an unexpected value, but valid
+	"baz":     "",           // empty string is an unexpected value, but valid
+	"macro":   "round(1.5)", // nested function
+	"roll":    "2d20",       // saved roll
+	"2d20":    "1",          // ambiguous name
+}
+
+func newContextWithParams(params map[string]string) context.Context {
+	return context.WithValue(context.Background(), dice.CtxKeyParameters, params)
 }
 
 type astTestCase struct {
@@ -444,6 +454,7 @@ func TestSanitize(t *testing.T) {
 		{"whitespace", args{" \t\n "}, ""},
 		{"trailing", args{"foo  "}, "foo"},
 		{"comment", args{"// comment "}, "// comment"},
+		{"comment2", args{" // comment "}, "// comment"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

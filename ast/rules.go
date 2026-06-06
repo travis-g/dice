@@ -21,11 +21,6 @@ var (
 	Char  = lexer.Rule{Name: "Char", Pattern: `\$|[^$]+`}
 )
 
-// Rules for parsing the various components of the dice notation.
-var (
-	GenericText = lexer.Rule{Name: "GenericText", Pattern: `.+`}
-)
-
 // Rules for parsing the various components between tokens.
 var (
 	MathOperator = lexer.Rule{Name: "MathOperator", Pattern: `[-+*^%/]|\*\*|<<|>>`}

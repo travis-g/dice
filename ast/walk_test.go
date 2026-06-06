@@ -2,39 +2,37 @@ package main
 
 import (
 	"context"
+	"reflect"
 	"testing"
 )
 
-func TestWalk_String(t *testing.T) {
-	stringFunc := func(ctx context.Context, n Node, err error) error {
-		if n == nil {
-			return nil
-		}
-		if s, ok := any(n).(Stringer); ok {
-			_ = s.String()
-			return nil
-		}
-		panic("not a stringer")
+func typeName(n Node) string {
+	if n == nil {
+		return "<nil>"
+	}
+	return reflect.TypeOf(n).String()
+}
+
+func TestWalk_Traversal(t *testing.T) {
+	root, err := ParseString("1 + 2 * (3 + 4)", false)
+	if err != nil {
+		t.Fatalf("parse error: %v", err)
 	}
 
-	type args struct {
-		ctx  context.Context
-		root Node
+	visited := []string{}
+	visit := func(ctx context.Context, n Node, err error) error {
+		if err != nil {
+			return err
+		}
+		visited = append(visited, typeName(n))
+		return nil
 	}
-	tests := []struct {
-		name    string
-		args    args
-		want    string
-		wantErr bool
-	}{
-		{"nil root", args{context.TODO(), nil}, "", false},
-		// TODO: Add more test cases for Walk
+
+	if err := Walk(context.Background(), root, visit); err != nil {
+		t.Fatalf("Walk() returned error: %v", err)
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := Walk(tt.args.ctx, tt.args.root, stringFunc); (err != nil) != tt.wantErr {
-				t.Errorf("Walk() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
+
+	if len(visited) == 0 {
+		t.Fatal("expected nodes to be visited")
 	}
 }

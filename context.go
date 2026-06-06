@@ -4,6 +4,7 @@ import (
 	"context"
 )
 
+// internal custom type for request context keys
 type contextKey string
 
 func (k contextKey) String() string {
@@ -19,9 +20,10 @@ var CtxKeyTotalRolls = contextKey("total rolls")
 // the context.
 var CtxKeyMaxRolls = contextKey("max rolls")
 
+// Context keys that allow arbitrary parameters to be used in the request.
 var (
-	CtxKeyParameters = contextKey("parameters")
-	CtxKeyFunctions  = contextKey("functions")
+	CtxKeyParameters = contextKey("parameters") // map[string]string
+	CtxKeyFunctions  = contextKey("functions")  // unimplemented
 )
 
 // NewContextFromContext makes a child context from a given context, including
@@ -31,7 +33,7 @@ func NewContextFromContext(ctx context.Context) context.Context {
 	if _, ok := ctx.Value(CtxKeyMaxRolls).(uint64); !ok {
 		ctx = context.WithValue(ctx, CtxKeyMaxRolls, MaxRolls)
 	}
-	// add a roll counter, if one doesn't exist
+	// add a roll counter, if not present
 	if _, ok := ctx.Value(CtxKeyTotalRolls).(*uint64); !ok {
 		return context.WithValue(ctx, CtxKeyTotalRolls, new(uint64))
 	}
@@ -39,8 +41,8 @@ func NewContextFromContext(ctx context.Context) context.Context {
 }
 
 // CtxTotalRolls returns the pointer to count of rolls made within the context.
-// It returns a pointer to a new uint64 and a non-nil error if the value is
-// missing.
+// It returns a pointer to a new uint64 and [ErrContextKeyMissing] if the value
+// is missing.
 func CtxTotalRolls(ctx context.Context) (*uint64, error) {
 	if count, ok := ctx.Value(CtxKeyTotalRolls).(*uint64); ok {
 		return count, nil
@@ -49,8 +51,8 @@ func CtxTotalRolls(ctx context.Context) (*uint64, error) {
 }
 
 // CtxMaxRolls returns the context's maximum allowed number of rolls. If
-// missing, it returns the default and a non-nil error. The default is defined
-// by [MaxRolls].
+// missing, it returns the default and [ErrContextKeyMissing]. The default is
+// defined by [MaxRolls].
 func CtxMaxRolls(ctx context.Context) (uint64, error) {
 	if max, ok := ctx.Value(CtxKeyMaxRolls).(uint64); ok {
 		return max, nil
@@ -59,7 +61,7 @@ func CtxMaxRolls(ctx context.Context) (uint64, error) {
 }
 
 // CtxParameters returns the context's arbitrary parameters. If missing, it
-// returns an empty map and a non-nil error.
+// returns an empty map and [ErrContextKeyMissing].
 func CtxParameters(ctx context.Context) (map[string]string, error) {
 	if params, ok := ctx.Value(CtxKeyParameters).(map[string]string); ok {
 		return params, nil

@@ -27,7 +27,7 @@ func setSourceMathRand() {
 }
 
 func makeTestContext() (ctx context.Context) {
-	ctx = context.WithValue(dice.NewContextFromContext(context.Background()), dice.CtxKeyParameters, map[string]interface{}{
+	ctx = context.WithValue(dice.NewContextFromContext(context.Background()), dice.CtxKeyParameters, map[string]string{
 		"foo": "1",
 		"BaR": "dFOO",
 		"baZ": "0",
@@ -181,9 +181,10 @@ func TestEvaluateDiceFunctions(t *testing.T) {
 	}
 	var de *ExpressionResult
 	for _, tc := range testCases {
+		t.Logf("evaluating %s", tc.expression)
 		ctx := makeTestContext()
 		de, err := EvaluateExpression(ctx, tc.expression)
-		t.Logf("evaluating %s; got %v", tc.expression, de)
+		t.Logf("evaluating %s; got %v, wanted %v", tc.expression, de.Result, tc.result)
 		if err != nil {
 			t.Fatalf("error evaluating \"%s\": %s", tc.expression, err)
 		}
@@ -213,9 +214,9 @@ func TestEvaluate(t *testing.T) {
 	}
 	var de *ExpressionResult
 	for _, tc := range testCases {
+		t.Logf("evaluating %s", tc.expression)
 		ctx := makeTestContext()
 		de, err := EvaluateExpression(ctx, tc.expression)
-		t.Logf("evaluating %s; got %v", tc.expression, de)
 		if err != nil {
 			t.Fatalf("error evaluating \"%s\": %s", tc.expression, err)
 		}
